@@ -1,0 +1,16 @@
+*.class
+*.log
+/out
+.DS_Store
+/sireum-v3
+/sireum-intellij-plugin.zip
+/.idea/libraries
+/.idea/compiler.xml
+/.idea/encodings.xml
+/.idea/hydra.xml
+/.idea/jarRepositories.xml
+/.idea/kotlinc.xml
+/.idea/sbt.xml
+/.idea/vcs.xml
+/.idea/workspace.xml
+/.idea/scala_settings.xml
