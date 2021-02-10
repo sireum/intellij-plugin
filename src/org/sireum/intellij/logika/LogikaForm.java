@@ -40,10 +40,6 @@ public abstract class LogikaForm {
     protected JLabel titleLabel;
     protected JLabel subtitleLabel;
     protected JCheckBox backgroundCheckBox;
-    protected JCheckBox highlightingCheckBox;
-    protected JCheckBox underwaveCheckBox;
-    protected JTextField fileExtsTextField;
-    protected JLabel fileExtsLabel;
     protected JCheckBox hintCheckBox;
     protected JCheckBox inscribeSummoningsCheckBox;
     protected JRadioButton forwardRadioButton;
@@ -59,7 +55,6 @@ public abstract class LogikaForm {
     protected JRadioButton bits16RadioButton;
     protected JRadioButton bits32RadioButton;
     protected JRadioButton bits64RadioButton;
-    protected JCheckBox coneInfluenceCheckBox;
     protected JRadioButton unrollingSymExeRadioButton;
     protected JPanel boundsPanel;
     protected JLabel loopBoundLabel;

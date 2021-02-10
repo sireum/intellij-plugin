@@ -51,8 +51,6 @@
 
         <applicationConfigurable id="SireumLogikaConfigurable" instance="org.sireum.intellij.logika.LogikaConfigurable"
                                  displayName="Logika" parentId="SireumConfigurable"/>
-
-        <fileTypeFactory implementation="org.sireum.intellij.logika.LogikaFileTypeFactory"/>
     </extensions>
 
     <actions>

@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.sireum.intellij.logika.LogikaForm">
-  <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="13" column-count="6" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+  <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="10" column-count="6" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="973" height="498"/>
+      <xy x="20" y="20" width="992" height="420"/>
     </constraints>
     <properties/>
     <border type="none"/>
     <children>
       <hspacer id="3fc34">
         <constraints>
-          <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
+          <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
             <minimum-size width="10" height="-1"/>
             <preferred-size width="10" height="-1"/>
             <maximum-size width="10" height="-1"/>
@@ -19,7 +19,7 @@
       </hspacer>
       <hspacer id="b67ad">
         <constraints>
-          <grid row="5" column="5" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+          <grid row="3" column="5" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
             <minimum-size width="5" height="-1"/>
             <preferred-size width="5" height="-1"/>
             <maximum-size width="5" height="-1"/>
@@ -28,7 +28,7 @@
       </hspacer>
       <component id="a138c" class="javax.swing.JLabel" binding="idleLabel">
         <constraints>
-          <grid row="4" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="2" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
           <labelFor value="c9266"/>
@@ -38,7 +38,7 @@
       </component>
       <component id="c9266" class="javax.swing.JTextField" binding="idleTextField">
         <constraints>
-          <grid row="4" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+          <grid row="2" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
             <preferred-size width="200" height="24"/>
           </grid>
         </constraints>
@@ -88,14 +88,16 @@
             </constraints>
             <properties>
               <font size="12" style="1"/>
-              <text value="A Program Verifier for the Slang Programming Language"/>
+              <text value="A Program Verifier for the Slang Programming Language                                                                                                       "/>
             </properties>
           </component>
         </children>
       </grid>
       <component id="48258" class="javax.swing.JCheckBox" binding="backgroundCheckBox">
         <constraints>
-          <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="203" height="21"/>
+          </grid>
         </constraints>
         <properties>
           <text value="&amp;Background analysis"/>
@@ -103,7 +105,7 @@
       </component>
       <vspacer id="bcb2a">
         <constraints>
-          <grid row="12" column="4" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+          <grid row="9" column="4" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
             <minimum-size width="-1" height="5"/>
             <preferred-size width="437" height="14"/>
           </grid>
@@ -118,17 +120,9 @@
           </grid>
         </constraints>
       </vspacer>
-      <component id="a372e" class="javax.swing.JCheckBox" binding="highlightingCheckBox">
-        <constraints>
-          <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <text value="Syntax high&amp;lighting"/>
-        </properties>
-      </component>
       <component id="8d7c" class="javax.swing.JTextField" binding="timeoutTextField">
         <constraints>
-          <grid row="5" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+          <grid row="3" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
             <preferred-size width="200" height="24"/>
           </grid>
         </constraints>
@@ -136,7 +130,7 @@
       </component>
       <component id="caaa0" class="javax.swing.JLabel" binding="timeoutLabel">
         <constraints>
-          <grid row="5" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="3" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
           <labelFor value="8d7c"/>
@@ -146,16 +140,22 @@
       </component>
       <component id="b85fb" class="javax.swing.JCheckBox" binding="autoCheckBox">
         <constraints>
-          <grid row="5" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="203" height="21"/>
+          </grid>
         </constraints>
         <properties>
+          <enabled value="false"/>
+          <selected value="true"/>
           <text value="&amp;Auto mode"/>
           <toolTipText value="Auto mode for programming logic"/>
         </properties>
       </component>
       <component id="210f5" class="javax.swing.JCheckBox" binding="checkSatCheckBox">
         <constraints>
-          <grid row="6" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="203" height="21"/>
+          </grid>
         </constraints>
         <properties>
           <text value="&amp;Check facts and contracts satisfiability"/>
@@ -164,24 +164,18 @@
       </component>
       <hspacer id="8a5b6">
         <constraints>
-          <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
+          <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
             <minimum-size width="30" height="-1"/>
             <preferred-size width="30" height="-1"/>
             <maximum-size width="30" height="-1"/>
           </grid>
         </constraints>
       </hspacer>
-      <component id="f16e5" class="javax.swing.JCheckBox" binding="underwaveCheckBox">
-        <constraints>
-          <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <text value="Underwa&amp;ve effect for errors and warnings"/>
-        </properties>
-      </component>
       <component id="2f1dd" class="javax.swing.JCheckBox" binding="hintCheckBox">
         <constraints>
-          <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="5" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="203" height="21"/>
+          </grid>
         </constraints>
         <properties>
           <text value="Generate programming logic &amp;hints"/>
@@ -190,7 +184,9 @@
       </component>
       <component id="89244" class="javax.swing.JCheckBox" binding="inscribeSummoningsCheckBox">
         <constraints>
-          <grid row="8" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="6" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="203" height="21"/>
+          </grid>
         </constraints>
         <properties>
           <text value="Inscribe &amp;summonings"/>
@@ -200,7 +196,7 @@
       <grid id="8a332" binding="devPanel" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="11" column="1" row-span="1" col-span="4" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <grid row="8" column="1" row-span="1" col-span="4" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties/>
         <border type="none"/>
@@ -312,7 +308,7 @@
                     </constraints>
                     <properties>
                       <enabled value="false"/>
-                      <text value="10"/>
+                      <text value="3"/>
                       <toolTipText value=""/>
                     </properties>
                   </component>
@@ -337,7 +333,7 @@
                     </constraints>
                     <properties>
                       <enabled value="false"/>
-                      <text value="10"/>
+                      <text value="0"/>
                       <toolTipText value=""/>
                     </properties>
                   </component>
@@ -426,45 +422,18 @@
           </grid>
         </children>
       </grid>
-      <component id="6cf5f" class="javax.swing.JLabel" binding="fileExtsLabel">
-        <constraints>
-          <grid row="2" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <labelFor value="e5e8b"/>
-          <text value="File &amp;extensions"/>
-          <toolTipText value="File extensions that Logika should accept (format: semicolon-separated file extensions of [a-zA-Z0-9]+)"/>
-        </properties>
-      </component>
-      <component id="e5e8b" class="javax.swing.JTextField" binding="fileExtsTextField">
-        <constraints>
-          <grid row="2" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-            <preferred-size width="200" height="24"/>
-          </grid>
-        </constraints>
-        <properties/>
-      </component>
       <vspacer id="989c4">
         <constraints>
-          <grid row="10" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+          <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
             <minimum-size width="-1" height="15"/>
-            <preferred-size width="-1" height="15"/>
+            <preferred-size width="203" height="15"/>
             <maximum-size width="-1" height="15"/>
           </grid>
         </constraints>
       </vspacer>
-      <component id="d1407" class="javax.swing.JCheckBox" binding="coneInfluenceCheckBox">
-        <constraints>
-          <grid row="9" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <text value="Use c&amp;one of influence in summonings"/>
-          <toolTipText value="Use conclusions to filter out irrelevant premises in validity summonings"/>
-        </properties>
-      </component>
       <component id="6576e" class="javax.swing.JCheckBox" binding="hintUnicodeCheckBox">
         <constraints>
-          <grid row="7" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="5" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
           <enabled value="false"/>

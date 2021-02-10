@@ -38,8 +38,6 @@ object LogikaConfigurable {
   private val logo = IconLoader.getIcon("/logika/icon/logika-logo.png")
 
   private val logikaKey = "org.sireum.logika."
-  private val syntaxHighlightingKey = logikaKey + "highlighting"
-  private val underwaveKey = logikaKey + "underwave"
   private val backgroundAnalysisKey = logikaKey + "background"
   private val idleKey = logikaKey + "idle"
   private val timeoutKey = logikaKey + "timeout"
@@ -49,46 +47,37 @@ object LogikaConfigurable {
   private val hintKey = logikaKey + "hint"
   private val hintUnicodeKey = logikaKey + "hintUnicode"
   private val inscribeSummoningsKey = logikaKey + "inscribeSummonings"
-  private val coneInfluenceKey = logikaKey + "coneInfluence"
   private val checkerKindKey = logikaKey + "checkerKind"
   private val bitWidthKey = logikaKey + "bitWidth"
   private val loopBoundKey = logikaKey + "loopBound"
   private val recursionBoundKey = logikaKey + "recursionBound"
   private val methodContractKey = logikaKey + "methodContract"
 
-  private[logika] var syntaxHighlighting = true
-  private[logika] var underwave = true
   private[logika] var backgroundAnalysis = true
   private[logika] var idle: Int = 1500
   private[logika] var timeout: Int = 2000
   private[logika] var autoEnabled = false
   private[logika] var checkSat = false
-  private[logika] var fileExts: Seq[String] = Vector("sc")
   private[logika] var hint = false
   private[logika] var hintUnicode = SystemInfo.isMac
   private[logika] var inscribeSummonings = false
-  private[logika] var coneInfluence = false
   // TODO
   //private[logika] var checkerKind = CheckerKind.Forward
   private[logika] var bitWidth = 0
-  private[logika] var loopBound = 10
-  private[logika] var recursionBound = 10
+  private[logika] var loopBound = 3
+  private[logika] var recursionBound = 0
   private[logika] var methodContract = true
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
-    syntaxHighlighting = pc.getBoolean(syntaxHighlightingKey, syntaxHighlighting)
-    underwave = pc.getBoolean(underwaveKey, underwave)
     backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
     idle = pc.getInt(idleKey, idle)
     timeout = pc.getInt(timeoutKey, timeout)
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
-    fileExts = Option(pc.getValue(fileExtsKey)).flatMap(parseFileExts).getOrElse(fileExts)
     hint = pc.getBoolean(hintKey, hint)
     hint = pc.getBoolean(hintUnicodeKey, hintUnicode)
     inscribeSummonings = pc.getBoolean(inscribeSummoningsKey, inscribeSummonings)
-    coneInfluence = pc.getBoolean(coneInfluenceKey, coneInfluence)
     // TODO
     //checkerKind = pc.getValue(checkerKindKey, checkerKind)
     bitWidth = pc.getInt(bitWidthKey, bitWidth)
@@ -99,18 +88,14 @@ object LogikaConfigurable {
 
   def saveConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
-    pc.setValue(syntaxHighlightingKey, syntaxHighlighting.toString)
-    pc.setValue(underwaveKey, underwave.toString)
     pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
     pc.setValue(idleKey, idle.toString)
     pc.setValue(timeoutKey, timeout.toString)
     pc.setValue(autoEnabledKey, autoEnabled.toString)
     pc.setValue(checkSatKey, checkSat.toString)
-    pc.setValue(fileExtsKey, fileExtsString)
     pc.setValue(hintKey, hint.toString)
     pc.setValue(hintUnicodeKey, hintUnicode.toString)
     pc.setValue(inscribeSummoningsKey, inscribeSummonings.toString)
-    pc.setValue(coneInfluenceKey, coneInfluence.toString)
     // TODO
     //pc.setValue(checkerKindKey, checkerKind)
     pc.setValue(bitWidthKey, bitWidth.toString)
@@ -118,10 +103,6 @@ object LogikaConfigurable {
     pc.setValue(recursionBoundKey, recursionBound.toString)
     pc.setValue(methodContractKey, methodContract.toString)
   }
-
-  def allFileExts: Set[String] = LogikaFileType.extensions ++ fileExts
-
-  def fileExtsString: String = fileExts.mkString("; ")
 
   def parseGe200(text: String): Option[Int] =
     try {
@@ -169,18 +150,14 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def isModified: Boolean =
     validIdle && validTimeout && validFileExts && validLoopBound &&
       validRecursionBound &&
-      (highlightingCheckBox.isSelected != syntaxHighlighting ||
-        underwaveCheckBox.isSelected != underwave ||
-        backgroundCheckBox.isSelected != backgroundAnalysis ||
+      (backgroundCheckBox.isSelected != backgroundAnalysis ||
         idleTextField.getText != idle.toString ||
         timeoutTextField.getText != timeout.toString ||
         autoCheckBox.isSelected != autoEnabled ||
         checkSatCheckBox.isSelected != checkSat ||
-        fileExtsTextField.getText != fileExtsString ||
         hintCheckBox.isSelected != hint ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
-        coneInfluenceCheckBox.isSelected != coneInfluence ||
         // TODO
         //selectedKind != checkerKind ||
         selectedBitWidth != bitWidth ||
@@ -222,12 +199,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       timeoutLabel.setForeground(if (validTimeout) fgColor else JBColor.red)
       timeoutTextField.setToolTipText(if (validTimeout) "OK" else "Must be at least 200.")
     }
-    def updateFileExts() = {
-      val text = fileExtsTextField.getText
-      validFileExts = parseFileExts(text).nonEmpty
-      fileExtsLabel.setForeground(if (validFileExts) fgColor else JBColor.red)
-      fileExtsTextField.setToolTipText(if (validTimeout) "OK" else "Ill-formed (format: semicolon-separated file extensions of [a-zA-Z0-9]+).")
-    }
     def updateLoopBound() = {
       val text = loopBoundTextField.getText
       validLoopBound = parsePosInteger(text).nonEmpty
@@ -245,10 +216,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       val isSymExe = symExeRadioButton.isSelected || isUnrolling
       bitsLabel.setEnabled(isSymExe)
       bitsUnboundedRadioButton.setEnabled(isSymExe)
-      bits8RadioButton.setEnabled(isSymExe)
-      bits16RadioButton.setEnabled(isSymExe)
-      bits32RadioButton.setEnabled(isSymExe)
-      bits64RadioButton.setEnabled(isSymExe)
+      // TODO
+      //bits8RadioButton.setEnabled(isSymExe)
+      //bits16RadioButton.setEnabled(isSymExe)
+      //bits32RadioButton.setEnabled(isSymExe)
+      //bits64RadioButton.setEnabled(isSymExe)
       autoCheckBox.setEnabled(!isSymExe)
       loopBoundLabel.setEnabled(isUnrolling)
       loopBoundTextField.setEnabled(isUnrolling)
@@ -287,14 +259,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       override def removeUpdate(e: DocumentEvent): Unit = updateTimeout()
     })
 
-    fileExtsTextField.getDocument.addDocumentListener(new DocumentListener {
-      override def insertUpdate(e: DocumentEvent): Unit = updateFileExts()
-
-      override def changedUpdate(e: DocumentEvent): Unit = updateFileExts()
-
-      override def removeUpdate(e: DocumentEvent): Unit = updateFileExts()
-    })
-
     loopBoundTextField.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = updateLoopBound()
 
@@ -324,18 +288,14 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def disposeUIResources(): Unit = {}
 
   override def apply(): Unit = {
-    syntaxHighlighting = highlightingCheckBox.isSelected
-    underwave = underwaveCheckBox.isSelected
     backgroundAnalysis = backgroundCheckBox.isSelected
     idle = parseGe200(idleTextField.getText).getOrElse(idle)
     timeout = parseGe200(timeoutTextField.getText).getOrElse(timeout)
     autoEnabled = autoCheckBox.isSelected
     checkSat = checkSatCheckBox.isSelected
-    fileExts = parseFileExts(fileExtsTextField.getText).getOrElse(fileExts)
     hint = hintCheckBox.isSelected
     hintUnicode = hintUnicodeCheckBox.isSelected
     inscribeSummonings = inscribeSummoningsCheckBox.isSelected
-    coneInfluence = coneInfluenceCheckBox.isSelected
     // TODO
     //checkerKind = selectedKind
     bitWidth = selectedBitWidth
@@ -346,18 +306,14 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   }
 
   override def reset(): Unit = {
-    highlightingCheckBox.setSelected(syntaxHighlighting)
-    underwaveCheckBox.setSelected(underwave)
     backgroundCheckBox.setSelected(backgroundAnalysis)
     idleTextField.setText(idle.toString)
     timeoutTextField.setText(timeout.toString)
     autoCheckBox.setSelected(autoEnabled)
     checkSatCheckBox.setSelected(checkSat)
-    fileExtsTextField.setText(fileExtsString)
     hintCheckBox.setSelected(hint)
     hintUnicodeCheckBox.setSelected(hintUnicode)
     inscribeSummoningsCheckBox.setSelected(inscribeSummonings)
-    coneInfluenceCheckBox.setSelected(coneInfluence)
     /* TODO
     checkerKind match {
       case CheckerKind.Forward => forwardRadioButton.setSelected(true)

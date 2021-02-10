@@ -32,7 +32,6 @@ import com.intellij.openapi.project.Project
 
 object Util {
   def getFilePath(project: Project): Option[String] = {
-    val fem = FileEditorManager.getInstance(project)
     val editor = FileEditorManager.
       getInstance(project).getSelectedTextEditor
     if (editor == null) return None

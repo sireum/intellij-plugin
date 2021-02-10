@@ -50,7 +50,7 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.Consumer
 import com.intellij.util.ui.UIUtil
 import org.sireum.intellij.{SireumApplicationComponent, SireumToolWindowFactory, Util}
-import org.sireum.intellij.logika.{LogikaConfigurable, LogikaFileType}
+import org.sireum.intellij.logika.LogikaConfigurable
 
 object LogikaCheckAction {
 
@@ -189,14 +189,6 @@ object LogikaCheckAction {
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
-    if (LogikaConfigurable.syntaxHighlighting) {
-      /* TODO
-      ApplicationManager.getApplication.invokeLater(
-        (() => Lexer.addSyntaxHighlighter(project, editor)): Runnable,
-        ((_: Any) => editor.isDisposed): Condition[Any])
-
-       */
-    }
     if (isBackground && !LogikaConfigurable.backgroundAnalysis) return
     init(project)
     val input = editor.getDocument.getText
@@ -256,7 +248,7 @@ object LogikaCheckAction {
     editor.putUserData(logikaKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
-        if (LogikaConfigurable.syntaxHighlighting || LogikaConfigurable.backgroundAnalysis)
+        if (LogikaConfigurable.backgroundAnalysis)
           scala.util.Try(analyze(project, file, editor, isBackground = true))
       }
 
@@ -326,12 +318,15 @@ object LogikaCheckAction {
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit = {
     val ext = Util.getFileExt(project)
-    if (!LogikaConfigurable.allFileExts.contains(ext)) return
+    if ("scala" != ext) return
+    // TODO
+    /*
     if (LogikaFileType.extensions.contains(ext)) {
       enableEditor(project, file, editor)
       editor.putUserData(statusKey, false)
       analyze(project, file, editor, isBackground = true)
     }
+    */
   }
 
   def notifyHelper(projectOpt: Option[Project], editorOpt: Option[Editor],
