@@ -69,12 +69,13 @@ object Slang {
       val ext = Util.getFileExt(project)
       ext match {
         case "scala" | "slang" =>
-          val fileUri = new File(file.getCanonicalPath).toURI.toString
+          val filePath = Os.path(file.getCanonicalPath)
+          val r = check(editor, filePath)
           // TODO
-          //processResult(editor, check(editor, fileUri))
+          //processResult(editor, r)
           editor.putUserData(changedKey, Some(System.currentTimeMillis()))
           scheduler.scheduleAtFixedRate((() => {
-            try analyze(editor, fileUri) catch {
+            try analyze(editor, filePath) catch {
               case t: Throwable =>
                 val sw = new java.io.StringWriter()
                 t.printStackTrace(new java.io.PrintWriter(sw))
@@ -218,39 +219,36 @@ object Slang {
     Seq()
   }
 
-  def analyze(editor: Editor, fileUri: String): Unit = {
-    /* TODO
-      editor.synchronized {
-        editor.getUserData(changedKey) match {
-          case Some(lastChanged) =>
-            val d = System.currentTimeMillis() - lastChanged
-            if (d > changeThreshold) {
-              processResult(editor, check(editor, fileUri))
-              editor.putUserData(changedKey, null)
-            }
-          case _ =>
-        }
+  def analyze(editor: Editor, filePath: Os.Path): Unit = {
+    editor.synchronized {
+      editor.getUserData(changedKey) match {
+        case Some(lastChanged) =>
+          val d = System.currentTimeMillis() - lastChanged
+          if (d > changeThreshold) {
+            val r = check(editor, filePath)
+            // TODO
+            // processResult(editor, r)
+            editor.putUserData(changedKey, null)
+          }
+        case _ =>
       }
-     */
     }
+  }
 
-  /* TODO
-  def processResult(editor: Editor, tags: Seq[Tag]): Unit =
+  def processResult(editor: Editor, messages: Seq[Message]): Unit =
     ApplicationManager.getApplication.invokeLater(() => editor.synchronized {
       val mm = editor.getMarkupModel
-      val document = editor.getDocument
 
-      def addRangeHighlighter(line: PosInteger, offset: Natural, length: Natural, attr: TextAttributes): RangeHighlighter = {
-        val actualLine = document.getLineNumber(offset)
-        val end = scala.math.min(offset + length, editor.getDocument.getTextLength)
-        mm.addRangeHighlighter(offset, end, layer, attr, HighlighterTargetArea.EXACT_RANGE)
+      def addRangeHighlighter(offset: org.sireum.Z, length: org.sireum.Z, attr: TextAttributes): RangeHighlighter = {
+        val end = scala.math.min((offset + length).toInt, editor.getDocument.getTextLength)
+        mm.addRangeHighlighter(offset.toInt, end.toInt, layer, attr, HighlighterTargetArea.EXACT_RANGE)
       }
 
       var rhs = editor.getUserData(analysisDataKey)
       if (rhs != null)
         for (rh <- rhs)
           mm.removeHighlighter(rh)
-      rhs = ivectorEmpty[RangeHighlighter]
+      rhs = Vector[RangeHighlighter]()
       val cs = editor.getColorsScheme
       val errorColor = cs.getAttributes(
         TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor
@@ -267,56 +265,44 @@ object Slang {
       errorAttr.setErrorStripeColor(errorColor)
       warningAttr.setErrorStripeColor(warningColor)
       infoAttr.setErrorStripeColor(infoColor)
-      var lineMap = Map[Int, IVector[MessageTag]]()
-      for (tag <- tags) scala.util.Try((tag: @unchecked) match {
-        case tag: FileLocationInfoErrorMessage =>
-          lineMap += tag.lineBegin -> (lineMap.getOrElse(tag.lineBegin, ivectorEmpty) :+ tag)
-          val rh = addRangeHighlighter(tag.lineBegin, tag.offset, tag.length, errorAttr)
-          rh.setErrorStripeTooltip(tag.message)
-          rh.setThinErrorStripeMark(false)
-          rh.setErrorStripeMarkColor(errorColor)
-          rhs :+= rh
-        case tag: FileLocationInfoWarningMessage =>
-          lineMap += tag.lineBegin -> (lineMap.getOrElse(tag.lineBegin, ivectorEmpty) :+ tag)
-          val rh = addRangeHighlighter(tag.lineBegin, tag.offset, tag.length, warningAttr)
-          rh.setErrorStripeTooltip(tag.message)
-          rh.setThinErrorStripeMark(false)
-          rh.setErrorStripeMarkColor(warningColor)
-          rhs :+= rh
-        case tag: FileLocationInfoInfoMessage =>
-          lineMap += tag.lineBegin -> (lineMap.getOrElse(tag.lineBegin, ivectorEmpty) :+ tag)
-          val rh = addRangeHighlighter(tag.lineBegin, tag.offset, tag.length, infoAttr)
-          rh.setErrorStripeTooltip(tag.message)
-          rh.setThinErrorStripeMark(false)
-          rh.setErrorStripeMarkColor(infoColor)
-          rhs :+= rh
-        case tag: MessageTag =>
-          lineMap += 1 -> (lineMap.getOrElse(1, ivectorEmpty) :+ tag)
-        case _ =>
-      })
-      for ((line, tags) <- lineMap) {
-        val attr = {
-          var p = 0
-          for (tag <- tags) tag match {
-            case _: ErrorMessage if p <= 2 => p = 3
-            case _: WarningMessage if p <= 1 => p = 2
-            case _: InfoMessage if p <= 0 => p = 1
+      var lineMap = Map[org.sireum.Z, Vector[Message]]()
+      for (msg <- messages) msg.posOpt match {
+        case org.sireum.Some(pos) if msg.level != Level.InternalError =>
+          msg.level match {
+            case Level.Error =>
+              lineMap += pos.beginLine -> (lineMap.getOrElse(pos.beginLine, Vector()) :+ msg)
+              val rh = addRangeHighlighter(pos.offset, pos.length, errorAttr)
+              rh.setErrorStripeTooltip(msg.text.value)
+              rh.setThinErrorStripeMark(false)
+              rh.setErrorStripeMarkColor(errorColor)
+              rhs :+= rh
+            case Level.Warning =>
+              lineMap += pos.beginLine -> (lineMap.getOrElse(pos.beginLine, Vector()) :+ msg)
+              val rh = addRangeHighlighter(pos.offset, pos.length, errorAttr)
+              rh.setErrorStripeTooltip(msg.text.value)
+              rh.setThinErrorStripeMark(false)
+              rh.setErrorStripeMarkColor(warningColor)
+              rhs :+= rh
+            case Level.Info =>
+              lineMap += pos.beginLine -> (lineMap.getOrElse(pos.beginLine, Vector()) :+ msg)
+              val rh = addRangeHighlighter(pos.offset, pos.length, errorAttr)
+              rh.setErrorStripeTooltip(msg.text.value)
+              rh.setThinErrorStripeMark(false)
+              rh.setErrorStripeMarkColor(infoColor)
+              rhs :+= rh
             case _ =>
           }
-          p match {
-            case 0 => null
-            case 1 => infoAttr
-            case 2 => warningAttr
-            case 3 => errorAttr
-          }
-        }
-        val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+        case _ => lineMap = lineMap + ((org.sireum.Z(1), lineMap.getOrElse(1, Vector()) :+ msg))
+      }
+
+      for ((line, messages) <- lineMap) {
+        val rhLine = mm.addLineHighlighter((line - 1).toInt, layer, null)
         val (color, icon) = {
           var p = 0
-          for (tag <- tags) {
-            tag match {
-              case _: ErrorTag if p <= 1 => p = 2
-              case _: WarningTag if p <= 0 => p = 1
+          for (msg <- messages) {
+            msg.level match {
+              case Level.Error if p <= 1 => p = 2
+              case Level.Warning if p <= 0 => p = 1
               case _ =>
             }
           }
@@ -329,14 +315,12 @@ object Slang {
         rhLine.setThinErrorStripeMark(false)
         rhLine.setErrorStripeMarkColor(color)
         rhLine.setGutterIconRenderer(
-          LogikaCheckAction.gutterIconRenderer(tags.map(_.message).mkString(tooltipSep),
+          LogikaCheckAction.gutterIconRenderer(messages.map(_.text.value).mkString(tooltipSep),
             icon, emptyAction))
         rhs :+= rhLine
       }
       editor.putUserData(analysisDataKey, rhs)
     })
-
-   */
 
   def editorClosed(project: Project, file: VirtualFile): Unit = {}
 }
