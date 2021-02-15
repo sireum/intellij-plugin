@@ -29,7 +29,6 @@ import java.awt.{Color, Font}
 import java.awt.event.MouseEvent
 import java.util.concurrent._
 import javax.swing.{DefaultListModel, Icon, JSplitPane}
-
 import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
 import com.intellij.openapi.editor.event._
 import com.intellij.notification.{Notification, NotificationType}
@@ -51,6 +50,7 @@ import com.intellij.util.Consumer
 import com.intellij.util.ui.UIUtil
 import org.sireum.intellij.{SireumApplicationComponent, SireumToolWindowFactory, Util}
 import org.sireum.intellij.logika.LogikaConfigurable
+import org.sireum.message.Level
 
 object LogikaCheckAction {
 
@@ -401,43 +401,42 @@ object LogikaCheckAction {
     override def toString: String = messageFirstLine
   }
 
-  private final case class ReportItems(error: Array[ConsoleReportItem] = Array(),
-                                       warning: Array[ConsoleReportItem] = Array(),
-                                       info: Array[ConsoleReportItem] = Array(),
+  private final case class ReportItems(error: scala.collection.mutable.ArrayBuffer[ConsoleReportItem] = scala.collection.mutable.ArrayBuffer(),
+                                       warning: scala.collection.mutable.ArrayBuffer[ConsoleReportItem] = scala.collection.mutable.ArrayBuffer(),
+                                       info: scala.collection.mutable.ArrayBuffer[ConsoleReportItem] = scala.collection.mutable.ArrayBuffer(),
                                        var hint: Option[HintReportItem] = None,
-                                       checksat: Array[CheckSatReportItem] = Array(),
-                                       summoning: Array[SummoningReportItem] = Array())
+                                       checksat: scala.collection.mutable.ArrayBuffer[CheckSatReportItem] = scala.collection.mutable.ArrayBuffer(),
+                                       summoning: scala.collection.mutable.ArrayBuffer[SummoningReportItem] = scala.collection.mutable.ArrayBuffer())
 
   private def processLocationTags(project: Project,
                                   file: VirtualFile,
-                                  tags: Vector[org.sireum.message.Message]): scala.collection.Map[Int, ReportItems] = {
+                                  messages: Vector[org.sireum.message.Message]): scala.collection.Map[Int, ReportItems] = {
     val reportItemMap: scala.collection.mutable.Map[Int, ReportItems] = {
       import scala.jdk.CollectionConverters._
       new java.util.TreeMap[Int, ReportItems]().asScala
     }
 
-    /* TODO
-    for (tag <- tags) (tag: @unchecked) match {
-      case tag: UriTag with LocationInfoTag with MessageTag with KindTag with SeverityTag =>
-        val ris = reportItemMap.getOrElseUpdate(tag.lineBegin, ReportItems())
-        tag match {
-          case _: ErrorTag =>
-            ris.error += ConsoleReportItem(project, file, tag.lineBegin, tag.columnBegin, tag.offset, tag.length, tag.message)
-          case _: WarningTag if tag.kind == "checksat" =>
-            ris.checksat += CheckSatReportItem(tag.message)
-          case _: WarningTag =>
-            ris.warning += ConsoleReportItem(project, file, tag.lineBegin, tag.columnBegin, tag.offset, tag.length, tag.message)
-          case _: InfoTag if tag.kind == "hint" =>
-            ris.hint = Some(HintReportItem(tag.message))
-          case _: InfoTag if tag.kind == "summoning" =>
-            val firstLine = tag.message.substring(tag.message.indexOf(';') + 1,
-              tag.message.indexOf('\n')).trim
-            ris.summoning += SummoningReportItem(project, file, firstLine, tag.offset, tag.message)
-          case _: InfoTag =>
-            ris.info += ConsoleReportItem(project, file, tag.lineBegin, tag.columnBegin, tag.offset, tag.length, tag.message)
+    for (msg <- messages) msg.posOpt match {
+      case org.sireum.Some(pos) =>
+        val ris = reportItemMap.getOrElseUpdate(pos.beginLine.toInt, ReportItems())
+        msg.level match {
+          case Level.Error =>
+            ris.error += ConsoleReportItem(project, file, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)
+          case Level.Warning if msg.kind === "checksat" => // TODO
+            ris.checksat += CheckSatReportItem(msg.text.value)
+          case Level.Warning =>
+            ris.warning += ConsoleReportItem(project, file, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)
+          case Level.Info if msg.kind === "hint" => // TODO
+            ris.hint = Some(HintReportItem(msg.text.value))
+          case Level.Info if msg.kind === "summoning" => // TODO
+            val firstLine = msg.text.value.substring(msg.text.value.indexOf(';') + 1,
+              msg.text.value.indexOf('\n')).trim
+            ris.summoning += SummoningReportItem(project, file, firstLine, pos.offset.toInt, msg.text.value)
+          case Level.Info =>
+            ris.info += ConsoleReportItem(project, file, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)
         }
+      case _ =>
     }
-    */
     reportItemMap
   }
 
