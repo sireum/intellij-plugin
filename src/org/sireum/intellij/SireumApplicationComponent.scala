@@ -154,10 +154,8 @@ object SireumApplicationComponent {
         import org.sireum._
         val javaPath = d / "bin" / platform / "java" / "bin" / (if (Os.isWin) "java.exe" else "java")
         val sireumJarPath = d / "bin" / "sireum.jar"
-        scala.None
-        /* TODO
-        Some(new Exec().process((javaPath +: vmArgs) ++
-          Seq("-Dfile.encoding=UTF-8", "-jar", sireumJarPath) ++
+        scala.Some(new Exec().process((javaPath.string.value +: vmArgs) ++
+          Seq("-Dfile.encoding=UTF-8", "-jar", sireumJarPath.string.value) ++
           args, { os =>
           try {
             val w = new OutputStreamWriter(os)
@@ -185,8 +183,7 @@ object SireumApplicationComponent {
           } catch {
             case _: IOException =>
           } finally is.close()
-        }, ("SIREUM_HOME", d.getAbsolutePath)))
-         */
+        }, ("SIREUM_HOME", d.string.value)))
       case _ => None
     }
 
