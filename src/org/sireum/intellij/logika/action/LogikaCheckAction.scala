@@ -71,7 +71,7 @@ object LogikaCheckAction {
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/logika/icon/logika-gutter-summoning.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/logika/icon/logika-verified-info.png")
   val queue = new LinkedBlockingQueue[String]()
-  val editorMap: scala.collection.mutable.Map[String, (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
+  val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
   val logikaKey = new Key[EditorEnabled.type]("Logika")
   val analysisDataKey = new Key[Seq[RangeHighlighter]]("Logika Analysis Data")
   val statusKey = new Key[Boolean]("Logika Analysis Status")
@@ -84,7 +84,7 @@ object LogikaCheckAction {
   val tooltipDefaultBgColor: Color = new Color(0xff, 0xff, 0xcc)
   val tooltipDarculaBgColor: Color = new Color(0x5c, 0x5c, 0x42)
 
-  final case class Request(time: Long, requestId: String,
+  final case class Request(time: Long, requestId: org.sireum.ISZ[org.sireum.String],
                            project: Project, file: VirtualFile, editor: Editor,
                            input: String, msgGen: () => String)
 
@@ -195,7 +195,7 @@ object LogikaCheckAction {
     val proofs = Vector() // TODO
     val (t, requestId) = {
       val t = System.currentTimeMillis
-      val id = t.toString
+      val id = org.sireum.ISZ(org.sireum.String(t.toString))
       (t, id)
     }
 
@@ -410,7 +410,7 @@ object LogikaCheckAction {
 
   private def processLocationTags(project: Project,
                                   file: VirtualFile,
-                                  messages: Vector[org.sireum.message.Message]): scala.collection.Map[Int, ReportItems] = {
+                                  messages: Seq[org.sireum.message.Message]): scala.collection.Map[Int, ReportItems] = {
     val reportItemMap: scala.collection.mutable.Map[Int, ReportItems] = {
       import scala.jdk.CollectionConverters._
       new java.util.TreeMap[Int, ReportItems]().asScala
@@ -521,24 +521,23 @@ object LogikaCheckAction {
     else text
   }
 
-  /* TODO
-  def processResult(r: Result): Unit =
+  def processResult(isBackground: Boolean, id: org.sireum.ISZ[org.sireum.String], messages: Seq[org.sireum.message.Message]): Unit =
     ApplicationManager.getApplication.invokeLater(() => analysisDataKey.synchronized {
-      val tags = r.tags
-      if (r.requestId == "") {
+      import org.sireum._
+      if (id.isEmpty) {
         editorMap.synchronized {
           editorMap.clear()
         }
-        notifyHelper(None, None, isBackground = false, tags)
+        notifyHelper(scala.None, scala.None, isBackground = false, messages)
         return
       }
       val (project, file, editor, input) = editorMap.synchronized {
-        editorMap.get(r.requestId) match {
-          case Some(pe) =>
-            editorMap -= r.requestId
+        editorMap.get(id) match {
+          case scala.Some(pe) =>
+            editorMap -= id
             pe
           case _ =>
-            notifyHelper(None, None, isBackground = false, tags)
+            notifyHelper(scala.None, scala.None, isBackground = false, messages)
             return
         }
       }
@@ -556,42 +555,26 @@ object LogikaCheckAction {
           for (rh <- rhs)
             mm.removeHighlighter(rh)
         editor.putUserData(analysisDataKey, null)
-        val (lTags, nlTags) = tags.partition(
-          _.isInstanceOf[UriTag with LocationInfoTag with MessageTag with KindTag with SeverityTag])
-        notifyHelper(Some(project), Some(editor), r.isBackground, nlTags)
+        val (lTags, nlTags) = messages.partition(_.posOpt.nonEmpty) // TODO
+        notifyHelper(scala.Some(project), scala.Some(editor), isBackground, nlTags)
         if (lTags.isEmpty || input != editor.getDocument.getText) return
-        rhs = ivectorEmpty[RangeHighlighter]
+        rhs = Vector[RangeHighlighter]()
         val cs = editor.getColorsScheme
         val errorColor = cs.getAttributes(
           TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor
-        val (errorIcon, errorAttr) =
-          if (LogikaConfigurable.underwave) {
-            (gutterErrorIcon, new TextAttributes(null, null, errorColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
-          } else {
-            (gutterErrorIcon, new TextAttributes(null, errorColor, null, null, Font.PLAIN))
-          }
+        val (errorIcon, errorAttr) = (gutterErrorIcon, new TextAttributes(null, null, errorColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
         errorAttr.setErrorStripeColor(errorColor)
         val warningColor = cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor
-        val (warningIcon, warningAttr) =
-          if (LogikaConfigurable.underwave) {
-            (gutterWarningIcon, new TextAttributes(null, null, warningColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
-          } else {
-            (gutterWarningIcon, new TextAttributes(null, warningColor, null, null, Font.PLAIN))
-          }
+        val (warningIcon, warningAttr) = (gutterWarningIcon, new TextAttributes(null, null, warningColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
         warningAttr.setErrorStripeColor(warningColor)
         val infoColor = cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor
-        val (infoIcon, infoAttr) =
-          if (LogikaConfigurable.underwave) {
-            (gutterInfoIcon, new TextAttributes(null, null, infoColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
-          } else {
-            (gutterInfoIcon, new TextAttributes(null, infoColor, null, null, Font.PLAIN))
-          }
+        val (infoIcon, infoAttr) = (gutterInfoIcon, new TextAttributes(null, null, infoColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
         val layer = 1000000
         val tooltipSep = "<hr>"
         val listModel = new DefaultListModel[Object]()
 
         def consoleReportItems(cis: Iterable[ConsoleReportItem],
-                               line: PosInteger, icon: Icon, attr: TextAttributes, color: Color): Unit = {
+                               line: Int, icon: Icon, attr: TextAttributes, color: Color): Unit = {
           scala.util.Try {
             val rhLine = mm.addLineHighlighter(line - 1, layer, null)
             rhLine.setThinErrorStripeMark(false)
@@ -632,7 +615,7 @@ object LogikaCheckAction {
             rhs :+= rhLine
           }
           ris.hint match {
-            case Some(hint) =>
+            case scala.Some(hint) =>
               scala.util.Try {
                 val rhLine = mm.addLineHighlighter(line - 1, layer, null)
                 rhLine.setThinErrorStripeMark(false)
@@ -721,7 +704,7 @@ object LogikaCheckAction {
         })
         editor.putUserData(analysisDataKey, rhs)
       }
-    }) */
+    })
 }
 
 import LogikaCheckAction._
