@@ -55,7 +55,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
   }
 
   override def createComponent(): JComponent = {
-    def updateSireumHome(path: String): Unit = {
+    def updateSireumHome(path: org.sireum.Os.Path): Unit = {
       validSireumHome = checkSireumDir(path,
         parseVmArgs(vmArgsTextField.getText).getOrElse(Vector()),
         parseEnvVars(envVarsTextArea.getText).getOrElse(scala.collection.mutable.LinkedHashMap())).nonEmpty
@@ -86,7 +86,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
 
       override def removeUpdate(e: DocumentEvent): Unit = update()
 
-      def update(): Unit = updateSireumHome(sireumHomeTextField.getText)
+      def update(): Unit = updateSireumHome(org.sireum.Os.path(sireumHomeTextField.getText))
     })
 
     vmArgsTextField.getDocument.addDocumentListener(new DocumentListener {
@@ -102,12 +102,12 @@ final class SireumConfigurable extends SireumForm with Configurable {
     sireumHomeButton.addActionListener(e => browseSireumHome(null) match {
       case Some(p) =>
         updateSireumHome(p)
-        if (validSireumHome) sireumHomeTextField.setText(p)
-        else updateSireumHome(sireumHomeTextField.getText)
+        if (validSireumHome) sireumHomeTextField.setText(p.string.value)
+        else updateSireumHome(org.sireum.Os.path(sireumHomeTextField.getText))
       case _ =>
     })
 
-    updateSireumHome(sireumHomeString)
+    updateSireumHome(org.sireum.Os.path(sireumHomeString))
 
     envVarsTextArea.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = update()
@@ -132,7 +132,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
   override def apply(): Unit = {
     envVars = parseEnvVars(envVarsTextArea.getText).getOrElse(scala.collection.mutable.LinkedHashMap())
     vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
-    val path = sireumHomeTextField.getText
+    val path = org.sireum.Os.path(sireumHomeTextField.getText)
     sireumHomeOpt = checkSireumDir(path, vmArgs, envVars)
     if (sireumHomeOpt.nonEmpty) saveConfiguration()
     else {

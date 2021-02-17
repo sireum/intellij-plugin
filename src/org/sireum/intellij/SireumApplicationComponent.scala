@@ -27,7 +27,6 @@ package org.sireum.intellij
 
 import java.io._
 import java.util.concurrent.BlockingQueue
-
 import com.intellij.ide.plugins.PluginManager
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.notification.{Notification, NotificationType}
@@ -37,6 +36,7 @@ import com.intellij.openapi.fileChooser._
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.SystemInfo
+import com.intellij.openapi.vfs.VirtualFile
 import org.sireum.intellij.logika.LogikaConfigurable
 
 object SireumApplicationComponent {
@@ -45,40 +45,47 @@ object SireumApplicationComponent {
   private val sireumVarArgsKey = sireumKey + "vmargs"
   private val sireumEnvVarsKey = sireumKey + "envvars"
   private val sireumPluginVersionKey = sireumKey + "plugin.version"
-  private val isDev: Boolean = "true" == System.getProperty("org.sireum.ive.dev")
+  private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
 
   private lazy val currentPluginVersion =
     PluginManager.getPlugin(
       PluginId.getId("org.sireum.intellij")).getVersion
-  private[intellij] var sireumHomeOpt: Option[File] = None
+  private[intellij] var sireumHomeOpt: Option[org.sireum.Os.Path] = None
   private[intellij] var vmArgs: Seq[String] = Vector("-Xss2m")
   private[intellij] var envVars = scala.collection.mutable.LinkedHashMap[String, String]()
   private[intellij] var pluginVersion: String = ""
+  private[intellij] val platform: String =
+    if (scala.util.Properties.isMac) "mac"
+    else if (scala.util.Properties.isLinux) "linux"
+    else if (scala.util.Properties.isWin) "win"
+    else "unsupported"
 
   private var terminated: Boolean = false
 
-  final def getSireumHome(project: Project = null): Option[File] = {
+  final def getSireumHome(project: Project = null): Option[org.sireum.Os.Path] = {
+    import org.sireum._
     if (sireumHomeOpt.isEmpty) {
       val env = System.getenv("SIREUM_HOME")
-      sireumHomeOpt = checkSireumDir(env)
-      if (sireumHomeOpt.isEmpty && SystemInfo.isWindows)
-        sireumHomeOpt = checkSireumDir("C:\\Sireum" + dev)
-      if (sireumHomeOpt.isEmpty && SystemInfo.isMac) {
-        val appResources = s"/Applications/Sireum$dev.app/Contents/Resources/sireum-v3"
-        sireumHomeOpt = checkSireumDir(appResources)
+      sireumHomeOpt = checkSireumDir(Os.path(env))
+      if (sireumHomeOpt.isEmpty && SystemInfo.isWindows) {
+        sireumHomeOpt = checkSireumDir(Os.path("C:\\Sireum" + dev))
         if (sireumHomeOpt.isEmpty)
-          sireumHomeOpt = checkSireumDir(System.getProperty("user.home") + appResources)
-      }
-      if (sireumHomeOpt.isEmpty && SystemInfo.isLinux)
-        sireumHomeOpt = checkSireumDir(System.getProperty("user.home") + "/Applications/Sireum" + dev)
-      if (sireumHomeOpt.isEmpty) {
+          sireumHomeOpt = checkSireumDir(Os.path(System.getProperty("user.home") + s"\\Applications\\Sireum$dev"))
+      } else if (sireumHomeOpt.isEmpty && SystemInfo.isMac) {
+        val appResources = s"/Applications/Sireum$dev.app/Contents/Resources/sireum"
+        sireumHomeOpt = checkSireumDir(Os.path(appResources))
+        if (sireumHomeOpt.isEmpty)
+          sireumHomeOpt = checkSireumDir(Os.path(System.getProperty("user.home") + appResources))
+      } else if (sireumHomeOpt.isEmpty && SystemInfo.isLinux)
+        sireumHomeOpt = checkSireumDir(Os.path(System.getProperty("user.home") + "/Applications/Sireum" + dev))
+      else if (sireumHomeOpt.isEmpty) {
         browseSireumHome(project).foreach(p =>
           sireumHomeOpt = checkSireumDir(p))
       }
     }
     sireumHomeOpt match {
-      case Some(homeDir) =>
+      case scala.Some(homeDir) =>
         checkSireumInSync(homeDir)
         saveConfiguration()
       case _ =>
@@ -86,11 +93,10 @@ object SireumApplicationComponent {
     sireumHomeOpt
   }
 
-  private def isSource(homeDir: File): Boolean =
-    currentPluginVersion.contains("-SNAPSHOT") ||
-      new File(homeDir, "bin/detect-build.sh").exists
+  private def isSource(homeDir: org.sireum.Os.Path): Boolean =
+    currentPluginVersion.contains("-SNAPSHOT") || (homeDir / "bin" / "build.cmd").exists
 
-  private def checkSireumInSync(homeDir: File): Unit = {
+  private def checkSireumInSync(homeDir: org.sireum.Os.Path): Unit = {
     if (currentPluginVersion.contains("-SNAPSHOT")) {
       pluginVersion = ""
       return
@@ -100,27 +106,27 @@ object SireumApplicationComponent {
       Messages.showInfoMessage(
         s"""The Sireum IntelliJ plugin has been updated.
            |Please update Sireum through the command-line:
-           |(1) do a git pull, and
-           |(2) run Sireum again.""".stripMargin,
+           |(1) do a "git pull --recurse-submodules", and
+           |(2) build Sireum again.""".stripMargin,
         "Sireum May Need Updating")
     }
     pluginVersion = currentPluginVersion
   }
 
-  def sireumHomeString: String = sireumHomeOpt.map(_.getAbsolutePath).getOrElse("")
+  def sireumHomeString: String = sireumHomeOpt.map(_.string.value).getOrElse("")
 
   def envVarsString: String = envVars.map(p => s"${p._1}=${p._2}").
     mkString(scala.util.Properties.lineSeparator)
 
   def vmArgsString: String = vmArgs.mkString(" ")
 
-  def browseSireumHome(project: Project = null): Option[String] = {
-    var pathOpt: Option[String] = None
+  def browseSireumHome(project: Project = null): Option[org.sireum.Os.Path] = {
+    var pathOpt: Option[org.sireum.Os.Path] = None
     val desc = FileChooserDescriptorFactory.createSingleFolderDescriptor()
-    desc.setTitle("Select Sireum v3 directory")
+    desc.setTitle("Select Sireum directory")
     FileChooser.chooseFile(
       desc,
-      project, null, t => pathOpt = Some(t.getCanonicalPath))
+      project, null, (t: VirtualFile) => pathOpt = Some(org.sireum.Os.path(t.getCanonicalPath)))
     pathOpt.foreach(path =>
       if (checkSireumDir(path).isEmpty)
         Messages.showMessageDialog(project, sireumInvalid(path),
@@ -129,13 +135,13 @@ object SireumApplicationComponent {
     pathOpt
   }
 
-  def sireumInvalid(path: String): String =
+  def sireumInvalid(path: org.sireum.Os.Path): String =
     s"""Could not confirm a working Sireum installation in $path (with the specified VM arguments and environment variables in the settings).
        |Make sure to run Sireum at least once from the command-line.""".stripMargin
 
   def runSireum(project: Project, input: Option[String], args: String*): Option[String] =
     getSireumHome(project) match {
-      case Some(d) => runSireum(d.getAbsolutePath, vmArgs, envVars, input, args)
+      case Some(d) => runSireum(d, vmArgs, envVars, input, args)
       case _ => None
     }
 
@@ -145,9 +151,10 @@ object SireumApplicationComponent {
                        args: String*): Option[scala.sys.process.Process] =
     getSireumHome(project) match {
       case Some(d) =>
-        val javaPath = new File(d, "platform/java/bin/java").getAbsolutePath
-        val sireumJarPath = new File(d, "bin/sireum.jar").getAbsolutePath
-        None
+        import org.sireum._
+        val javaPath = d / "bin" / platform / "java" / "bin" / (if (Os.isWin) "java.exe" else "java")
+        val sireumJarPath = d / "bin" / "sireum.jar"
+        scala.None
         /* TODO
         Some(new Exec().process((javaPath +: vmArgs) ++
           Seq("-Dfile.encoding=UTF-8", "-jar", sireumJarPath) ++
@@ -183,38 +190,32 @@ object SireumApplicationComponent {
       case _ => None
     }
 
-  private def runSireum(path: String,
+  private def runSireum(d: org.sireum.Os.Path,
                         vmArgs: Seq[String],
                         envVars: scala.collection.mutable.LinkedHashMap[String, String],
                         input: Option[String],
                         args: Seq[String]): Option[String] = {
-    val d = new File(path)
-    val javaPath = new File(d, "platform/java/bin/java").getAbsolutePath
-    val sireumJarPath = new File(d, "bin/sireum.jar").getAbsolutePath
-    if (path.trim == "") None
-    else None
-      /* TODO
-      new Exec().run(0,
-      (javaPath +: vmArgs) ++ Seq("-Dfile.encoding=UTF-8", "-jar",
-        sireumJarPath) ++ args,
-      input, envVars.toSeq :+ ("SIREUM_HOME", path): _*) match {
-      case Exec.StringResult(s, _) => Some(s)
-      case _ => None
+    import org.sireum._
+    val javaPath = d / "bin" / platform / "java" / "bin" / (if (Os.isWin) "java.exe" else "java")
+    val sireumJarPath = d / "bin" / "sireum.jar"
+    if (d.string.value.trim == "") scala.None
+    else {
+      val r = Os.proc(ISZ(((javaPath.string.value +: vmArgs) ++ Seq("-Dfile.encoding=UTF-8", "-jar",
+        sireumJarPath.string.value) ++ args).map(String(_)): _*)).run()
+      if (r.ok) scala.Some(r.out.value) else scala.None
     }
-
-       */
   }
 
   private[intellij] final def
-  checkSireumDir(path: String,
+  checkSireumDir(path: org.sireum.Os.Path,
                  vmArgs: Seq[String] = this.vmArgs,
-                 envVars: scala.collection.mutable.LinkedHashMap[String, String] = this.envVars): Option[File] = {
+                 envVars: scala.collection.mutable.LinkedHashMap[String, String] = this.envVars): Option[org.sireum.Os.Path] = {
     if (path == null) return None
     runSireum(path, vmArgs, envVars, None, Seq()) match {
       case Some(s) =>
         if (s.linesIterator.exists(
           _.trim == "Sireum: A Software Analysis Platform (v3)")) {
-          Some(new File(path))
+          Some(path)
         } else None
       case _ => None
     }
@@ -245,13 +246,13 @@ object SireumApplicationComponent {
     val pc = PropertiesComponent.getInstance
     envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
     vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
-    sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(p, vmArgs, envVars))
+    sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
     pluginVersion = Option(pc.getValue(sireumPluginVersionKey)).getOrElse("")
   }
 
   def saveConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
-    pc.setValue(sireumHomeKey, sireumHomeOpt.map(_.getAbsolutePath).orNull)
+    pc.setValue(sireumHomeKey, sireumHomeOpt.map(_.string.value).orNull)
     pc.setValue(sireumEnvVarsKey, envVarsString)
     pc.setValue(sireumVarArgsKey, vmArgs.mkString(" "))
     pc.setValue(sireumPluginVersionKey, pluginVersion)
