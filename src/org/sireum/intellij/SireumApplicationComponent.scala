@@ -44,7 +44,6 @@ object SireumApplicationComponent {
   private val sireumHomeKey = sireumKey.dropRight(1)
   private val sireumVarArgsKey = sireumKey + "vmargs"
   private val sireumEnvVarsKey = sireumKey + "envvars"
-  private val sireumPluginVersionKey = sireumKey + "plugin.version"
   private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
 
@@ -54,7 +53,6 @@ object SireumApplicationComponent {
   private[intellij] var sireumHomeOpt: Option[org.sireum.Os.Path] = None
   private[intellij] var vmArgs: Seq[String] = Vector("-Xss2m")
   private[intellij] var envVars = scala.collection.mutable.LinkedHashMap[String, String]()
-  private[intellij] var pluginVersion: String = ""
   private[intellij] val platform: String =
     if (scala.util.Properties.isMac) "mac"
     else if (scala.util.Properties.isLinux) "linux"
@@ -85,32 +83,10 @@ object SireumApplicationComponent {
       }
     }
     sireumHomeOpt match {
-      case scala.Some(homeDir) =>
-        checkSireumInSync(homeDir)
-        saveConfiguration()
+      case scala.Some(homeDir) => saveConfiguration()
       case _ =>
     }
     sireumHomeOpt
-  }
-
-  private def isSource(homeDir: org.sireum.Os.Path): Boolean =
-    currentPluginVersion.contains("-SNAPSHOT") || (homeDir / "bin" / "build.cmd").exists
-
-  private def checkSireumInSync(homeDir: org.sireum.Os.Path): Unit = {
-    if (currentPluginVersion.contains("-SNAPSHOT")) {
-      pluginVersion = ""
-      return
-    }
-    if ("" == pluginVersion) pluginVersion = currentPluginVersion
-    if (currentPluginVersion != pluginVersion && isSource(homeDir)) {
-      Messages.showInfoMessage(
-        s"""The Sireum IntelliJ plugin has been updated.
-           |Please update Sireum through the command-line:
-           |(1) do a "git pull --recurse-submodules", and
-           |(2) build Sireum again.""".stripMargin,
-        "Sireum May Need Updating")
-    }
-    pluginVersion = currentPluginVersion
   }
 
   def sireumHomeString: String = sireumHomeOpt.map(_.string.value).getOrElse("")
@@ -152,7 +128,8 @@ object SireumApplicationComponent {
     getSireumHome(project) match {
       case Some(d) =>
         import org.sireum._
-        val javaPath = d / "bin" / platform / "java" / "bin" / (if (Os.isWin) "java.exe" else "java")
+        val javaHome = d / "bin" / platform / "java"
+        val javaPath = javaHome / "bin" / (if (Os.isWin) "java.exe" else "java")
         val sireumJarPath = d / "bin" / "sireum.jar"
         scala.Some(new Exec().process((javaPath.string.value +: vmArgs) ++
           Seq("-Dfile.encoding=UTF-8", "-jar", sireumJarPath.string.value) ++
@@ -193,12 +170,20 @@ object SireumApplicationComponent {
                         input: Option[String],
                         args: Seq[String]): Option[String] = {
     import org.sireum._
-    val javaPath = d / "bin" / platform / "java" / "bin" / (if (Os.isWin) "java.exe" else "java")
+    val javaHome = d / "bin" / platform / "java"
+    val javaPath = javaHome / "bin" / (if (Os.isWin) "java.exe" else "java")
     val sireumJarPath = d / "bin" / "sireum.jar"
     if (d.string.value.trim == "") scala.None
     else {
-      val r = Os.proc(ISZ(((javaPath.string.value +: vmArgs) ++ Seq("-Dfile.encoding=UTF-8", "-jar",
-        sireumJarPath.string.value) ++ args).map(String(_)): _*)).run()
+      var proc = Os.proc(ISZ(((javaPath.string.value +: vmArgs) ++ Seq("-Dfile.encoding=UTF-8", "-jar",
+        sireumJarPath.string.value) ++ args).map(String(_)): _*))
+      proc = proc.env(ISZ(envVars.toSeq.map(p => (org.sireum.String(p._1), org.sireum.String(p._2))): _*) :+
+        string"SIREUM_HOME" -> d.string)
+      input match {
+        case scala.Some(in) => proc = proc.input(in)
+        case _ =>
+      }
+      val r = proc.run()
       if (r.ok) scala.Some(r.out.value) else scala.None
     }
   }
@@ -211,7 +196,7 @@ object SireumApplicationComponent {
     runSireum(path, vmArgs, envVars, None, Seq()) match {
       case Some(s) =>
         if (s.linesIterator.exists(
-          _.trim == "Sireum: A Software Analysis Platform (v3)")) {
+          _.trim == "Sireum: A High-Assurance System Engineering Platform")) {
           Some(path)
         } else None
       case _ => None
@@ -244,7 +229,6 @@ object SireumApplicationComponent {
     envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
     vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
     sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
-    pluginVersion = Option(pc.getValue(sireumPluginVersionKey)).getOrElse("")
   }
 
   def saveConfiguration(): Unit = {
@@ -252,7 +236,6 @@ object SireumApplicationComponent {
     pc.setValue(sireumHomeKey, sireumHomeOpt.map(_.string.value).orNull)
     pc.setValue(sireumEnvVarsKey, envVarsString)
     pc.setValue(sireumVarArgsKey, vmArgs.mkString(" "))
-    pc.setValue(sireumPluginVersionKey, pluginVersion)
   }
 }
 
@@ -264,62 +247,6 @@ class SireumApplicationComponent extends ApplicationComponent {
   override def initComponent(): Unit = {
     SireumApplicationComponent.loadConfiguration()
     LogikaConfigurable.loadConfiguration()
-
-    val suffix = "options/notifications.xml"
-    Option(System.getProperty("org.sireum.ive")) match {
-      case Some(name) =>
-        val homeDir = new File(System.getProperty("user.home"))
-        val notificationFileOpt =
-          if (SystemInfo.isMac) {
-            val f = new File(homeDir, s"Library/Preferences/$name/$suffix")
-            if (f.exists) None else Some(f)
-          } else if (SystemInfo.isLinux || SystemInfo.isWindows) {
-            val f = new File(homeDir, s".$name/config/$suffix")
-            if (f.exists) None else Some(f)
-          } else None
-        for (f <- notificationFileOpt) try {
-          val fw = new java.io.FileWriter(f)
-          fw.write(
-            """<application>
-              |  <component name="NotificationConfiguration">
-              |    <notification groupId="Platform and Plugin Updates" displayType="STICKY_BALLOON" shouldLog="false" />
-              |  </component>
-              |</application>
-              |""".stripMargin)
-          fw.close()
-        } catch {
-          case _: Throwable =>
-        }
-      case _ =>
-    }
-
-    SireumApplicationComponent.sireumHomeOpt match {
-      case Some(homeDir) =>
-        if (!isSource(homeDir)) {
-          val reinstall = try {
-            /* TODO
-            import org.sireum.util.jvm._
-            val localVer = FileUtil.readFile(FileUtil.toUri(new File(homeDir, "bin/VER")))._1.trim
-            val onlineVer = scala.io.Source.fromURL(s"http://files.sireum.org/sireum-v3$dev-VER").mkString.trim
-            localVer != onlineVer
-             */
-            false
-          } catch {
-            case _: Throwable => false
-          }
-          if (reinstall)
-            new Thread() {
-              override def run(): Unit = {
-                Thread.sleep(5000)
-                Util.notify(new Notification("Sireum Logika", "Sireum Update",
-                  s"A newer Sireum$dev version is available; please re-download/install.",
-                  NotificationType.INFORMATION),
-                  null, shouldExpire = false)
-              }
-            }.start()
-        }
-      case _ =>
-    }
   }
 
   override def disposeComponent(): Unit = {
