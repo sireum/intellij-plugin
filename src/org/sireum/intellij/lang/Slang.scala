@@ -26,10 +26,8 @@
 package org.sireum.intellij.lang
 
 import java.awt.Font
-import java.io.File
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 import javax.swing.Icon
-
 import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.application.ApplicationManager
@@ -43,10 +41,13 @@ import com.intellij.openapi.util.{Condition, Key}
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.ui.UIUtil
-import org.sireum.{ISZ, Some => SSome, Os}
+import org.sireum.{Os, Some => SSome}
 import org.sireum.intellij.Util
 import org.sireum.intellij.logika.action.LogikaCheckAction
 import org.sireum.intellij.logika.action.LogikaCheckAction._
+import org.sireum.lang.ast.TopUnit
+import org.sireum.lang.logika.TruthTableVerifier
+import org.sireum.lang.parser.SlangParser
 import org.sireum.message._
 
 object Slang {
@@ -66,9 +67,8 @@ object Slang {
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit =
     ApplicationManager.getApplication.invokeLater(() => {
-      val ext = Util.getFileExt(project)
-      ext match {
-        case "scala" | "slang" =>
+      Util.isSireumOrLogikaFile(project) match {
+        case (true, true) =>
           val filePath = Os.path(file.getCanonicalPath)
           val r = check(editor, filePath)
           // TODO
@@ -156,16 +156,17 @@ object Slang {
 
     })
 
-  def check(editor: Editor, fileUri: Os.Path): Seq[Message] = {
+  def check(editor: Editor, filePath: Os.Path): Seq[Message] = {
     val text = editor.getDocument.getText
     val reporter = Reporter.create
     val (noPrev, prevStatus) = Option(editor.getUserData(statusKey)) match {
       case Some(b) => (false, b)
       case _ => (true, false)
     }
-    /* TODO
+
     val r = SlangParser(allowSireumPackage = "true" == System.getProperty("org.sireum.ive.dev"),
-      isWorksheet = false, isDiet = false, fileUriOpt = SSome(fileUri), txt = text, reporter = reporter)
+      isWorksheet = false, isDiet = false, fileUriOpt = SSome(new java.io.File(filePath.string.value).toURI.toASCIIString),
+      txt = text, reporter = reporter)
     var status = !reporter.hasIssue.value
     r.unitOpt match {
       case SSome(tt: TopUnit.TruthTableUnit) =>
@@ -190,33 +191,7 @@ object Slang {
         NotificationType.ERROR), editor.getProject, shouldExpire = true)
     }
     editor.putUserData(statusKey, status)
-
-    val fileUriOpt = Some(fileUri)
-    var tags = Vector[Tag]()
-    for (m <- reporter.messages) {
-      m.posOpt match {
-        case SSome(pos) =>
-          val li = LocationInfo(pos.beginLine.toMP.toInt, pos.beginColumn.toMP.toInt, pos.endLine.toMP.toInt,
-            pos.endColumn.toMP.toInt, pos.offset.toMP.toInt, pos.length.toMP.toInt)
-          m.level match {
-            case Level.Error => tags :+= li.toLocationError(fileUriOpt, m.kind.value, m.text.value)
-            case Level.Warning => tags :+= li.toLocationWarning(fileUriOpt, m.kind.value, m.text.value)
-            case Level.Info => tags :+= li.toLocationInfo(fileUriOpt, m.kind.value, m.text.value)
-            case _ =>
-          }
-        case _ =>
-          m.level match {
-            case Level.Error => tags :+= ErrorMessage(m.kind.value, m.text.value)
-            case Level.Warning => tags :+= WarningMessage(m.kind.value, m.text.value)
-            case Level.Info => tags :+= InfoMessage(m.kind.value, m.text.value)
-            case _ =>
-          }
-      }
-    }
-    tags
-
-     */
-    Seq()
+    reporter.messages.elements
   }
 
   def analyze(editor: Editor, filePath: Os.Path): Unit = {

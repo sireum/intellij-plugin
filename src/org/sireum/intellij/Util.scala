@@ -31,25 +31,40 @@ import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.project.Project
 
 object Util {
-  def getFilePath(project: Project): Option[String] = {
+  def getFilePath(project: Project): Option[org.sireum.Os.Path] = {
     val editor = FileEditorManager.
       getInstance(project).getSelectedTextEditor
     if (editor == null) return None
     val fdm = FileDocumentManager.getInstance
     val file = fdm.getFile(editor.getDocument)
     if (file == null) return None
-    Some(file.getCanonicalPath)
+    Some(org.sireum.Os.path(file.getCanonicalPath))
   }
 
   def getFileExt(project: Project): String = {
     getFilePath(project) match {
-      case Some(path) =>
-        val i = path.lastIndexOf('.')
-        if (i >= 0)
-          path.substring(path.lastIndexOf('.') + 1)
-        else ""
+      case Some(path) => path.ext.value
       case _ => ""
     }
+  }
+
+  def isSireumOrLogikaFile(project: Project): (Boolean, Boolean) =
+    getFilePath(project) match {
+      case Some(p) => isSireumOrLogikaFile(p)
+      case _ => (false, false)
+    }
+
+  def isSireumOrLogikaFile(path: org.sireum.Os.Path): (Boolean, Boolean) = {
+    if (!path.exists) return (false, false)
+    if (path.string.value.endsWith(".slang")) {
+      return (true, true)
+    } else if (path.string.value.endsWith(".scala")) {
+      for (line <- path.readLineStream.take(1)) {
+        val cline = line.value.replace(" ", "").replace("\t", "")
+        return (cline.contains("#Sireum"), cline.contains("#Logika"))
+      }
+    }
+    return (false, false)
   }
 
   def notify(n: Notification, project: Project, shouldExpire: Boolean): Unit =
