@@ -34,7 +34,6 @@ trait LogikaAction extends AnAction
 trait LogikaOnlyAction extends LogikaAction {
   override def update(e: AnActionEvent): Unit = {
     val project = e.getProject
-    // TODO: Check #Sireum #Logika
-    e.getPresentation.setEnabledAndVisible(project != null && "scala" == Util.getFileExt(project))
+    e.getPresentation.setEnabledAndVisible(project != null && Util.isSireumOrLogikaFile(project) == (true, true))
   }
 }
