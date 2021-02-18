@@ -201,8 +201,7 @@ object Slang {
           val d = System.currentTimeMillis() - lastChanged
           if (d > changeThreshold) {
             val r = check(editor, filePath)
-            // TODO
-            // processResult(editor, r)
+            processResult(editor, r)
             editor.putUserData(changedKey, null)
           }
         case _ =>
