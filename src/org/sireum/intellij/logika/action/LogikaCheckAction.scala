@@ -184,8 +184,7 @@ object LogikaCheckAction {
     }
   }
 
-  def isEnabled(editor: Editor): Boolean =
-    EditorEnabled == editor.getUserData(logikaKey)
+  def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(logikaKey)
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
@@ -546,21 +545,6 @@ object LogikaCheckAction {
         }
         if (input != editor.getDocument.getText) return
         val cs = editor.getColorsScheme
-        lazy val errorColor = cs.getAttributes(
-          TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor
-        lazy val (errorIcon, errorAttr) = {
-          val ta = new TextAttributes(null, null, errorColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
-          ta.setErrorStripeColor(errorColor)
-          (gutterErrorIcon, ta)
-        }
-        lazy val warningColor = cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor
-        lazy val (warningIcon, warningAttr) = {
-          val ta = new TextAttributes(null, null, warningColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
-          ta.setErrorStripeColor(warningColor)
-          (gutterWarningIcon, ta)
-        }
-        lazy val infoColor = cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor
-        lazy val (infoIcon, infoAttr) = (gutterInfoIcon, new TextAttributes(null, null, infoColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
         val layer = 1000000
         val tooltipSep = "<hr>"
 

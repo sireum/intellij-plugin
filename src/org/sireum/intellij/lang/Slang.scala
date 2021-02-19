@@ -71,8 +71,7 @@ object Slang {
         case (true, true) =>
           val filePath = Os.path(file.getCanonicalPath)
           val r = check(editor, filePath)
-          // TODO
-          //processResult(editor, r)
+          processResult(editor, r)
           editor.putUserData(changedKey, Some(System.currentTimeMillis()))
           scheduler.scheduleAtFixedRate((() => {
             try analyze(editor, filePath) catch {
