@@ -98,7 +98,7 @@ object LogikaCheckAction {
             if (trimmed != "") {
               import org.sireum.server.protocol._
               CustomMessagePack.toResponse(trimmed) match {
-                case org.sireum.Either.Left(r: ResponseId) => processResult(true, r)
+                case org.sireum.Either.Left(r: ResponseId) => processResult(r)
               }
             }
           }, "x", "server", "-m", "msgpack")
@@ -200,6 +200,7 @@ object LogikaCheckAction {
     def f(): String = {
       import org.sireum.server.protocol._
       CustomMessagePack.fromRequest(Logika.Verify.CheckScript(
+        isBackground = isBackground,
         id = requestId,
         uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
         content = input
@@ -309,51 +310,47 @@ object LogikaCheckAction {
   }
 
   def notifyHelper(projectOpt: Option[Project], editorOpt: Option[Editor],
-                   isBackground: Boolean, msg: org.sireum.server.protocol.ResponseId): Unit = {
-    /* TODO
+                   r: org.sireum.server.protocol.ResponseId): Unit = {
+    import org.sireum.server.protocol._
+    import org.sireum.message.Level
     val project = projectOpt.orNull
     val statusOpt = editorOpt.map(_.getUserData(statusKey))
-    val lineSep = scala.util.Properties.lineSeparator
-    val ienlTags = tags.filter(_.isInstanceOf[InternalErrorTag])
-    if (ienlTags.nonEmpty) {
-      Util.notify(new Notification(
-        "Sireum Logika", "Logika Internal Error",
-        ienlTags.map(_.asInstanceOf[MessageTag].message).mkString(lineSep),
-        NotificationType.ERROR), project, shouldExpire = true)
-      editorOpt.foreach(_.putUserData(statusKey, false))
-    }
-    val enlTags = tags.filter(_.isInstanceOf[ErrorTag])
-    if (enlTags.nonEmpty) {
-      if (!isBackground || statusOpt.getOrElse(true))
-        Util.notify(new Notification(
-          "Sireum Logika", "Logika Error",
-          enlTags.map(_.asInstanceOf[MessageTag].message).mkString(lineSep),
-          NotificationType.ERROR), project, shouldExpire = true)
-      editorOpt.foreach(_.putUserData(statusKey, false))
-    }
-    val wnlTags = tags.filter(_.isInstanceOf[WarningTag])
-    if (wnlTags.nonEmpty && !isBackground) {
-      Util.notify(new Notification(
-        "Sireum Logika", "Logika Warning",
-        wnlTags.map(_.asInstanceOf[MessageTag].message).mkString(lineSep),
-        NotificationType.WARNING, null), project, shouldExpire = true)
-    }
-    val inlTags = tags.filter(_.isInstanceOf[InfoTag])
-    if (inlTags.nonEmpty) {
-      val msg = inlTags.map(_.asInstanceOf[MessageTag].message).mkString(lineSep)
-      val isVerified = msg.contains("is accepted")
-      val (title, icon) =
-        if (isVerified) {
+    r match {
+      case r: Logika.Verify.End =>
+        if (r.numOfErrors > 0) {
+          if (!r.isBackground || statusOpt.getOrElse(true))
+            Util.notify(new Notification(
+              "Sireum Logika", "Logika Error",
+              s"Verification failed with ${r.numOfErrors} error(s)",
+              NotificationType.ERROR), project, shouldExpire = true)
+          editorOpt.foreach(_.putUserData(statusKey, false))
+        } else if (r.numOfWarnings > 0) {
+          Util.notify(new Notification(
+            "Sireum Logika", "Logika Warning",
+            s"Successful verification with ${r.numOfWarnings} warning(s)",
+            NotificationType.WARNING, null), project, shouldExpire = true)
+        } else {
           editorOpt.foreach(_.putUserData(statusKey, true))
-          ("Logika Verified", verifiedInfoIcon)
-        } else ("Logika Information", null)
-      if (!isBackground || !(isVerified && statusOpt.getOrElse(false)))
-        Util.notify(new Notification("Sireum Logika", title, msg,
-          NotificationType.INFORMATION, null) {
-          override def getIcon: Icon = icon
-        }, project, shouldExpire = true)
+          val title = "Logika Verified"
+          val icon = verifiedInfoIcon
+          if (!r.isBackground || !(statusOpt.getOrElse(false)))
+            Util.notify(new Notification("Sireum Logika", title, "Successful verification",
+              NotificationType.INFORMATION, null) {
+              override def getIcon: Icon = icon
+            }, project, shouldExpire = true)
+        }
+      case r: ReportId =>
+        r.message.level match {
+          case Level.InternalError =>
+            Util.notify(new Notification(
+              "Sireum Logika", "Logika Internal Error",
+              r.message.text.value,
+              NotificationType.ERROR), project, shouldExpire = true)
+            editorOpt.foreach(_.putUserData(statusKey, false))
+          case _ =>
+        }
+      case _ =>
     }
-    */
   }
 
   private[action] sealed trait ReportItem
@@ -369,7 +366,8 @@ object LogikaCheckAction {
     override val toString: String = s"[$line, $column] $message"
   }
 
-  private[action] final case class CheckSatReportItem(message: String) extends ReportItem
+  // TODO
+  // private[action] final case class CheckSatReportItem(message: String) extends ReportItem
 
   private[action] final case class HintReportItem(message: String) extends ReportItem
 
@@ -506,7 +504,7 @@ object LogikaCheckAction {
     else text
   }
 
-  def processResult(isBackground: Boolean, r: org.sireum.server.protocol.ResponseId): Unit =
+  def processResult(r: org.sireum.server.protocol.ResponseId): Unit =
     ApplicationManager.getApplication.invokeLater(() => analysisDataKey.synchronized {
       import org.sireum._
       val (project, file, editor, input) = editorMap.synchronized {
@@ -519,7 +517,7 @@ object LogikaCheckAction {
             }
             pe
           case _ =>
-            notifyHelper(scala.None, scala.None, isBackground = false, r)
+            notifyHelper(scala.None, scala.None, r)
             return
         }
       }
@@ -539,7 +537,7 @@ object LogikaCheckAction {
             rhs = scala.collection.immutable.Map[Int, RangeHighlighter]()
             listModel = new DefaultListModel[Object]()
           case r: server.protocol.ReportId =>
-            notifyHelper(scala.Some(project), scala.Some(editor), isBackground, r)
+            notifyHelper(scala.Some(project), scala.Some(editor), r)
             return
           case _ =>
         }
