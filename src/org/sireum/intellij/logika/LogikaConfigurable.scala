@@ -102,6 +102,26 @@ object LogikaConfigurable {
     pc.setValue(loopBoundKey, loopBound.toString)
     pc.setValue(recursionBoundKey, recursionBound.toString)
     pc.setValue(methodContractKey, methodContract.toString)
+
+    /* TODO
+    Message.pickleInput(Check(
+      requestId = requestId,
+      isBackground = isBackground,
+      kind = LogikaConfigurable.checkerKind,
+      hintEnabled = LogikaConfigurable.hint,
+      inscribeSummoningsEnabled = LogikaConfigurable.inscribeSummonings,
+      coneInfluenceEnabled = LogikaConfigurable.coneInfluence,
+      proofs = proofs,
+      lastOnly = false,
+      autoEnabled = LogikaConfigurable.autoEnabled,
+      timeout = LogikaConfigurable.timeout,
+      checkSatEnabled = LogikaConfigurable.checkSat,
+      bitWidth = LogikaConfigurable.bitWidth,
+      loopBound = LogikaConfigurable.loopBound,
+      recursionBound = LogikaConfigurable.recursionBound,
+      useMethodContract = LogikaConfigurable.methodContract))
+
+     */
   }
 
   def parseGe200(text: String): Option[Int] =

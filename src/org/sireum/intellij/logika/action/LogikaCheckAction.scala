@@ -73,8 +73,9 @@ object LogikaCheckAction {
   val queue = new LinkedBlockingQueue[String]()
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
   val logikaKey = new Key[EditorEnabled.type]("Logika")
-  val analysisDataKey = new Key[Seq[RangeHighlighter]]("Logika Analysis Data")
+  val analysisDataKey = new Key[(Map[Int, RangeHighlighter], DefaultListModel[Object])]("Logika Analysis Data")
   val statusKey = new Key[Boolean]("Logika Analysis Status")
+  val summoningKey = new Key[DefaultListModel[SummoningReportItem]]("Summoning list model")
   var request: Option[Request] = None
   var processInit: Option[scala.sys.process.Process] = None
   var terminated = false
@@ -93,15 +94,14 @@ object LogikaCheckAction {
       processInit =
         SireumApplicationComponent.getSireumProcess(p,
           queue, { s =>
-            if (s.trim != "") {
-              /* TODO
-              Message.unpickleOutput[OutputMessage](s) match {
-                case r: Result => processResult(r)
+            val trimmed = s.trim
+            if (trimmed != "") {
+              import org.sireum.server.protocol._
+              CustomMessagePack.toResponse(trimmed) match {
+                case org.sireum.Either.Left(r: ResponseId) => processResult(true, r)
               }
-
-               */
             }
-          }, "logika", "--server")
+          }, "x", "server", "-m", "msgpack")
       if (processInit.isEmpty) return
       val statusBar = WindowManager.getInstance().getStatusBar(p)
       var frame = 0
@@ -192,34 +192,19 @@ object LogikaCheckAction {
     if (isBackground && !LogikaConfigurable.backgroundAnalysis) return
     init(project)
     val input = editor.getDocument.getText
-    val proofs = Vector() // TODO
     val (t, requestId) = {
       val t = System.currentTimeMillis
       val id = org.sireum.ISZ(org.sireum.String(t.toString))
       (t, id)
     }
 
-    def f: String = {
-      ""
-      /* TODO
-      Message.pickleInput(Check(
-        requestId = requestId,
-        isBackground = isBackground,
-        kind = LogikaConfigurable.checkerKind,
-        hintEnabled = LogikaConfigurable.hint,
-        inscribeSummoningsEnabled = LogikaConfigurable.inscribeSummonings,
-        coneInfluenceEnabled = LogikaConfigurable.coneInfluence,
-        proofs = proofs,
-        lastOnly = false,
-        autoEnabled = LogikaConfigurable.autoEnabled,
-        timeout = LogikaConfigurable.timeout,
-        checkSatEnabled = LogikaConfigurable.checkSat,
-        bitWidth = LogikaConfigurable.bitWidth,
-        loopBound = LogikaConfigurable.loopBound,
-        recursionBound = LogikaConfigurable.recursionBound,
-        useMethodContract = LogikaConfigurable.methodContract))
-
-       */
+    def f(): String = {
+      import org.sireum.server.protocol._
+      CustomMessagePack.fromRequest(Logika.Verify.CheckScript(
+        id = requestId,
+        uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
+        content = input
+      )).value
     }
 
     if (isBackground) {
@@ -238,7 +223,7 @@ object LogikaCheckAction {
         }
         editorMap(requestId) = (project, file, editor, input)
       }
-      queue.add(f)
+      queue.add(f())
     }
   }
 
@@ -258,7 +243,7 @@ object LogikaCheckAction {
       override def mouseMoved(e: EditorMouseEvent): Unit = {
         if (!EditorMouseEventArea.EDITING_AREA.equals(e.getArea))
           return
-        val rhs = editor.getUserData(analysisDataKey)
+        val (rhs, _) = editor.getUserData(analysisDataKey)
         if (rhs == null) return
         val component = editor.getContentComponent
         val point = e.getMouseEvent.getPoint
@@ -275,7 +260,7 @@ object LogikaCheckAction {
           }
         }
         var msgs = Vector[String]()
-        for (rh <- rhs if rh.getErrorStripeTooltip != null)
+        for ((_, rh) <- rhs if rh.getErrorStripeTooltip != null)
           if (rh.getStartOffset <= offset && offset <= rh.getEndOffset) {
             msgs :+= rh.getErrorStripeTooltip.toString
           }
@@ -317,20 +302,15 @@ object LogikaCheckAction {
   }
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit = {
-    val ext = Util.getFileExt(project)
-    if ("scala" != ext) return
-    // TODO
-    /*
-    if (LogikaFileType.extensions.contains(ext)) {
+    if (Util.isSireumOrLogikaFile(project) == (true, true)) {
       enableEditor(project, file, editor)
       editor.putUserData(statusKey, false)
       analyze(project, file, editor, isBackground = true)
     }
-    */
   }
 
   def notifyHelper(projectOpt: Option[Project], editorOpt: Option[Editor],
-                   isBackground: Boolean, tags: Seq[org.sireum.message.Message]): Unit = {
+                   isBackground: Boolean, msg: org.sireum.server.protocol.ResponseId): Unit = {
     /* TODO
     val project = projectOpt.orNull
     val statusOpt = editorOpt.map(_.getUserData(statusKey))
@@ -377,10 +357,11 @@ object LogikaCheckAction {
     */
   }
 
-  private sealed trait ReportItem
+  private[action] sealed trait ReportItem
 
-  private final case class ConsoleReportItem(project: Project,
+  private[action] final case class ConsoleReportItem(project: Project,
                                              file: VirtualFile,
+                                             level: org.sireum.message.Level.Type,
                                              line: Int,
                                              column: Int,
                                              offset: Int,
@@ -389,11 +370,11 @@ object LogikaCheckAction {
     override val toString: String = s"[$line, $column] $message"
   }
 
-  private final case class CheckSatReportItem(message: String) extends ReportItem
+  private[action] final case class CheckSatReportItem(message: String) extends ReportItem
 
-  private final case class HintReportItem(message: String) extends ReportItem
+  private[action] final case class HintReportItem(message: String) extends ReportItem
 
-  private final case class SummoningReportItem(project: Project,
+  private[action] final case class SummoningReportItem(project: Project,
                                                file: VirtualFile,
                                                messageFirstLine: String,
                                                offset: Int,
@@ -401,43 +382,48 @@ object LogikaCheckAction {
     override def toString: String = messageFirstLine
   }
 
-  private final case class ReportItems(error: scala.collection.mutable.ArrayBuffer[ConsoleReportItem] = scala.collection.mutable.ArrayBuffer(),
-                                       warning: scala.collection.mutable.ArrayBuffer[ConsoleReportItem] = scala.collection.mutable.ArrayBuffer(),
-                                       info: scala.collection.mutable.ArrayBuffer[ConsoleReportItem] = scala.collection.mutable.ArrayBuffer(),
-                                       var hint: Option[HintReportItem] = None,
-                                       checksat: scala.collection.mutable.ArrayBuffer[CheckSatReportItem] = scala.collection.mutable.ArrayBuffer(),
-                                       summoning: scala.collection.mutable.ArrayBuffer[SummoningReportItem] = scala.collection.mutable.ArrayBuffer())
-
-  private def processLocationTags(project: Project,
-                                  file: VirtualFile,
-                                  messages: Seq[org.sireum.message.Message]): scala.collection.Map[Int, ReportItems] = {
-    val reportItemMap: scala.collection.mutable.Map[Int, ReportItems] = {
-      import scala.jdk.CollectionConverters._
-      new java.util.TreeMap[Int, ReportItems]().asScala
-    }
-
-    for (msg <- messages) msg.posOpt match {
-      case org.sireum.Some(pos) =>
-        val ris = reportItemMap.getOrElseUpdate(pos.beginLine.toInt, ReportItems())
-        msg.level match {
-          case Level.Error =>
-            ris.error += ConsoleReportItem(project, file, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)
-          case Level.Warning if msg.kind === "checksat" => // TODO
-            ris.checksat += CheckSatReportItem(msg.text.value)
-          case Level.Warning =>
-            ris.warning += ConsoleReportItem(project, file, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)
-          case Level.Info if msg.kind === "hint" => // TODO
-            ris.hint = Some(HintReportItem(msg.text.value))
-          case Level.Info if msg.kind === "summoning" => // TODO
-            val firstLine = msg.text.value.substring(msg.text.value.indexOf(';') + 1,
-              msg.text.value.indexOf('\n')).trim
-            ris.summoning += SummoningReportItem(project, file, firstLine, pos.offset.toInt, msg.text.value)
-          case Level.Info =>
-            ris.info += ConsoleReportItem(project, file, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)
+  private def processReportId(project: Project,
+                              file: VirtualFile,
+                              r: org.sireum.server.protocol.ResponseId): Option[(Int, ReportItem)] = {
+    import org.sireum.server.protocol._
+    r match {
+      case r: ReportId =>
+        r.message.posOpt match {
+          case org.sireum.Some(pos) =>
+            val line = pos.beginLine.toInt
+            val msg = r.message
+            msg.level match {
+              case Level.InternalError =>
+                return Some((line, ConsoleReportItem(project, file, Level.Error, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
+              case Level.Error =>
+                return Some((line, ConsoleReportItem(project, file, Level.Error, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
+              case Level.Warning =>
+                return Some((line, ConsoleReportItem(project, file, Level.Warning, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
+              case Level.Info =>
+                return Some((line, ConsoleReportItem(project, file, Level.Info, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
+            }
+          case _ =>
         }
+      case r: Logika.Verify.Smt2Query =>
+        val text = r.result.query.value
+        val line = r.pos.beginLine.toInt
+        val offset = r.pos.offset.toInt
+        val firstLine = text.substring(text.indexOf(';') + 1, text.indexOf('\n')).trim
+        return Some((line, SummoningReportItem(project, file, firstLine, offset, text)))
+      case r: Logika.Verify.State =>
+        import org.sireum._
+        val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.ClaimDefs.empty)
+        val text =
+          st"""${(sts, ",\n")}
+              |""".render.value
+        val line = r.posOpt.get.beginLine.toInt
+        return scala.Some((line, HintReportItem(text)))
+      // TODO
+      //case Level.Warning if msg.kind === "checksat" =>
+      //  return Some((line, CheckSatReportItem(msg.text.value)))
       case _ =>
     }
-    reportItemMap
+    None
   }
 
   def gutterIconRenderer(tooltipText: String, icon: Icon, action: AnAction): GutterIconRenderer =
@@ -521,65 +507,82 @@ object LogikaCheckAction {
     else text
   }
 
-  def processResult(isBackground: Boolean, id: org.sireum.ISZ[org.sireum.String], messages: Seq[org.sireum.message.Message]): Unit =
+  def processResult(isBackground: Boolean, r: org.sireum.server.protocol.ResponseId): Unit =
     ApplicationManager.getApplication.invokeLater(() => analysisDataKey.synchronized {
       import org.sireum._
-      if (id.isEmpty) {
-        editorMap.synchronized {
-          editorMap.clear()
-        }
-        notifyHelper(scala.None, scala.None, isBackground = false, messages)
-        return
-      }
       val (project, file, editor, input) = editorMap.synchronized {
-        editorMap.get(id) match {
+        editorMap.get(r.id) match {
           case scala.Some(pe) =>
-            editorMap -= id
+            r match {
+              case r: org.sireum.server.protocol.Logika.Verify.End => editorMap -= r.id
+              case _: server.protocol.Logika.Verify.Start => resetSireumView(pe._1)
+              case _ =>
+            }
             pe
           case _ =>
-            notifyHelper(scala.None, scala.None, isBackground = false, messages)
+            notifyHelper(scala.None, scala.None, isBackground = false, r)
             return
         }
       }
-      resetSireumView(project)
       if (!editor.isDisposed) {
-        sireumToolWindowFactory(project, f => {
-          f.logika.logikaTextArea.setFont(
-            editor.getColorsScheme.getFont(EditorFontType.PLAIN))
-          f.logika.logikaTextArea.setText("")
-        })
-        editor.getContentComponent.setToolTipText(null)
         val mm = editor.getMarkupModel
-        var rhs = editor.getUserData(analysisDataKey)
-        if (rhs != null)
-          for (rh <- rhs)
-            mm.removeHighlighter(rh)
-        editor.putUserData(analysisDataKey, null)
-        val (lTags, nlTags) = messages.partition(_.posOpt.nonEmpty) // TODO
-        notifyHelper(scala.Some(project), scala.Some(editor), isBackground, nlTags)
-        if (lTags.isEmpty || input != editor.getDocument.getText) return
-        rhs = Vector[RangeHighlighter]()
+        var (rhs, listModel) = editor.getUserData(analysisDataKey)
+        r match {
+          case _: server.protocol.Logika.Verify.Start =>
+            sireumToolWindowFactory(project, f => {
+              f.logika.logikaTextArea.setFont(
+                editor.getColorsScheme.getFont(EditorFontType.PLAIN))
+              f.logika.logikaTextArea.setText("")
+            })
+            editor.getContentComponent.setToolTipText(null)
+            if (rhs != null) for ((_, rh) <- rhs) mm.removeHighlighter(rh)
+            editor.putUserData(analysisDataKey, null)
+            rhs = scala.collection.immutable.Map[Int, RangeHighlighter]()
+            listModel = new DefaultListModel[Object]()
+          case r: server.protocol.ReportId =>
+            notifyHelper(scala.Some(project), scala.Some(editor), isBackground, r)
+            return
+          case _ =>
+        }
+        if (input != editor.getDocument.getText) return
         val cs = editor.getColorsScheme
-        val errorColor = cs.getAttributes(
+        lazy val errorColor = cs.getAttributes(
           TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor
-        val (errorIcon, errorAttr) = (gutterErrorIcon, new TextAttributes(null, null, errorColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
-        errorAttr.setErrorStripeColor(errorColor)
-        val warningColor = cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor
-        val (warningIcon, warningAttr) = (gutterWarningIcon, new TextAttributes(null, null, warningColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
-        warningAttr.setErrorStripeColor(warningColor)
-        val infoColor = cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor
-        val (infoIcon, infoAttr) = (gutterInfoIcon, new TextAttributes(null, null, infoColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
+        lazy val (errorIcon, errorAttr) = {
+          val ta = new TextAttributes(null, null, errorColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
+          ta.setErrorStripeColor(errorColor)
+          (gutterErrorIcon, ta)
+        }
+        lazy val warningColor = cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor
+        lazy val (warningIcon, warningAttr) = {
+          val ta = new TextAttributes(null, null, warningColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
+          ta.setErrorStripeColor(warningColor)
+          (gutterWarningIcon, ta)
+        }
+        lazy val infoColor = cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor
+        lazy val (infoIcon, infoAttr) = (gutterInfoIcon, new TextAttributes(null, null, infoColor, EffectType.WAVE_UNDERSCORE, Font.PLAIN))
         val layer = 1000000
         val tooltipSep = "<hr>"
-        val listModel = new DefaultListModel[Object]()
 
-        def consoleReportItems(cis: Iterable[ConsoleReportItem],
-                               line: Int, icon: Icon, attr: TextAttributes, color: Color): Unit = {
+        def consoleReportItems(ci: ConsoleReportItem, line: Int): Unit = {
+          val (icon, color) = ci.level match {
+            case Level.InternalError => (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
+            case Level.Error => (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
+            case Level.Warning => (gutterWarningIcon, cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor)
+            case Level.Info => (gutterInfoIcon, cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor)
+          }
+          val attr = new TextAttributes(null, null, color, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
           scala.util.Try {
+            val message: Predef.String = rhs.get(line) match {
+              case scala.Some(rh) =>
+                mm.removeHighlighter(rh)
+                rh.getGutterIconRenderer.getTooltipText + tooltipSep + ci.message
+              case _ => ci.message
+            }
             val rhLine = mm.addLineHighlighter(line - 1, layer, null)
             rhLine.setThinErrorStripeMark(false)
             rhLine.setErrorStripeMarkColor(color)
-            rhLine.setGutterIconRenderer(gutterIconRenderer(cis.map(_.message).mkString(tooltipSep),
+            rhLine.setGutterIconRenderer(gutterIconRenderer(message,
               icon, _ => sireumToolWindowFactory(project, f => {
                 val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
                 tw.activate(() => {
@@ -588,25 +591,19 @@ object LogikaCheckAction {
                   list.synchronized(list.setModel(listModel))
                 })
               })))
-            rhs :+= rhLine
-          }
-          for (ci <- cis) {
-            scala.util.Try {
-              val end = scala.math.min(ci.offset + ci.length, editor.getDocument.getTextLength)
-              val rh = mm.addRangeHighlighter(ci.offset, end, layer, attr, HighlighterTargetArea.EXACT_RANGE)
-              rh.setErrorStripeTooltip(ci.message)
-              rh.setThinErrorStripeMark(false)
-              rh.setErrorStripeMarkColor(color)
-              rhs :+= rh
-              listModel.addElement(ci)
-            }
+            rhs = rhs + ((line, rhLine))
+            val end = scala.math.min(ci.offset + ci.length, editor.getDocument.getTextLength)
+            val rh = mm.addRangeHighlighter(ci.offset, end, layer, attr, HighlighterTargetArea.EXACT_RANGE)
+            rh.setErrorStripeTooltip(ci.message)
+            rh.setThinErrorStripeMark(false)
+            rh.setErrorStripeMarkColor(color)
+            rhs = rhs + ((line, rh))
+            listModel.addElement(ci)
           }
         }
 
-        for ((line, ris) <- processLocationTags(project, file, lTags)) {
-          if (ris.error.nonEmpty) consoleReportItems(ris.error, line, errorIcon, errorAttr, errorColor)
-          if (ris.warning.nonEmpty) consoleReportItems(ris.warning, line, warningIcon, warningAttr, warningColor)
-          if (ris.info.nonEmpty) consoleReportItems(ris.info, line, infoIcon, infoAttr, infoColor)
+        for ((line, ri) <- processReportId(project, file, r)) {
+          /* TODO
           if (ris.checksat.nonEmpty) scala.util.Try {
             val rhLine = mm.addLineHighlighter(line - 1, layer, null)
             rhLine.setThinErrorStripeMark(false)
@@ -614,8 +611,10 @@ object LogikaCheckAction {
               warningIcon, null))
             rhs :+= rhLine
           }
-          ris.hint match {
-            case scala.Some(hint) =>
+          */
+          ri match {
+            case ri: ConsoleReportItem => consoleReportItems(ri, line)
+            case ri: HintReportItem =>
               scala.util.Try {
                 val rhLine = mm.addLineHighlighter(line - 1, layer, null)
                 rhLine.setThinErrorStripeMark(false)
@@ -626,49 +625,56 @@ object LogikaCheckAction {
                     f.logika.logikaTextArea.setFont(font)
                     tw.activate(() => {
                       saveSetDividerLocation(f.logika.logikaToolSplitPane, 0.0)
-                      f.logika.logikaTextArea.setText(normalizeChars(hint.message))
+                      f.logika.logikaTextArea.setText(normalizeChars(ri.message))
                       f.logika.logikaTextArea.setCaretPosition(0)
                     })
                   })
                 ))
-                rhs :+= rhLine
+                rhs = rhs + ((line, rhLine))
               }
-            case _ =>
-          }
-          if (ris.summoning.nonEmpty) scala.util.Try {
-            val rhLine = mm.addLineHighlighter(line - 1, layer, null)
-            rhLine.setThinErrorStripeMark(false)
-            rhLine.setGutterIconRenderer(gutterIconRenderer("Click to show scribed incantations",
-              gutterSummoningIcon, _ => sireumToolWindowFactory(project, f => {
-                val summoningListModel = new DefaultListModel[Object]()
-                ris.summoning.foreach(summoningListModel.addElement)
-                val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
-                val font = editor.getColorsScheme.getFont(EditorFontType.PLAIN)
-                f.logika.logikaTextArea.setFont(font)
-                tw.activate(() => {
-                  val list = f.logika.logikaList
-                  list.synchronized {
-                    list.setModel(summoningListModel)
-                    var selection = 0
-                    var i = 0
-                    while (i < ris.summoning.size && selection == 0) {
-                      if (ris.summoning(i).messageFirstLine.contains("Invalid")) {
-                        selection = i
+            case ri: SummoningReportItem =>
+              scala.util.Try {
+                val summoningListModel = rhs.get(line) match {
+                  case scala.Some(rh) =>
+                    mm.removeHighlighter(rh)
+                    mm.getUserData(summoningKey)
+                  case _ =>
+                    new DefaultListModel[SummoningReportItem]()
+                }
+                summoningListModel.addElement(ri)
+                val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+                rhLine.putUserData(summoningKey, summoningListModel)
+                rhLine.setThinErrorStripeMark(false)
+                rhLine.setGutterIconRenderer(gutterIconRenderer("Click to show scribed incantations",
+                  gutterSummoningIcon, _ => sireumToolWindowFactory(project, f => {
+                    val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
+                    val font = editor.getColorsScheme.getFont(EditorFontType.PLAIN)
+                    f.logika.logikaTextArea.setFont(font)
+                    tw.activate(() => {
+                      val list = f.logika.logikaList
+                      list.synchronized {
+                        list.setModel(summoningListModel.asInstanceOf[DefaultListModel[Object]])
+                        var selection = 0
+                        var i = 0
+                        while (i < summoningListModel.size && selection == 0) {
+                          if (summoningListModel.elementAt(i).messageFirstLine.contains("Invalid")) {
+                            selection = i
+                          }
+                          i += 1
+                        }
+                        i = 0
+                        while (i < summoningListModel.size && selection == 0) {
+                          if (summoningListModel.elementAt(i).messageFirstLine.contains("Don't Know")) {
+                            selection = i
+                          }
+                          i += 1
+                        }
+                        list.setSelectedIndex(selection)
                       }
-                      i += 1
-                    }
-                    i = 0
-                    while (i < ris.summoning.size && selection == 0) {
-                      if (ris.summoning(i).messageFirstLine.contains("Don't Know")) {
-                        selection = i
-                      }
-                      i += 1
-                    }
-                    list.setSelectedIndex(selection)
-                  }
-                })
-              })))
-            rhs :+= rhLine
+                    })
+                  })))
+                rhs = rhs + ((line, rhLine))
+              }
           }
         }
         sireumToolWindowFactory(project, f => {
@@ -702,7 +708,7 @@ object LogikaCheckAction {
           f.logika.logikaTextArea.setText("")
           saveSetDividerLocation(f.logika.logikaToolSplitPane, 1.0)
         })
-        editor.putUserData(analysisDataKey, rhs)
+        editor.putUserData(analysisDataKey, (rhs, listModel))
       }
     })
 }
