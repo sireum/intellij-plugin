@@ -17,15 +17,6 @@
           </grid>
         </constraints>
       </hspacer>
-      <hspacer id="b67ad">
-        <constraints>
-          <grid row="3" column="5" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
-            <minimum-size width="5" height="-1"/>
-            <preferred-size width="5" height="-1"/>
-            <maximum-size width="5" height="-1"/>
-          </grid>
-        </constraints>
-      </hspacer>
       <component id="a138c" class="javax.swing.JLabel" binding="idleLabel">
         <constraints>
           <grid row="2" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
@@ -333,7 +324,7 @@
                     </constraints>
                     <properties>
                       <enabled value="false"/>
-                      <text value="0"/>
+                      <text value="1"/>
                       <toolTipText value=""/>
                     </properties>
                   </component>
@@ -441,6 +432,11 @@
           <toolTipText value="Use Unicode/ASCII for programming logic hints"/>
         </properties>
       </component>
+      <hspacer id="fa117">
+        <constraints>
+          <grid row="3" column="5" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+        </constraints>
+      </hspacer>
     </children>
   </grid>
   <buttonGroups>

@@ -162,9 +162,9 @@ object Slang {
       case Some(b) => (false, b)
       case _ => (true, false)
     }
-
+    val isWorksheet = filePath.string.value.endsWith(".sc")
     val r = SlangParser(allowSireumPackage = "true" == System.getProperty("org.sireum.ive.dev"),
-      isWorksheet = false, isDiet = false, fileUriOpt = SSome(new java.io.File(filePath.string.value).toURI.toASCIIString),
+      isWorksheet = isWorksheet, isDiet = false, fileUriOpt = SSome(new java.io.File(filePath.string.value).toURI.toASCIIString),
       txt = text, reporter = reporter)
     var status = !reporter.hasIssue.value
     r.unitOpt match {

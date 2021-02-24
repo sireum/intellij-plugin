@@ -65,7 +65,7 @@ object LogikaConfigurable {
   //private[logika] var checkerKind = CheckerKind.Forward
   private[logika] var bitWidth = 0
   private[logika] var loopBound = 3
-  private[logika] var recursionBound = 0
+  private[logika] var recursionBound = 1
   private[logika] var methodContract = true
 
   def loadConfiguration(): Unit = {

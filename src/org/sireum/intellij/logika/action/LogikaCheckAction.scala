@@ -243,8 +243,9 @@ object LogikaCheckAction {
       override def mouseMoved(e: EditorMouseEvent): Unit = {
         if (!EditorMouseEventArea.EDITING_AREA.equals(e.getArea))
           return
-        val (rhs, _) = editor.getUserData(analysisDataKey)
-        if (rhs == null) return
+        val pair = editor.getUserData(analysisDataKey)
+        if (pair == null) return
+        val (rhs, _) = pair
         val component = editor.getContentComponent
         val point = e.getMouseEvent.getPoint
         val pos = editor.xyToLogicalPosition(point)
@@ -523,7 +524,8 @@ object LogikaCheckAction {
       }
       if (!editor.isDisposed) {
         val mm = editor.getMarkupModel
-        var (rhs, listModel) = editor.getUserData(analysisDataKey)
+        var pairOpt = scala.Option(editor.getUserData(analysisDataKey))
+        var (rhs, listModel) = pairOpt.getOrElse((null, null))
         r match {
           case _: server.protocol.Logika.Verify.Start =>
             sireumToolWindowFactory(project, f => {
@@ -616,13 +618,17 @@ object LogikaCheckAction {
               }
             case ri: SummoningReportItem =>
               scala.util.Try {
-                val summoningListModel = rhs.get(line) match {
+                val summoningListModel = (rhs.get(line) match {
                   case scala.Some(rh) =>
                     mm.removeHighlighter(rh)
-                    mm.getUserData(summoningKey)
+                    scala.Option(mm.getUserData(summoningKey))
                   case _ =>
-                    new DefaultListModel[SummoningReportItem]()
-                }
+                    scala.None
+                }).getOrElse({
+                  val r = new DefaultListModel[SummoningReportItem]()
+                  mm.putUserData(summoningKey, r)
+                  r
+                })
                 summoningListModel.addElement(ri)
                 val rhLine = mm.addLineHighlighter(line - 1, layer, null)
                 rhLine.putUserData(summoningKey, summoningListModel)

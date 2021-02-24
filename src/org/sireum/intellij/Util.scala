@@ -56,9 +56,10 @@ object Util {
 
   def isSireumOrLogikaFile(path: org.sireum.Os.Path): (Boolean, Boolean) = {
     if (!path.exists) return (false, false)
-    if (path.string.value.endsWith(".slang")) {
+    val p = path.string.value
+    if (p.endsWith(".slang")) {
       return (true, true)
-    } else if (path.string.value.endsWith(".scala")) {
+    } else if (p.endsWith(".scala") || p.endsWith(".sc")) {
       for (line <- path.readLineStream.take(1)) {
         val cline = line.value.replace(" ", "").replace("\t", "")
         return (cline.contains("#Sireum"), cline.contains("#Logika"))
