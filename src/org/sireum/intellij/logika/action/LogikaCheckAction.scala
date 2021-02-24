@@ -73,9 +73,8 @@ object LogikaCheckAction {
   val queue = new LinkedBlockingQueue[String]()
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
   val logikaKey = new Key[EditorEnabled.type]("Logika")
-  val analysisDataKey = new Key[(Map[Int, RangeHighlighter], DefaultListModel[Object])]("Logika Analysis Data")
+  val analysisDataKey = new Key[(Map[Int, RangeHighlighter], DefaultListModel[Object], Map[Int, DefaultListModel[SummoningReportItem]])]("Logika Analysis Data")
   val statusKey = new Key[Boolean]("Logika Analysis Status")
-  val summoningKey = new Key[DefaultListModel[SummoningReportItem]]("Summoning list model")
   var request: Option[Request] = None
   var processInit: Option[scala.sys.process.Process] = None
   var terminated = false
@@ -243,9 +242,9 @@ object LogikaCheckAction {
       override def mouseMoved(e: EditorMouseEvent): Unit = {
         if (!EditorMouseEventArea.EDITING_AREA.equals(e.getArea))
           return
-        val pair = editor.getUserData(analysisDataKey)
-        if (pair == null) return
-        val (rhs, _) = pair
+        val t = editor.getUserData(analysisDataKey)
+        if (t == null) return
+        val (rhs, _, _) = t
         val component = editor.getContentComponent
         val point = e.getMouseEvent.getPoint
         val pos = editor.xyToLogicalPosition(point)
@@ -524,8 +523,8 @@ object LogikaCheckAction {
       }
       if (!editor.isDisposed) {
         val mm = editor.getMarkupModel
-        var pairOpt = scala.Option(editor.getUserData(analysisDataKey))
-        var (rhs, listModel) = pairOpt.getOrElse((null, null))
+        var tOpt = scala.Option(editor.getUserData(analysisDataKey))
+        var (rhs, listModel, summoningListModelMap) = tOpt.getOrElse((null, null, null))
         r match {
           case _: server.protocol.Logika.Verify.Start =>
             sireumToolWindowFactory(project, f => {
@@ -538,6 +537,7 @@ object LogikaCheckAction {
             editor.putUserData(analysisDataKey, null)
             rhs = scala.collection.immutable.Map[Int, RangeHighlighter]()
             listModel = new DefaultListModel[Object]()
+            summoningListModelMap = scala.collection.immutable.Map[Int, DefaultListModel[SummoningReportItem]]()
           case r: server.protocol.ReportId =>
             notifyHelper(scala.Some(project), scala.Some(editor), r)
             return
@@ -618,20 +618,20 @@ object LogikaCheckAction {
               }
             case ri: SummoningReportItem =>
               scala.util.Try {
-                val summoningListModel = (rhs.get(line) match {
+                rhs.get(line) match {
                   case scala.Some(rh) =>
                     mm.removeHighlighter(rh)
-                    scala.Option(mm.getUserData(summoningKey))
                   case _ =>
-                    scala.None
-                }).getOrElse({
-                  val r = new DefaultListModel[SummoningReportItem]()
-                  mm.putUserData(summoningKey, r)
-                  r
-                })
+                }
+                val summoningListModel = summoningListModelMap.get(line) match {
+                  case scala.Some(l) => l
+                  case _ =>
+                    val l = new DefaultListModel[SummoningReportItem]()
+                    summoningListModelMap = summoningListModelMap + ((line, l))
+                    l
+                }
                 summoningListModel.addElement(ri)
                 val rhLine = mm.addLineHighlighter(line - 1, layer, null)
-                rhLine.putUserData(summoningKey, summoningListModel)
                 rhLine.setThinErrorStripeMark(false)
                 rhLine.setGutterIconRenderer(gutterIconRenderer("Click to show scribed incantations",
                   gutterSummoningIcon, _ => sireumToolWindowFactory(project, f => {
@@ -696,7 +696,7 @@ object LogikaCheckAction {
           f.logika.logikaTextArea.setText("")
           saveSetDividerLocation(f.logika.logikaToolSplitPane, 1.0)
         })
-        editor.putUserData(analysisDataKey, (rhs, listModel))
+        editor.putUserData(analysisDataKey, (rhs, listModel, summoningListModelMap))
       }
     })
 }
