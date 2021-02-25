@@ -66,11 +66,11 @@
             <add-to-group group-id="SireumLogikaGroup" anchor="last"/>
         </group>
 
-        <action id="LogikaCheckAction" class="org.sireum.intellij.logika.action.LogikaCheckAction"
+        <action id="LogikaCheckAction" class="org.sireum.intellij.LogikaCheckAction"
                 text="Logika Check"
                 description="Check Logika Proof">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl L"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
     </actions>
 

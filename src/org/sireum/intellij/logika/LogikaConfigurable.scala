@@ -53,20 +53,20 @@ object LogikaConfigurable {
   private val recursionBoundKey = logikaKey + "recursionBound"
   private val methodContractKey = logikaKey + "methodContract"
 
-  private[logika] var backgroundAnalysis = true
-  private[logika] var idle: Int = 1500
-  private[logika] var timeout: Int = 2000
-  private[logika] var autoEnabled = false
-  private[logika] var checkSat = false
-  private[logika] var hint = false
-  private[logika] var hintUnicode = SystemInfo.isMac
-  private[logika] var inscribeSummonings = false
+  private[intellij] var backgroundAnalysis = true
+  private[intellij] var idle: Int = 1500
+  private[intellij] var timeout: Int = 2000
+  private[intellij] var autoEnabled = false
+  private[intellij] var checkSat = false
+  private[intellij] var hint = false
+  private[intellij] var hintUnicode = SystemInfo.isMac
+  private[intellij] var inscribeSummonings = false
   // TODO
-  //private[logika] var checkerKind = CheckerKind.Forward
-  private[logika] var bitWidth = 0
-  private[logika] var loopBound = 3
-  private[logika] var recursionBound = 1
-  private[logika] var methodContract = true
+  //private[intellij] var checkerKind = CheckerKind.Forward
+  private[intellij] var bitWidth = 0
+  private[intellij] var loopBound = 3
+  private[intellij] var recursionBound = 1
+  private[intellij] var methodContract = true
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance

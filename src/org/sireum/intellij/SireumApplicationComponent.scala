@@ -29,7 +29,6 @@ import java.io._
 import java.util.concurrent.BlockingQueue
 import com.intellij.ide.plugins.PluginManager
 import com.intellij.ide.util.PropertiesComponent
-import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.components._
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileChooser._
@@ -38,7 +37,6 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
 import org.sireum.intellij.logika.LogikaConfigurable
-import org.sireum.intellij.logika.action.LogikaCheckAction
 
 object SireumApplicationComponent {
   private val sireumKey = "org.sireum."
@@ -252,9 +250,9 @@ class SireumApplicationComponent extends ApplicationComponent {
 
   override def disposeComponent(): Unit = {
     SireumApplicationComponent.terminated = true
-    LogikaCheckAction.editorMap.synchronized {
-      for (p <- LogikaCheckAction.processInit) p.destroy()
-      LogikaCheckAction.processInit = None
+    SlangCheckAction.editorMap.synchronized {
+      for (p <- SlangCheckAction.processInit) p.destroy()
+      SlangCheckAction.processInit = None
     }
   }
 }

@@ -23,18 +23,14 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.sireum.intellij.logika.action
+package org.sireum.intellij
 
-import java.awt.{Color, Font}
-import java.awt.event.MouseEvent
-import java.util.concurrent._
-import javax.swing.{DefaultListModel, Icon, JSplitPane}
-import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
-import com.intellij.openapi.editor.event._
 import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem._
 import com.intellij.openapi.application.{ApplicationManager, TransactionGuard}
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
+import com.intellij.openapi.editor.event._
 import com.intellij.openapi.editor.markup._
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor}
 import com.intellij.openapi.project.Project
@@ -42,15 +38,19 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util._
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, PlatformType, WidgetPresentation}
+import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresentation}
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, WindowManager}
 import com.intellij.util.Consumer
-import org.sireum.intellij.{SireumApplicationComponent, SireumToolWindowFactory, Util}
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.message.Level
 
-object LogikaCheckAction {
+import java.awt.event.MouseEvent
+import java.awt.{Color, Font}
+import java.util.concurrent._
+import javax.swing.{DefaultListModel, Icon, JSplitPane}
+
+object SlangCheckAction {
 
   object EditorEnabled
 
@@ -258,8 +258,8 @@ object LogikaCheckAction {
 
   def notifyHelper(projectOpt: Option[Project], editorOpt: Option[Editor],
                    r: org.sireum.server.protocol.ResponseId): Unit = {
-    import org.sireum.server.protocol._
     import org.sireum.message.Level
+    import org.sireum.server.protocol._
     val project = projectOpt.orNull
     val statusOpt = editorOpt.map(_.getUserData(statusKey))
     r match {
@@ -313,29 +313,29 @@ object LogikaCheckAction {
     }
   }
 
-  private[action] sealed trait ReportItem
+  private[intellij] sealed trait ReportItem
 
-  private[action] final case class ConsoleReportItem(project: Project,
-                                                     file: VirtualFile,
-                                                     level: org.sireum.message.Level.Type,
-                                                     line: Int,
-                                                     column: Int,
-                                                     offset: Int,
-                                                     length: Int,
-                                                     message: String) extends ReportItem {
+  private[intellij] final case class ConsoleReportItem(project: Project,
+                                                       file: VirtualFile,
+                                                       level: org.sireum.message.Level.Type,
+                                                       line: Int,
+                                                       column: Int,
+                                                       offset: Int,
+                                                       length: Int,
+                                                       message: String) extends ReportItem {
     override val toString: String = s"[$line, $column] $message"
   }
 
   // TODO
-  // private[action] final case class CheckSatReportItem(message: String) extends ReportItem
+  // private[intellij] final case class CheckSatReportItem(message: String) extends ReportItem
 
-  private[action] final case class HintReportItem(message: String) extends ReportItem
+  private[intellij] final case class HintReportItem(message: String) extends ReportItem
 
-  private[action] final case class SummoningReportItem(project: Project,
-                                                       file: VirtualFile,
-                                                       messageFirstLine: String,
-                                                       offset: Int,
-                                                       message: String) extends ReportItem {
+  private[intellij] final case class SummoningReportItem(project: Project,
+                                                         file: VirtualFile,
+                                                         messageFirstLine: String,
+                                                         offset: Int,
+                                                         message: String) extends ReportItem {
     override def toString: String = messageFirstLine
   }
 
@@ -693,9 +693,9 @@ object LogikaCheckAction {
     })
 }
 
-import LogikaCheckAction._
+import org.sireum.intellij.SlangCheckAction._
 
-private class LogikaCheckAction extends LogikaOnlyAction {
+class LogikaCheckAction extends LogikaOnlyAction {
 
   // init
   {
