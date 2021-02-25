@@ -23,31 +23,36 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.sireum.intellij
+package org.sireum.intellij.logika
 
-import java.util.concurrent.ConcurrentHashMap
+import com.intellij.openapi.actionSystem._
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.vfs.VirtualFile
 
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.ToolWindow
-import com.intellij.ui.content.ContentFactory
-import org.sireum.intellij.logika.LogikaToolWindowForm
+import org.sireum.intellij.SireumClient._
 
-object SireumToolWindowFactory {
+class LogikaCheckAction extends LogikaOnlyAction {
 
-  final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm)
+  // init
+  {
+    getTemplatePresentation.setIcon(icon)
 
-  val windows = new ConcurrentHashMap[Project, Forms]()
+    val am = ActionManager.getInstance
 
-  def createToolWindowContent(project: Project, toolWindow: ToolWindow): Unit = {
-    toolWindow.setAutoHide(false)
-    val contentFactory = ContentFactory.SERVICE.getInstance
-    val logikaForm = new LogikaToolWindowForm()
-    val content = contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Logika", false)
-    toolWindow.getContentManager.addContent(content)
-    windows.put(project, Forms(toolWindow, logikaForm))
+    val runGroup = am.getAction("SireumLogikaGroup").
+      asInstanceOf[DefaultActionGroup]
+    runGroup.addAction(this, Constraints.FIRST)
   }
 
-  def removeToolWindow(project: Project): Unit = {
-    windows.remove(project)
+  override def actionPerformed(e: AnActionEvent): Unit = {
+    e.getPresentation.setEnabled(false)
+    val project = e.getProject
+    val editor = FileEditorManager.
+      getInstance(project).getSelectedTextEditor
+    val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
+    if (editor == null) return
+    enableEditor(project, file, editor)
+    analyze(project, file, editor, isBackground = false, hasLogika = true)
+    e.getPresentation.setEnabled(true)
   }
 }

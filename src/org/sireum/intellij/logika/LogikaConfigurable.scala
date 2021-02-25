@@ -35,7 +35,7 @@ import com.intellij.openapi.util.{IconLoader, SystemInfo}
 import com.intellij.ui.JBColor
 
 object LogikaConfigurable {
-  private val logo = IconLoader.getIcon("/logika/icon/logika-logo.png")
+  private val logo = IconLoader.getIcon("/icon/logika-logo.png")
 
   private val logikaKey = "org.sireum.logika."
   private val backgroundAnalysisKey = logikaKey + "background"
@@ -57,7 +57,7 @@ object LogikaConfigurable {
   private[intellij] var idle: Int = 1500
   private[intellij] var timeout: Int = 2000
   private[intellij] var autoEnabled = false
-  private[intellij] var checkSat = false
+  private[intellij] var checkSat = true
   private[intellij] var hint = false
   private[intellij] var hintUnicode = SystemInfo.isMac
   private[intellij] var inscribeSummonings = false
@@ -102,26 +102,6 @@ object LogikaConfigurable {
     pc.setValue(loopBoundKey, loopBound.toString)
     pc.setValue(recursionBoundKey, recursionBound.toString)
     pc.setValue(methodContractKey, methodContract.toString)
-
-    /* TODO
-    Message.pickleInput(Check(
-      requestId = requestId,
-      isBackground = isBackground,
-      kind = LogikaConfigurable.checkerKind,
-      hintEnabled = LogikaConfigurable.hint,
-      inscribeSummoningsEnabled = LogikaConfigurable.inscribeSummonings,
-      coneInfluenceEnabled = LogikaConfigurable.coneInfluence,
-      proofs = proofs,
-      lastOnly = false,
-      autoEnabled = LogikaConfigurable.autoEnabled,
-      timeout = LogikaConfigurable.timeout,
-      checkSatEnabled = LogikaConfigurable.checkSat,
-      bitWidth = LogikaConfigurable.bitWidth,
-      loopBound = LogikaConfigurable.loopBound,
-      recursionBound = LogikaConfigurable.recursionBound,
-      useMethodContract = LogikaConfigurable.methodContract))
-
-     */
   }
 
   def parseGe200(text: String): Option[Int] =

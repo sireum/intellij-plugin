@@ -50,7 +50,7 @@ import java.awt.{Color, Font}
 import java.util.concurrent._
 import javax.swing.{DefaultListModel, Icon, JSplitPane}
 
-object SlangCheckAction {
+object SireumClient {
 
   object EditorEnabled
 
@@ -66,7 +66,7 @@ object SlangCheckAction {
   val gutterHintIcon: Icon = IconLoader.getIcon("/icon/gutter-hint.png")
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
-  val queue = new LinkedBlockingQueue[String]()
+  val queue = new LinkedBlockingQueue[Vector[String]]()
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
   val analysisDataKey = new Key[(Map[Int, Vector[RangeHighlighter]], DefaultListModel[Object], Map[Int, DefaultListModel[SummoningReportItem]])]("Logika Analysis Data")
@@ -83,9 +83,9 @@ object SlangCheckAction {
 
   final case class Request(time: Long, requestId: org.sireum.ISZ[org.sireum.String],
                            project: Project, file: VirtualFile, editor: Editor,
-                           input: String, msgGen: () => String)
+                           input: String, msgGen: () => Vector[String])
 
-  def init(p: Project): Unit = {
+  def init(p: Project): Unit = editorMap.synchronized {
     if (processInit.isEmpty) {
       processInit =
         SireumApplicationComponent.getSireumProcess(p,
@@ -195,14 +195,22 @@ object SlangCheckAction {
       (t, id)
     }
 
-    def f(): String = {
+    def f(): Vector[String] = {
       import org.sireum.server.protocol._
-      CustomMessagePack.fromRequest(Slang.CheckScript(
-        isBackground = isBackground,
-        id = requestId,
-        uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
-        content = input
-      )).value
+      Vector(
+        CustomMessagePack.fromRequest(Logika.Verify.Config(
+          org.sireum.server.service.LogikaService.defaultConfig(
+            defaultLoopBound = LogikaConfigurable.loopBound,
+            timeoutInMs = LogikaConfigurable.timeout
+          )
+        )).value,
+        CustomMessagePack.fromRequest(Slang.CheckScript(
+          isBackground = isBackground,
+          id = requestId,
+          uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
+          content = input
+        )).value
+      )
     }
 
     if (isBackground) {
@@ -361,19 +369,22 @@ object SlangCheckAction {
             }
           case _ =>
         }
-      case r: Logika.Verify.Smt2Query =>
+      case r: Logika.Verify.Smt2Query if LogikaConfigurable.inscribeSummonings =>
         val text = r.result.query.value
         val line = r.pos.beginLine.toInt
         val offset = r.pos.offset.toInt
         val firstLine = text.substring(text.indexOf(';') + 1, text.indexOf('\n')).trim
         return Some((line, SummoningReportItem(project, file, firstLine, offset, text)))
-      case r: Logika.Verify.State =>
+      case r: Logika.Verify.State if LogikaConfigurable.hint =>
         import org.sireum._
         val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.ClaimDefs.empty)
-        val text =
+        var text =
           st"""{
               |  ${(sts, ",\n")}
               |}""".render.value
+        if (!LogikaConfigurable.hintUnicode) {
+          text = text.replace(org.sireum.logika.State.symPrefix.value, "cx")
+        }
         val line = r.posOpt.get.beginLine.toInt
         return scala.Some((line, HintReportItem(text)))
       // TODO
@@ -691,32 +702,4 @@ object SlangCheckAction {
         editor.putUserData(analysisDataKey, (rhs, listModel, summoningListModelMap))
       }
     })
-}
-
-import org.sireum.intellij.SlangCheckAction._
-
-class LogikaCheckAction extends LogikaOnlyAction {
-
-  // init
-  {
-    getTemplatePresentation.setIcon(icon)
-
-    val am = ActionManager.getInstance
-
-    val runGroup = am.getAction("SireumLogikaGroup").
-      asInstanceOf[DefaultActionGroup]
-    runGroup.addAction(this, Constraints.FIRST)
-  }
-
-  override def actionPerformed(e: AnActionEvent): Unit = {
-    e.getPresentation.setEnabled(false)
-    val project = e.getProject
-    val editor = FileEditorManager.
-      getInstance(project).getSelectedTextEditor
-    val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
-    if (editor == null) return
-    enableEditor(project, file, editor)
-    analyze(project, file, editor, isBackground = false, hasLogika = true)
-    e.getPresentation.setEnabled(true)
-  }
 }

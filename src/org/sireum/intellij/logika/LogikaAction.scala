@@ -23,9 +23,10 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.sireum.intellij
+package org.sireum.intellij.logika
 
 import com.intellij.openapi.actionSystem.{AnAction, AnActionEvent}
+import org.sireum.intellij.Util
 
 trait LogikaAction extends AnAction
 

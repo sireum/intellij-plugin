@@ -121,7 +121,7 @@ object SireumApplicationComponent {
     }
 
   def getSireumProcess(project: Project,
-                       queue: BlockingQueue[String],
+                       queue: BlockingQueue[Vector[String]],
                        processOutput: String => Unit,
                        args: String*): Option[scala.sys.process.Process] =
     getSireumHome(project) match {
@@ -137,10 +137,11 @@ object SireumApplicationComponent {
             val w = new OutputStreamWriter(os)
             val lineSep = scala.util.Properties.lineSeparator
             while (!terminated) {
-              val m = queue.take()
-              w.write(m)
-              w.write(lineSep)
-              w.flush()
+              for (m <- queue.take()) {
+                w.write(m)
+                w.write(lineSep)
+                w.flush()
+              }
             }
           } catch {
             case _: InterruptedException =>
@@ -250,9 +251,9 @@ class SireumApplicationComponent extends ApplicationComponent {
 
   override def disposeComponent(): Unit = {
     SireumApplicationComponent.terminated = true
-    SlangCheckAction.editorMap.synchronized {
-      for (p <- SlangCheckAction.processInit) p.destroy()
-      SlangCheckAction.processInit = None
+    SireumClient.editorMap.synchronized {
+      for (p <- SireumClient.processInit) p.destroy()
+      SireumClient.processInit = None
     }
   }
 }

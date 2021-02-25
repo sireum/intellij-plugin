@@ -46,13 +46,13 @@ class SireumProjectComponent(project: Project) extends ProjectComponent {
         new FileEditorManagerListener {
           override def fileClosed(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
-            SlangCheckAction.editorClosed(project)
+            SireumClient.editorClosed(project)
           }
 
           override def fileOpened(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
             val editor = source.getSelectedTextEditor
-            SlangCheckAction.editorOpened(project, file, editor)
+            SireumClient.editorOpened(project, file, editor)
           }
 
           override def
