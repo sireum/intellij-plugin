@@ -186,9 +186,11 @@ object LogikaCheckAction {
 
   def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(logikaKey)
 
-  def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean): Unit = {
+  def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
-    if (isBackground && !LogikaConfigurable.backgroundAnalysis) return
+    if (hasLogika) {
+      if (isBackground && !LogikaConfigurable.backgroundAnalysis) return
+    }
     init(project)
     val input = editor.getDocument.getText
     val (t, requestId) = {
@@ -199,7 +201,7 @@ object LogikaCheckAction {
 
     def f(): String = {
       import org.sireum.server.protocol._
-      CustomMessagePack.fromRequest(Logika.Verify.CheckScript(
+      CustomMessagePack.fromRequest(Slang.CheckScript(
         isBackground = isBackground,
         id = requestId,
         uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
@@ -233,8 +235,12 @@ object LogikaCheckAction {
     editor.putUserData(logikaKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
-        if (LogikaConfigurable.backgroundAnalysis)
-          scala.util.Try(analyze(project, file, editor, isBackground = true))
+        if (Util.isSireumOrLogikaFile(project)._2) {
+          if (LogikaConfigurable.backgroundAnalysis)
+            scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = true))
+        } else {
+          scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false))
+        }
       }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
@@ -246,10 +252,11 @@ object LogikaCheckAction {
   }
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit = {
-    if (Util.isSireumOrLogikaFile(project) == (true, true)) {
+    val (hasSireum, _) = Util.isSireumOrLogikaFile(project)
+    if (hasSireum) {
       enableEditor(project, file, editor)
       editor.putUserData(statusKey, false)
-      analyze(project, file, editor, isBackground = true)
+      analyze(project, file, editor, isBackground = true, hasLogika = true)
     }
   }
 
@@ -262,13 +269,24 @@ object LogikaCheckAction {
     r match {
       case r: Logika.Verify.End =>
         if (r.numOfErrors > 0) {
-          if (!r.isBackground || statusOpt.getOrElse(true))
-            Util.notify(new Notification(
-              "Sireum Logika", "Logika Error",
-              s"Programming logic proof is rejected with ${r.numOfErrors} error(s)",
-              NotificationType.ERROR), project, shouldExpire = true)
+          if (!r.isBackground || statusOpt.getOrElse(true)) {
+            if (r.hasLogika) {
+              if (r.isIllFormed) {
+                Util.notify(new Notification(
+                  "Sireum Logika", "Slang Error",
+                  s"Ill-formed program with ${r.numOfErrors} error(s)",
+                  NotificationType.ERROR), project, shouldExpire = true)
+              }
+              else {
+                Util.notify(new Notification(
+                  "Sireum Logika", "Logika Error",
+                  s"Programming logic proof is rejected with ${r.numOfErrors} error(s)",
+                  NotificationType.ERROR), project, shouldExpire = true)
+              }
+            }
+          }
           editorOpt.foreach(_.putUserData(statusKey, false))
-        } else if (r.numOfWarnings > 0) {
+        } else if (r.hasLogika && r.numOfWarnings > 0) {
           Util.notify(new Notification(
             "Sireum Logika", "Logika Warning",
             s"Programming logic proof is accepted with ${r.numOfWarnings} warning(s)",
@@ -277,11 +295,12 @@ object LogikaCheckAction {
         } else {
           val title = "Logika Verified"
           val icon = verifiedInfoIcon
-          if (!r.isBackground || !(statusOpt.getOrElse(false)))
+          if (r.hasLogika && (!r.isBackground || !(statusOpt.getOrElse(false)))) {
             Util.notify(new Notification("Sireum Logika", title, "Programming logic proof is accepted",
               NotificationType.INFORMATION, null) {
               override def getIcon: Icon = icon
             }, project, shouldExpire = true)
+          }
           editorOpt.foreach(_.putUserData(statusKey, true))
         }
       case r: ReportId =>
@@ -301,13 +320,13 @@ object LogikaCheckAction {
   private[action] sealed trait ReportItem
 
   private[action] final case class ConsoleReportItem(project: Project,
-                                             file: VirtualFile,
-                                             level: org.sireum.message.Level.Type,
-                                             line: Int,
-                                             column: Int,
-                                             offset: Int,
-                                             length: Int,
-                                             message: String) extends ReportItem {
+                                                     file: VirtualFile,
+                                                     level: org.sireum.message.Level.Type,
+                                                     line: Int,
+                                                     column: Int,
+                                                     offset: Int,
+                                                     length: Int,
+                                                     message: String) extends ReportItem {
     override val toString: String = s"[$line, $column] $message"
   }
 
@@ -317,10 +336,10 @@ object LogikaCheckAction {
   private[action] final case class HintReportItem(message: String) extends ReportItem
 
   private[action] final case class SummoningReportItem(project: Project,
-                                               file: VirtualFile,
-                                               messageFirstLine: String,
-                                               offset: Int,
-                                               message: String) extends ReportItem {
+                                                       file: VirtualFile,
+                                                       messageFirstLine: String,
+                                                       offset: Int,
+                                                       message: String) extends ReportItem {
     override def toString: String = messageFirstLine
   }
 
@@ -593,7 +612,7 @@ object LogikaCheckAction {
                     for (rh <- rhv) {
                       rh.getUserData(reportItemKey) match {
                         case _: SummoningReportItem => mm.removeHighlighter(rh)
-                        case _ => newRhv  = newRhv :+ rh
+                        case _ => newRhv = newRhv :+ rh
                       }
                     }
                     newRhv
@@ -701,7 +720,7 @@ private class LogikaCheckAction extends LogikaOnlyAction {
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     if (editor == null) return
     enableEditor(project, file, editor)
-    analyze(project, file, editor, isBackground = false)
+    analyze(project, file, editor, isBackground = false, hasLogika = true)
     e.getPresentation.setEnabled(true)
   }
 }

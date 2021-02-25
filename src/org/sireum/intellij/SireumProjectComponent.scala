@@ -30,7 +30,6 @@ import com.intellij.openapi.fileEditor.{FileEditorManager, FileEditorManagerEven
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.{ToolWindowAnchor, ToolWindowManager}
-import org.sireum.intellij.lang.Slang
 import org.sireum.intellij.logika.action.LogikaCheckAction
 
 class SireumProjectComponent(project: Project) extends ProjectComponent {
@@ -49,14 +48,12 @@ class SireumProjectComponent(project: Project) extends ProjectComponent {
           override def fileClosed(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
             LogikaCheckAction.editorClosed(project)
-            Slang.editorClosed(project, file)
           }
 
           override def fileOpened(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
             val editor = source.getSelectedTextEditor
             LogikaCheckAction.editorOpened(project, file, editor)
-            Slang.editorOpened(project, file, editor)
           }
 
           override def
