@@ -39,15 +39,13 @@ import com.intellij.openapi.editor.markup._
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.ui.popup.{Balloon, JBPopupFactory}
+import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util._
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, PlatformType, WidgetPresentation}
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, WindowManager}
-import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.Consumer
-import com.intellij.util.ui.UIUtil
 import org.sireum.intellij.{SireumApplicationComponent, SireumToolWindowFactory, Util}
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.message.Level
@@ -57,25 +55,23 @@ object LogikaCheckAction {
   object EditorEnabled
 
   val icons: Seq[Icon] = {
-    var r = (0 to 6).map(n => IconLoader.getIcon(s"/logika/icon/logika-$n.png"))
-    r = r.dropRight(1)
-    r ++= r.reverse
-    r = r.dropRight(1)
+    var r = (0 to 6).map(n => IconLoader.getIcon(s"/icon/sireum-$n.png"))
+    r ++= r.drop(1).reverse.drop(1)
     r
   }
   val icon: Icon = icons.head
-  val gutterErrorIcon: Icon = IconLoader.getIcon("/logika/icon/logika-gutter-error.png")
-  val gutterWarningIcon: Icon = IconLoader.getIcon("/logika/icon/logika-gutter-warning.png")
-  val gutterInfoIcon: Icon = IconLoader.getIcon("/logika/icon/logika-gutter-info.png")
-  val gutterHintIcon: Icon = IconLoader.getIcon("/logika/icon/logika-gutter-hint.png")
-  val gutterSummoningIcon: Icon = IconLoader.getIcon("/logika/icon/logika-gutter-summoning.png")
-  val verifiedInfoIcon: Icon = IconLoader.getIcon("/logika/icon/logika-verified-info.png")
+  val gutterErrorIcon: Icon = IconLoader.getIcon("/icon/gutter-error.png")
+  val gutterWarningIcon: Icon = IconLoader.getIcon("/icon/gutter-warning.png")
+  val gutterInfoIcon: Icon = IconLoader.getIcon("/icon/gutter-info.png")
+  val gutterHintIcon: Icon = IconLoader.getIcon("/icon/gutter-hint.png")
+  val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
+  val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
   val queue = new LinkedBlockingQueue[String]()
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
-  val logikaKey = new Key[EditorEnabled.type]("Logika")
+  val sireumKey = new Key[EditorEnabled.type]("Sireum")
   val analysisDataKey = new Key[(Map[Int, Vector[RangeHighlighter]], DefaultListModel[Object], Map[Int, DefaultListModel[SummoningReportItem]])]("Logika Analysis Data")
-  val statusKey = new Key[Boolean]("Logika Analysis Status")
-  val reportItemKey = new Key[ReportItem]("Logika Report Item")
+  val statusKey = new Key[Boolean]("Sireum Analysis Status")
+  val reportItemKey = new Key[ReportItem]("Sireum Report Item")
   var request: Option[Request] = None
   var processInit: Option[scala.sys.process.Process] = None
   var terminated = false
@@ -105,14 +101,14 @@ object LogikaCheckAction {
       if (processInit.isEmpty) return
       val statusBar = WindowManager.getInstance().getStatusBar(p)
       var frame = 0
-      val statusIdle = "Sireum Logika is idle"
-      val statusWaiting = "Sireum Logika is waiting to work"
-      val statusWorking = "Sireum Logika is working"
+      val statusIdle = "Sireum is idle"
+      val statusWaiting = "Sireum is waiting to work"
+      val statusWorking = "Sireum is working"
       var statusTooltip = statusIdle
       var shutdown = false
       lazy val statusBarWidget: StatusBarWidget = new StatusBarWidget {
 
-        override def ID(): String = "Sireum Logika"
+        override def ID(): String = "Sireum"
 
         override def install(statusBar: StatusBar): Unit = {}
 
@@ -120,8 +116,8 @@ object LogikaCheckAction {
           new IconPresentation {
             override def getClickConsumer: Consumer[MouseEvent] = _ =>
               if (Messages.showYesNoDialog(
-                p, "Shutdown Sireum Logika background server?",
-                "Sireum Logika", null) == Messages.YES)
+                p, "Shutdown Sireum background server?",
+                "Sireum", null) == Messages.YES)
                 editorMap.synchronized {
                   this.synchronized {
                     request = None
@@ -184,7 +180,7 @@ object LogikaCheckAction {
     }
   }
 
-  def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(logikaKey)
+  def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(sireumKey)
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
@@ -231,8 +227,8 @@ object LogikaCheckAction {
 
 
   def enableEditor(project: Project, file: VirtualFile, editor: Editor): Unit = {
-    if (editor.getUserData(logikaKey) != null) return
-    editor.putUserData(logikaKey, EditorEnabled)
+    if (editor.getUserData(sireumKey) != null) return
+    editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
         if (Util.isSireumOrLogikaFile(project)._2) {
@@ -273,13 +269,13 @@ object LogikaCheckAction {
             if (r.hasLogika) {
               if (r.isIllFormed) {
                 Util.notify(new Notification(
-                  "Sireum Logika", "Slang Error",
+                  "Sireum", "Slang Error",
                   s"Ill-formed program with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
               else {
                 Util.notify(new Notification(
-                  "Sireum Logika", "Logika Error",
+                  "Sireum", "Logika Error",
                   s"Programming logic proof is rejected with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
@@ -288,7 +284,7 @@ object LogikaCheckAction {
           editorOpt.foreach(_.putUserData(statusKey, false))
         } else if (r.hasLogika && r.numOfWarnings > 0) {
           Util.notify(new Notification(
-            "Sireum Logika", "Logika Warning",
+            "Sireum", "Logika Warning",
             s"Programming logic proof is accepted with ${r.numOfWarnings} warning(s)",
             NotificationType.WARNING, null), project, shouldExpire = true)
           editorOpt.foreach(_.putUserData(statusKey, true))
@@ -296,7 +292,7 @@ object LogikaCheckAction {
           val title = "Logika Verified"
           val icon = verifiedInfoIcon
           if (r.hasLogika && (!r.isBackground || !(statusOpt.getOrElse(false)))) {
-            Util.notify(new Notification("Sireum Logika", title, "Programming logic proof is accepted",
+            Util.notify(new Notification("Sireum", title, "Programming logic proof is accepted",
               NotificationType.INFORMATION, null) {
               override def getIcon: Icon = icon
             }, project, shouldExpire = true)
@@ -307,7 +303,7 @@ object LogikaCheckAction {
         r.message.level match {
           case Level.InternalError =>
             Util.notify(new Notification(
-              "Sireum Logika", "Logika Internal Error",
+              "Sireum", "Logika Internal Error",
               r.message.text.value,
               NotificationType.ERROR), project, shouldExpire = true)
             editorOpt.foreach(_.putUserData(statusKey, false))
