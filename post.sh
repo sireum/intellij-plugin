@@ -7,3 +7,5 @@ sed -i.bak "s/5.0.0-SNAPSHOT/${VER}/g" META-INF/plugin.xml
 7z a sireum-intellij-plugin/lib/sireum-intellij-plugin.jar META-INF/plugin.xml
 7z a sireum-intellij-plugin.zip sireum-intellij-plugin/lib/sireum-intellij-plugin.jar
 rm -fR META-INF sireum-intellij-plugin
+echo ""
+echo "Version: ${VER}"
