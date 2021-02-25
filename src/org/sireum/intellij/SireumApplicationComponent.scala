@@ -38,6 +38,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
 import org.sireum.intellij.logika.LogikaConfigurable
+import org.sireum.intellij.logika.action.LogikaCheckAction
 
 object SireumApplicationComponent {
   private val sireumKey = "org.sireum."
@@ -251,5 +252,9 @@ class SireumApplicationComponent extends ApplicationComponent {
 
   override def disposeComponent(): Unit = {
     SireumApplicationComponent.terminated = true
+    LogikaCheckAction.editorMap.synchronized {
+      for (p <- LogikaCheckAction.processInit) p.destroy()
+      LogikaCheckAction.processInit = None
+    }
   }
 }
