@@ -64,7 +64,7 @@ object SireumApplicationComponent {
     import org.sireum._
     if (sireumHomeOpt.isEmpty) {
       val env = System.getenv("SIREUM_HOME")
-      sireumHomeOpt = checkSireumDir(Os.path(env))
+      sireumHomeOpt = if (env == null) scala.None else checkSireumDir(Os.path(env))
       if (sireumHomeOpt.isEmpty && SystemInfo.isWindows) {
         sireumHomeOpt = checkSireumDir(Os.path("C:\\Sireum" + dev))
         if (sireumHomeOpt.isEmpty)
@@ -81,10 +81,7 @@ object SireumApplicationComponent {
           sireumHomeOpt = checkSireumDir(p))
       }
     }
-    sireumHomeOpt match {
-      case scala.Some(homeDir) => saveConfiguration()
-      case _ =>
-    }
+    if (sireumHomeOpt.isDefined) saveConfiguration()
     sireumHomeOpt
   }
 
