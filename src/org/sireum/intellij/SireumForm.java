@@ -40,4 +40,6 @@ public abstract class SireumForm {
     protected JPanel headerPanel;
     protected JLabel titleLabel;
     protected JLabel subtitleLabel;
+    protected JPanel logoPanel;
+    protected JLabel logoLabel;
 }

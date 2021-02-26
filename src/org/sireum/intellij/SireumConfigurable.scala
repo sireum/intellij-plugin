@@ -28,13 +28,15 @@ package org.sireum.intellij
 import java.awt.Color
 import javax.swing.JComponent
 import javax.swing.event.{DocumentEvent, DocumentListener}
-
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.JBColor
 
 final class SireumConfigurable extends SireumForm with Configurable {
+
+  private val logo = IconLoader.getIcon("/icon/sireum-logo.png")
 
   import SireumApplicationComponent._
 
@@ -74,6 +76,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
       envVarsLabel.setForeground(if (validEnvVars) fgColor else JBColor.red)
       envVarsLabel.setToolTipText(if (validEnvVars) "OK" else "Ill-formed (format: key of [a-zA-Z_][a-zA-Z0-9_]* = value, per line).")
     }
+
+    logoLabel.setIcon(logo)
 
     reset()
 
