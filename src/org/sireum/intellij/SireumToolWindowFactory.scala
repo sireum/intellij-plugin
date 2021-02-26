@@ -42,7 +42,7 @@ object SireumToolWindowFactory {
     toolWindow.setAutoHide(false)
     val contentFactory = ContentFactory.SERVICE.getInstance
     val logikaForm = new LogikaToolWindowForm()
-    val content = contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Logika", false)
+    val content = contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Output", false)
     toolWindow.getContentManager.addContent(content)
     windows.put(project, Forms(toolWindow, logikaForm))
   }

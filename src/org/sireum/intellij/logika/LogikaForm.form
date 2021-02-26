@@ -96,6 +96,7 @@
           </grid>
         </constraints>
         <properties>
+          <selected value="true"/>
           <text value="&amp;Background analysis"/>
         </properties>
       </component>
@@ -176,6 +177,7 @@
           </grid>
         </constraints>
         <properties>
+          <selected value="true"/>
           <text value="Generate programming logic &amp;hints"/>
           <toolTipText value="Expose statement pre/post claims"/>
         </properties>
@@ -187,6 +189,7 @@
           </grid>
         </constraints>
         <properties>
+          <selected value="true"/>
           <text value="Inscribe &amp;summonings"/>
           <toolTipText value="Expose incantations used in summonings"/>
         </properties>
