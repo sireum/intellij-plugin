@@ -72,11 +72,13 @@ object SireumApplicationComponent {
       } else if (sireumHomeOpt.isEmpty && SystemInfo.isMac) {
         val appResources = s"/Applications/Sireum$dev.app/Contents/Resources/sireum"
         sireumHomeOpt = checkSireumDir(Os.path(appResources))
-        if (sireumHomeOpt.isEmpty)
+        if (sireumHomeOpt.isEmpty) {
           sireumHomeOpt = checkSireumDir(Os.path(System.getProperty("user.home") + appResources))
-      } else if (sireumHomeOpt.isEmpty && SystemInfo.isLinux)
+        }
+      } else if (sireumHomeOpt.isEmpty && SystemInfo.isLinux) {
         sireumHomeOpt = checkSireumDir(Os.path(System.getProperty("user.home") + "/Applications/Sireum" + dev))
-      else if (sireumHomeOpt.isEmpty) {
+      }
+      if (sireumHomeOpt.isEmpty) {
         browseSireumHome(project).foreach(p =>
           sireumHomeOpt = checkSireumDir(p))
       }
