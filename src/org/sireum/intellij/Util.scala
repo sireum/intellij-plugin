@@ -57,15 +57,8 @@ object Util {
   def isSireumOrLogikaFile(path: org.sireum.Os.Path): (Boolean, Boolean) = {
     if (!path.exists) return (false, false)
     val p = path.string.value
-    if (p.endsWith(".slang")) {
-      return (true, true)
-    } else if (p.endsWith(".scala") || p.endsWith(".sc")) {
-      for (line <- path.readLineStream.take(1)) {
-        val cline = line.value.replace(" ", "").replace("\t", "")
-        return (cline.contains("#Sireum"), cline.contains("#Logika"))
-      }
-    }
-    return (false, false)
+    val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p), path.read)
+    return (hasSireum, compactFirstLine.contains("#Logika"))
   }
 
   def notify(n: Notification, project: Project, shouldExpire: Boolean): Unit =
