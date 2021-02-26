@@ -43,11 +43,9 @@ object LogikaConfigurable {
   private val timeoutKey = logikaKey + "timeout"
   private val autoEnabledKey = logikaKey + "auto"
   private val checkSatKey = logikaKey + "checkSat"
-  private val fileExtsKey = logikaKey + "fileExts"
   private val hintKey = logikaKey + "hint"
   private val hintUnicodeKey = logikaKey + "hintUnicode"
   private val inscribeSummoningsKey = logikaKey + "inscribeSummonings"
-  private val checkerKindKey = logikaKey + "checkerKind"
   private val bitWidthKey = logikaKey + "bitWidth"
   private val loopBoundKey = logikaKey + "loopBound"
   private val recursionBoundKey = logikaKey + "recursionBound"
@@ -56,7 +54,7 @@ object LogikaConfigurable {
   private[intellij] var backgroundAnalysis = true
   private[intellij] var idle: Int = 1500
   private[intellij] var timeout: Int = 2000
-  private[intellij] var autoEnabled = false
+  private[intellij] var autoEnabled = true
   private[intellij] var checkSat = true
   private[intellij] var hint = true
   private[intellij] var hintUnicode = SystemInfo.isMac
