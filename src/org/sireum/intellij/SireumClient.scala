@@ -341,10 +341,10 @@ object SireumClient {
 
   private[intellij] final case class SummoningReportItem(project: Project,
                                                          file: VirtualFile,
-                                                         messageFirstLine: String,
+                                                         messageHeader: String,
                                                          offset: Int,
                                                          message: String) extends ReportItem {
-    override def toString: String = messageFirstLine
+    override def toString: String = messageHeader
   }
 
   private def processReportId(project: Project,
@@ -373,8 +373,9 @@ object SireumClient {
         val text = r.result.query.value
         val line = r.pos.beginLine.toInt
         val offset = r.pos.offset.toInt
-        val firstLine = text.substring(text.indexOf(';') + 1, text.indexOf('\n')).trim
-        return Some((line, SummoningReportItem(project, file, firstLine, offset, text)))
+        val header = text.lines().limit(2).map(line => line.replace(';', ' ').
+          replace("Result:", "").trim).toArray.mkString(": ")
+        return Some((line, SummoningReportItem(project, file, header, offset, text)))
       case r: Logika.Verify.State if LogikaConfigurable.hint =>
         import org.sireum._
         val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.ClaimDefs.empty)
@@ -648,14 +649,28 @@ object SireumClient {
                         var selection = 0
                         var i = 0
                         while (i < summoningListModel.size && selection == 0) {
-                          if (summoningListModel.elementAt(i).messageFirstLine.contains("Invalid")) {
+                          if (summoningListModel.elementAt(i).messageHeader.contains("Invalid")) {
                             selection = i
                           }
                           i += 1
                         }
                         i = 0
                         while (i < summoningListModel.size && selection == 0) {
-                          if (summoningListModel.elementAt(i).messageFirstLine.contains("Don't Know")) {
+                          if (summoningListModel.elementAt(i).messageHeader.contains("Don't Know")) {
+                            selection = i
+                          }
+                          i += 1
+                        }
+                        i = 0
+                        while (i < summoningListModel.size && selection == 0) {
+                          if (summoningListModel.elementAt(i).messageHeader.contains("Timeout")) {
+                            selection = i
+                          }
+                          i += 1
+                        }
+                        i = 0
+                        while (i < summoningListModel.size && selection == 0) {
+                          if (summoningListModel.elementAt(i).messageHeader.contains("Error")) {
                             selection = i
                           }
                           i += 1
