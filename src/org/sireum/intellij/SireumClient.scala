@@ -94,7 +94,7 @@ object SireumClient {
             if (trimmed != "") {
               import org.sireum.server.protocol._
               CustomMessagePack.toResponse(trimmed) match {
-                case org.sireum.Either.Left(r: ResponseId) => processResult(r)
+                case org.sireum.Either.Left(r) => processResult(r)
               }
             }
           }, "x", "server", "-m", "msgpack")
@@ -265,7 +265,7 @@ object SireumClient {
   }
 
   def notifyHelper(projectOpt: Option[Project], editorOpt: Option[Editor],
-                   r: org.sireum.server.protocol.ResponseId): Unit = {
+                   r: org.sireum.server.protocol.Response): Unit = {
     import org.sireum.message.Level
     import org.sireum.server.protocol._
     val project = projectOpt.orNull
@@ -307,7 +307,7 @@ object SireumClient {
           }
           editorOpt.foreach(_.putUserData(statusKey, true))
         }
-      case r: ReportId =>
+      case r: Report =>
         r.message.level match {
           case Level.InternalError =>
             Util.notify(new Notification(
@@ -347,12 +347,12 @@ object SireumClient {
     override def toString: String = messageHeader
   }
 
-  private def processReportId(project: Project,
+  private def processReport(project: Project,
                               file: VirtualFile,
-                              r: org.sireum.server.protocol.ResponseId): Option[(Int, ReportItem)] = {
+                              r: org.sireum.server.protocol.Response): Option[(Int, ReportItem)] = {
     import org.sireum.server.protocol._
     r match {
-      case r: ReportId =>
+      case r: Report =>
         r.message.posOpt match {
           case org.sireum.Some(pos) =>
             val line = pos.beginLine.toInt
@@ -477,7 +477,7 @@ object SireumClient {
     else text
   }
 
-  def processResult(r: org.sireum.server.protocol.ResponseId): Unit =
+  def processResult(r: org.sireum.server.protocol.Response): Unit =
     ApplicationManager.getApplication.invokeLater(() => analysisDataKey.synchronized {
       import org.sireum._
       val (project, file, editor, input) = editorMap.synchronized {
@@ -486,7 +486,7 @@ object SireumClient {
             r match {
               case r: org.sireum.server.protocol.Logika.Verify.End => editorMap -= r.id
               case _: server.protocol.Logika.Verify.Start => resetSireumView(pe._1)
-              case r: org.sireum.server.protocol.ReportId if r.message.level == Level.InternalError =>
+              case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
                 notifyHelper(scala.Some(pe._1), if (pe._3.isDisposed) scala.None else scala.Some(pe._3), r)
                 return
               case _ =>
@@ -576,7 +576,7 @@ object SireumClient {
           }
         }
 
-        for ((line, ri) <- processReportId(project, file, r)) {
+        for ((line, ri) <- processReport(project, file, r)) {
           /* TODO
           if (ris.checksat.nonEmpty) scala.util.Try {
             val rhLine = mm.addLineHighlighter(line - 1, layer, null)
