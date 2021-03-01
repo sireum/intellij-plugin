@@ -43,15 +43,17 @@ object SireumApplicationComponent {
   private val sireumHomeKey = sireumKey.dropRight(1)
   private val sireumVarArgsKey = sireumKey + "vmargs"
   private val sireumEnvVarsKey = sireumKey + "envvars"
+  private val backgroundAnalysisKey = sireumKey + "background"
+  private val idleKey = sireumKey + "idle"
   private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
 
-  private lazy val currentPluginVersion =
-    PluginManager.getPlugin(
-      PluginId.getId("org.sireum.intellij")).getVersion
   private[intellij] var sireumHomeOpt: Option[org.sireum.Os.Path] = None
   private[intellij] var vmArgs: Seq[String] = Vector("-Xss2m")
   private[intellij] var envVars = scala.collection.mutable.LinkedHashMap[String, String]()
+  private[intellij] var backgroundAnalysis = true
+  private[intellij] var idle: Int = 1500
+
   private[intellij] val platform: String =
     if (scala.util.Properties.isMac) "mac"
     else if (scala.util.Properties.isLinux) "linux"
@@ -228,6 +230,8 @@ object SireumApplicationComponent {
     envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
     vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
     sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
+    backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
+    idle = pc.getInt(idleKey, idle)
   }
 
   def saveConfiguration(): Unit = {
@@ -235,10 +239,10 @@ object SireumApplicationComponent {
     pc.setValue(sireumHomeKey, sireumHomeOpt.map(_.string.value).orNull)
     pc.setValue(sireumEnvVarsKey, envVarsString)
     pc.setValue(sireumVarArgsKey, vmArgs.mkString(" "))
+    pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
+    pc.setValue(idleKey, idle.toString)
   }
 }
-
-import SireumApplicationComponent._
 
 class SireumApplicationComponent extends ApplicationComponent {
   override val getComponentName: String = "Sireum Application"

@@ -159,7 +159,7 @@ object SireumClient {
             this.synchronized {
               request match {
                 case Some(r: Request) =>
-                  if (System.currentTimeMillis - r.time > LogikaConfigurable.idle) {
+                  if (System.currentTimeMillis - r.time > SireumApplicationComponent.idle) {
                     request = None
                     editorMap.synchronized {
                       editorMap(r.requestId) = (r.project, r.file, r.editor, r.input)
@@ -185,7 +185,7 @@ object SireumClient {
   def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     if (hasLogika) {
-      if (isBackground && !LogikaConfigurable.backgroundAnalysis) return
+      if (isBackground && !SireumApplicationComponent.backgroundAnalysis) return
     }
     init(project)
     val input = editor.getDocument.getText
@@ -240,7 +240,7 @@ object SireumClient {
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
         if (Util.isSireumOrLogikaFile(project)._2) {
-          if (LogikaConfigurable.backgroundAnalysis)
+          if (SireumApplicationComponent.backgroundAnalysis)
             scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = true))
         } else {
           scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false))

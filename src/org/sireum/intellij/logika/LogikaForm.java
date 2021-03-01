@@ -29,8 +29,6 @@ import javax.swing.*;
 
 public abstract class LogikaForm {
     protected JPanel logikaPanel;
-    protected JLabel idleLabel;
-    protected JTextField idleTextField;
     protected JLabel timeoutLabel;
     protected JTextField timeoutTextField;
     protected JCheckBox checkSatCheckBox;
@@ -39,7 +37,6 @@ public abstract class LogikaForm {
     protected JPanel headerPanel;
     protected JLabel titleLabel;
     protected JLabel subtitleLabel;
-    protected JCheckBox backgroundCheckBox;
     protected JCheckBox hintCheckBox;
     protected JCheckBox inscribeSummoningsCheckBox;
     protected JRadioButton forwardRadioButton;

@@ -43,6 +43,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
   private var validSireumHome = false
   private var validVmArgs = false
   private var validEnvVars = false
+  private var validIdle = false
   private var fgColor: Color = _
 
   override def getDisplayName: String = "Sireum"
@@ -50,11 +51,22 @@ final class SireumConfigurable extends SireumForm with Configurable {
   override def getHelpTopic: String = null
 
   override def isModified: Boolean = {
-    validSireumHome && validVmArgs && validEnvVars &&
+    validSireumHome && validVmArgs && validEnvVars && validIdle &&
       (sireumHomeString != sireumHomeTextField.getText ||
         vmArgsString != vmArgsTextField.getText ||
-        envVarsString != envVarsTextArea.getText)
+        envVarsString != envVarsTextArea.getText ||
+        backgroundAnalysis != backgroundCheckBox.isSelected ||
+        idle.toString != idleTextField.getText
+        )
   }
+
+  def parseGe200(text: String): Option[Int] =
+    try {
+      val n = text.toInt
+      if (n < 200) None else Some(n)
+    } catch {
+      case _: Throwable => None
+    }
 
   override def createComponent(): JComponent = {
     def updateSireumHome(path: org.sireum.Os.Path): Unit = {
@@ -75,6 +87,12 @@ final class SireumConfigurable extends SireumForm with Configurable {
       validEnvVars = text == "" || parseEnvVars(text).nonEmpty
       envVarsLabel.setForeground(if (validEnvVars) fgColor else JBColor.red)
       envVarsLabel.setToolTipText(if (validEnvVars) "OK" else "Ill-formed (format: key of [a-zA-Z_][a-zA-Z0-9_]* = value, per line).")
+    }
+
+    def updateIdle(text: String) = {
+      validIdle = parseGe200(text).nonEmpty
+      idleLabel.setForeground(if (validIdle) fgColor else JBColor.red)
+      idleTextField.setToolTipText(if (validIdle) "OK" else "Must be at least 200.")
     }
 
     logoLabel.setIcon(logo)
@@ -123,8 +141,24 @@ final class SireumConfigurable extends SireumForm with Configurable {
       def update(): Unit = updateEnvVars(envVarsTextArea.getText.trim)
     })
 
+    backgroundCheckBox.addActionListener(_ => {
+      idleLabel.setEnabled(backgroundCheckBox.isSelected)
+      idleTextField.setEnabled(backgroundCheckBox.isSelected)
+    })
+
+    idleTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = update()
+
+      override def changedUpdate(e: DocumentEvent): Unit = update()
+
+      override def removeUpdate(e: DocumentEvent): Unit = update()
+
+      def update(): Unit = updateIdle(idleTextField.getText)
+    })
+
     updateEnvVars(envVarsString)
     updateVmArgs(vmArgsString)
+    updateIdle(idle.toString)
 
     sireumPanel
   }
@@ -138,6 +172,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
     vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
     val path = org.sireum.Os.path(sireumHomeTextField.getText)
     sireumHomeOpt = checkSireumDir(path, vmArgs, envVars)
+    backgroundAnalysis = backgroundCheckBox.isSelected
+    idle = parseGe200(idleTextField.getText).getOrElse(idle)
     if (sireumHomeOpt.nonEmpty) saveConfiguration()
     else {
       Messages.showMessageDialog(null: Project, sireumInvalid(path),
@@ -150,5 +186,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     sireumHomeTextField.setText(sireumHomeString)
     vmArgsTextField.setText(vmArgsString)
     envVarsTextArea.setText(envVarsString)
+    backgroundCheckBox.setSelected(backgroundAnalysis)
+    idleTextField.setText(idle.toString)
   }
 }

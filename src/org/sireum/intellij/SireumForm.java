@@ -42,4 +42,8 @@ public abstract class SireumForm {
     protected JLabel subtitleLabel;
     protected JPanel logoPanel;
     protected JLabel logoLabel;
+    protected JCheckBox backgroundCheckBox;
+    protected JPanel idlePanel;
+    protected JLabel idleLabel;
+    protected JTextField idleTextField;
 }

@@ -38,8 +38,6 @@ object LogikaConfigurable {
   private val logo = IconLoader.getIcon("/icon/logika-logo.png")
 
   private val logikaKey = "org.sireum.logika."
-  private val backgroundAnalysisKey = logikaKey + "background"
-  private val idleKey = logikaKey + "idle"
   private val timeoutKey = logikaKey + "timeout"
   private val autoEnabledKey = logikaKey + "auto"
   private val checkSatKey = logikaKey + "checkSat"
@@ -51,8 +49,6 @@ object LogikaConfigurable {
   private val recursionBoundKey = logikaKey + "recursionBound"
   private val methodContractKey = logikaKey + "methodContract"
 
-  private[intellij] var backgroundAnalysis = true
-  private[intellij] var idle: Int = 1500
   private[intellij] var timeout: Int = 2000
   private[intellij] var autoEnabled = true
   private[intellij] var checkSat = true
@@ -68,8 +64,6 @@ object LogikaConfigurable {
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
-    backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
-    idle = pc.getInt(idleKey, idle)
     timeout = pc.getInt(timeoutKey, timeout)
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
@@ -86,8 +80,6 @@ object LogikaConfigurable {
 
   def saveConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
-    pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
-    pc.setValue(idleKey, idle.toString)
     pc.setValue(timeoutKey, timeout.toString)
     pc.setValue(autoEnabledKey, autoEnabled.toString)
     pc.setValue(checkSatKey, checkSat.toString)
@@ -136,7 +128,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
   private var validIdle = true
   private var validTimeout = true
-  private var validFileExts = true
   private var validLoopBound = true
   private var validRecursionBound = true
   private var fgColor: Color = _
@@ -146,11 +137,9 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def getHelpTopic: String = null
 
   override def isModified: Boolean =
-    validIdle && validTimeout && validFileExts && validLoopBound &&
+    validIdle && validTimeout && validLoopBound &&
       validRecursionBound &&
-      (backgroundCheckBox.isSelected != backgroundAnalysis ||
-        idleTextField.getText != idle.toString ||
-        timeoutTextField.getText != timeout.toString ||
+      (timeoutTextField.getText != timeout.toString ||
         autoCheckBox.isSelected != autoEnabled ||
         checkSatCheckBox.isSelected != checkSat ||
         hintCheckBox.isSelected != hint ||
@@ -185,12 +174,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     //devPanel.setVisible(false)
     //unrollingSymExeRadioButton.setEnabled(false)
 
-    def updateIdle() = {
-      val text = idleTextField.getText
-      validIdle = parseGe200(text).nonEmpty
-      idleLabel.setForeground(if (validIdle) fgColor else JBColor.red)
-      idleTextField.setToolTipText(if (validIdle) "OK" else "Must be at least 200.")
-    }
     def updateTimeout() = {
       val text = timeoutTextField.getText
       validTimeout = parseGe200(text).nonEmpty
@@ -234,21 +217,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
     reset()
 
-    fgColor = idleLabel.getForeground
-
-    backgroundCheckBox.addActionListener(_ => {
-      idleLabel.setEnabled(backgroundCheckBox.isSelected)
-      idleTextField.setEnabled(backgroundCheckBox.isSelected)
-    })
-
-    idleTextField.getDocument.addDocumentListener(new DocumentListener {
-      override def insertUpdate(e: DocumentEvent): Unit = updateIdle()
-
-      override def changedUpdate(e: DocumentEvent): Unit = updateIdle()
-
-      override def removeUpdate(e: DocumentEvent): Unit = updateIdle()
-    })
-
     timeoutTextField.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = updateTimeout()
 
@@ -286,8 +254,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def disposeUIResources(): Unit = {}
 
   override def apply(): Unit = {
-    backgroundAnalysis = backgroundCheckBox.isSelected
-    idle = parseGe200(idleTextField.getText).getOrElse(idle)
     timeout = parseGe200(timeoutTextField.getText).getOrElse(timeout)
     autoEnabled = autoCheckBox.isSelected
     checkSat = checkSatCheckBox.isSelected
@@ -304,8 +270,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   }
 
   override def reset(): Unit = {
-    backgroundCheckBox.setSelected(backgroundAnalysis)
-    idleTextField.setText(idle.toString)
     timeoutTextField.setText(timeout.toString)
     autoCheckBox.setSelected(autoEnabled)
     checkSatCheckBox.setSelected(checkSat)
