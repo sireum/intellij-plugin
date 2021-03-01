@@ -68,7 +68,7 @@ object LogikaConfigurable {
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
-    hint = pc.getBoolean(hintUnicodeKey, hintUnicode)
+    hintUnicode = pc.getBoolean(hintUnicodeKey, hintUnicode)
     inscribeSummonings = pc.getBoolean(inscribeSummoningsKey, inscribeSummonings)
     // TODO
     //checkerKind = pc.getValue(checkerKindKey, checkerKind)
