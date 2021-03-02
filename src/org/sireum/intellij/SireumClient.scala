@@ -91,13 +91,29 @@ object SireumClient {
         SireumApplicationComponent.getSireumProcess(p,
           queue, { s =>
             val trimmed = s.trim
-            if (trimmed != "") {
-              import org.sireum.server.protocol._
-              CustomMessagePack.toResponse(trimmed) match {
-                case org.sireum.Either.Left(r) => processResult(r)
-              }
+            def err(): Unit = {
+              val msg = s"Invalid server message: $trimmed"
+              notifyHelper(scala.Some(p), scala.None,
+                org.sireum.server.protocol.Report(org.sireum.ISZ(),
+                  org.sireum.message.Message(org.sireum.message.Level.InternalError, org.sireum.None(),
+                    "client", msg))
+              )
             }
-          }, "x", "server", "-m", "msgpack")
+            if (trimmed.startsWith("""{  "type" : """)) {
+              try {
+                org.sireum.server.protocol.JSON.toResponse(trimmed) match {
+                  case org.sireum.Either.Left(r) => processResult(r)
+                  case org.sireum.Either.Right(_) => err()
+                }
+              } catch {
+                case _: Throwable => err()
+              }
+            } else {
+//              val msg = s"Unrecognized server message: $trimmed"
+//              System.out.println(msg)
+//              System.out.flush()
+            }
+          }, "x", "server", "-m", "json")
       if (processInit.isEmpty) return
       val statusBar = WindowManager.getInstance().getStatusBar(p)
       var frame = 0
@@ -198,18 +214,19 @@ object SireumClient {
     def f(): Vector[String] = {
       import org.sireum.server.protocol._
       Vector(
-        CustomMessagePack.fromRequest(Logika.Verify.Config(
+        org.sireum.server.protocol.JSON.fromRequest(Logika.Verify.Config(
+          LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
           org.sireum.server.service.LogikaService.defaultConfig(
             defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout
           )
-        )).value,
-        CustomMessagePack.fromRequest(Slang.CheckScript(
+        ), true).value,
+        org.sireum.server.protocol.JSON.fromRequest(Slang.CheckScript(
           isBackground = isBackground,
           id = requestId,
           uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
           content = input
-        )).value
+        ), true).value
       )
     }
 
@@ -272,7 +289,7 @@ object SireumClient {
     val statusOpt = editorOpt.map(_.getUserData(statusKey))
     r match {
       case r: Logika.Verify.End =>
-        if (r.numOfErrors > 0) {
+        if (r.numOfErrors > 0 || r.numOfInternalErrors > 0) {
           if (!r.isBackground || statusOpt.getOrElse(true)) {
             if (r.hasLogika) {
               if (r.isIllFormed) {
@@ -296,7 +313,7 @@ object SireumClient {
             s"Programming logic proof is accepted with ${r.numOfWarnings} warning(s)",
             NotificationType.WARNING, null), project, shouldExpire = true)
           editorOpt.foreach(_.putUserData(statusKey, true))
-        } else {
+        } else if (!r.wasCancelled) {
           val title = "Logika Verified"
           val icon = verifiedInfoIcon
           if (r.hasLogika && (!r.isBackground || !(statusOpt.getOrElse(false)))) {
@@ -306,6 +323,8 @@ object SireumClient {
             }, project, shouldExpire = true)
           }
           editorOpt.foreach(_.putUserData(statusKey, true))
+        } else {
+          editorOpt.foreach(_.putUserData(statusKey, false))
         }
       case r: Report =>
         r.message.level match {
@@ -353,30 +372,29 @@ object SireumClient {
     import org.sireum.server.protocol._
     r match {
       case r: Report =>
-        r.message.posOpt match {
-          case org.sireum.Some(pos) =>
-            val line = pos.beginLine.toInt
-            val msg = r.message
-            msg.level match {
-              case Level.InternalError =>
-                return Some((line, ConsoleReportItem(project, file, Level.Error, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
-              case Level.Error =>
-                return Some((line, ConsoleReportItem(project, file, Level.Error, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
-              case Level.Warning =>
-                return Some((line, ConsoleReportItem(project, file, Level.Warning, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
-              case Level.Info =>
-                return Some((line, ConsoleReportItem(project, file, Level.Info, pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt, msg.text.value)))
-            }
-          case _ =>
+        val msg = r.message
+        val (line, column, offset, length) = r.message.posOpt match {
+          case org.sireum.Some(pos) => (pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt)
+          case _ => (1, 1, -1, -1)
         }
-      case r: Logika.Verify.Smt2Query if LogikaConfigurable.inscribeSummonings =>
+        msg.level match {
+          case Level.InternalError =>
+            return Some((line, ConsoleReportItem(project, file, Level.Error, line, column, offset, length, msg.text.value)))
+          case Level.Error =>
+            return Some((line, ConsoleReportItem(project, file, Level.Error, line, column, offset, length, msg.text.value)))
+          case Level.Warning =>
+            return Some((line, ConsoleReportItem(project, file, Level.Warning, line, column, offset, length, msg.text.value)))
+          case Level.Info =>
+            return Some((line, ConsoleReportItem(project, file, Level.Info, line, column, offset, length, msg.text.value)))
+        }
+      case r: Logika.Verify.Smt2Query =>
         val text = r.result.query.value
         val line = r.pos.beginLine.toInt
         val offset = r.pos.offset.toInt
         val header = text.lines().limit(2).map(line => line.replace(';', ' ').
           replace("Result:", "").trim).toArray.mkString(": ")
         return Some((line, SummoningReportItem(project, file, header, offset, text)))
-      case r: Logika.Verify.State if LogikaConfigurable.hint =>
+      case r: Logika.Verify.State =>
         import org.sireum._
         val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.ClaimDefs.empty)
         var text =
@@ -396,9 +414,11 @@ object SireumClient {
     None
   }
 
-  def gutterIconRenderer(tooltipText: String, icon: Icon, action: AnAction): GutterIconRenderer =
+  def gutterIconRenderer(tooltipText: String, icon: Icon, action: AnAction): GutterIconRenderer = {
     new GutterIconRenderer {
-      override val getTooltipText: String = tooltipText
+      val ttext: String = if (tooltipText.length > 100) tooltipText.substring(0, 1024) + "..." else tooltipText
+
+      override val getTooltipText: String = ttext
 
       override def getIcon: Icon = icon
 
@@ -408,6 +428,7 @@ object SireumClient {
 
       override def getClickAction: AnAction = action
     }
+  }
 
   def saveSetDividerLocation(divider: JSplitPane, weight: Double): Unit = {
     val w = divider.getResizeWeight
@@ -488,7 +509,6 @@ object SireumClient {
               case _: server.protocol.Logika.Verify.Start => resetSireumView(pe._1)
               case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
                 notifyHelper(scala.Some(pe._1), if (pe._3.isDisposed) scala.None else scala.Some(pe._3), r)
-                return
               case _ =>
             }
             pe
@@ -546,7 +566,8 @@ object SireumClient {
               case _ => (ci.message, Vector())
             }
             val (icon, color) = level match {
-              case Level.InternalError => (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
+              case Level.InternalError =>
+                (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
               case Level.Error => (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
               case Level.Warning => (gutterWarningIcon, cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor)
               case Level.Info => (gutterInfoIcon, cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor)
@@ -554,8 +575,6 @@ object SireumClient {
             val attr = new TextAttributes(null, null, color, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
             val end = scala.math.min(ci.offset + ci.length, editor.getDocument.getTextLength)
             val rhLine = mm.addLineHighlighter(line - 1, layer, null)
-            val rh = mm.addRangeHighlighter(ci.offset, end, layer, attr, HighlighterTargetArea.EXACT_RANGE)
-            rhs = rhs + ((line, rhl :+ rhLine :+ rh))
             rhLine.putUserData(reportItemKey, ci)
             rhLine.setThinErrorStripeMark(false)
             rhLine.setErrorStripeMarkColor(color)
@@ -569,10 +588,17 @@ object SireumClient {
                 })
               })))
             rhLine.putUserData(reportItemKey, ci)
-            rh.setErrorStripeTooltip(ci.message)
-            rh.setThinErrorStripeMark(false)
-            rh.setErrorStripeMarkColor(color)
-            listModel.addElement(ci)
+            if (ci.offset != -1) {
+              val rh = mm.addRangeHighlighter(ci.offset, end, layer, attr, HighlighterTargetArea.EXACT_RANGE)
+              rh.setErrorStripeTooltip(ci.message)
+              rh.setThinErrorStripeMark(false)
+              rh.setErrorStripeMarkColor(color)
+              listModel.addElement(ci)
+              rhs = rhs + ((line, rhl :+ rhLine :+ rh))
+            } else {
+              rhs = rhs + ((line, rhl :+ rhLine))
+
+            }
           }
         }
 
