@@ -4,6 +4,7 @@
 .DS_Store
 /sireum-v3
 /sireum-intellij-plugin.zip
+/intellij-plugin.zip
 /.idea/libraries
 /.idea/compiler.xml
 /.idea/encodings.xml
