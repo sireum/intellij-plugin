@@ -91,6 +91,7 @@ object SireumClient {
         SireumApplicationComponent.getSireumProcess(p,
           queue, { s =>
             val trimmed = s.trim
+
             def err(): Unit = {
               val msg = s"Invalid server message: $trimmed"
               notifyHelper(scala.Some(p), scala.None,
@@ -99,6 +100,7 @@ object SireumClient {
                     "client", msg))
               )
             }
+
             if (trimmed.startsWith("""{  "type" : """)) {
               try {
                 org.sireum.server.protocol.JSON.toResponse(trimmed) match {
@@ -109,9 +111,9 @@ object SireumClient {
                 case _: Throwable => err()
               }
             } else {
-//              val msg = s"Unrecognized server message: $trimmed"
-//              System.out.println(msg)
-//              System.out.flush()
+              //              val msg = s"Unrecognized server message: $trimmed"
+              //              System.out.println(msg)
+              //              System.out.flush()
             }
           }, "x", "server", "-m", "json")
       if (processInit.isEmpty) return
@@ -158,31 +160,33 @@ object SireumClient {
       val t = new Thread {
         override def run(): Unit = {
           val defaultFrame = icons.length / 2 + 1
+          var idle = false
           while (!terminated && !shutdown) {
-            if (editorMap.nonEmpty || request.nonEmpty) {
-              frame = (frame + 1) % icons.length
-              statusTooltip =
-                if (editorMap.nonEmpty) statusWorking
-                else statusWaiting
-              statusBar.updateWidget(statusBarWidget.ID())
-            } else {
-              val f = frame
-              frame = defaultFrame
-              statusTooltip = statusIdle
-              if (f != defaultFrame)
-                statusBar.updateWidget(statusBarWidget.ID())
-            }
             this.synchronized {
-              request match {
-                case Some(r: Request) =>
-                  if (System.currentTimeMillis - r.time > SireumApplicationComponent.idle) {
-                    request = None
-                    editorMap.synchronized {
-                      editorMap(r.requestId) = (r.project, r.file, r.editor, r.input)
-                    }
-                    queue.add(r.msgGen())
+              editorMap.synchronized {
+                if (editorMap.nonEmpty || request.nonEmpty) {
+                  frame = (frame + 1) % icons.length
+                  statusTooltip = if (editorMap.nonEmpty) statusWorking else statusWaiting
+                  statusBar.updateWidget(statusBarWidget.ID())
+                  idle = false
+                } else {
+                  if (!idle) {
+                    val f = frame
+                    frame = defaultFrame
+                    statusTooltip = statusIdle
+                    if (f != defaultFrame) statusBar.updateWidget(statusBarWidget.ID())
+                    idle = true
                   }
-                case None =>
+                }
+                request match {
+                  case Some(r: Request) =>
+                    if (System.currentTimeMillis - r.time > SireumApplicationComponent.idle) {
+                      request = None
+                      editorMap(r.requestId) = (r.project, r.file, r.editor, r.input)
+                      queue.add(r.msgGen())
+                    }
+                  case None =>
+                }
               }
             }
             Thread.sleep(175)
@@ -200,9 +204,6 @@ object SireumClient {
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
-    if (hasLogika) {
-      if (isBackground && !SireumApplicationComponent.backgroundAnalysis) return
-    }
     init(project)
     val input = editor.getDocument.getText
     val (t, requestId) = {
@@ -223,6 +224,8 @@ object SireumClient {
         ), true).value,
         org.sireum.server.protocol.JSON.fromRequest(Slang.CheckScript(
           isBackground = isBackground,
+          logikaEnabled = !isBackground ||
+            (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
           id = requestId,
           uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
           content = input
@@ -250,18 +253,22 @@ object SireumClient {
     }
   }
 
+  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor): Unit = {
+    if (Util.isSireumOrLogikaFile(project)._2) {
+      if (SireumApplicationComponent.backgroundAnalysis)
+        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = LogikaConfigurable.backgroundAnalysis))
+    } else {
+      if (SireumApplicationComponent.backgroundAnalysis)
+        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false))
+    }
+  }
 
   def enableEditor(project: Project, file: VirtualFile, editor: Editor): Unit = {
     if (editor.getUserData(sireumKey) != null) return
     editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
-        if (Util.isSireumOrLogikaFile(project)._2) {
-          if (SireumApplicationComponent.backgroundAnalysis)
-            scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = true))
-        } else {
-          scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false))
-        }
+        analyzeOpt(project, file, editor)
       }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
@@ -277,7 +284,7 @@ object SireumClient {
     if (hasSireum) {
       enableEditor(project, file, editor)
       editor.putUserData(statusKey, false)
-      analyze(project, file, editor, isBackground = true, hasLogika = true)
+      analyzeOpt(project, file, editor)
     }
   }
 
@@ -367,8 +374,8 @@ object SireumClient {
   }
 
   private def processReport(project: Project,
-                              file: VirtualFile,
-                              r: org.sireum.server.protocol.Response): Option[(Int, ReportItem)] = {
+                            file: VirtualFile,
+                            r: org.sireum.server.protocol.Response): Option[(Int, ReportItem)] = {
     import org.sireum.server.protocol._
     r match {
       case r: Report =>

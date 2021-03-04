@@ -38,6 +38,7 @@ object LogikaConfigurable {
   private val logo = IconLoader.getIcon("/icon/logika-logo.png")
 
   private val logikaKey = "org.sireum.logika."
+  private val backgroundAnalysisKey = logikaKey + "background"
   private val timeoutKey = logikaKey + "timeout"
   private val autoEnabledKey = logikaKey + "auto"
   private val checkSatKey = logikaKey + "checkSat"
@@ -49,6 +50,7 @@ object LogikaConfigurable {
   private val recursionBoundKey = logikaKey + "recursionBound"
   private val methodContractKey = logikaKey + "methodContract"
 
+  private[intellij] var backgroundAnalysis = true
   private[intellij] var timeout: Int = 2000
   private[intellij] var autoEnabled = true
   private[intellij] var checkSat = true
@@ -64,6 +66,7 @@ object LogikaConfigurable {
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
+    backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
     timeout = pc.getInt(timeoutKey, timeout)
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
@@ -80,6 +83,7 @@ object LogikaConfigurable {
 
   def saveConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
+    pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
     pc.setValue(timeoutKey, timeout.toString)
     pc.setValue(autoEnabledKey, autoEnabled.toString)
     pc.setValue(checkSatKey, checkSat.toString)
@@ -126,7 +130,6 @@ import LogikaConfigurable._
 
 final class LogikaConfigurable extends LogikaForm with Configurable {
 
-  private var validIdle = true
   private var validTimeout = true
   private var validLoopBound = true
   private var validRecursionBound = true
@@ -137,9 +140,10 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def getHelpTopic: String = null
 
   override def isModified: Boolean =
-    validIdle && validTimeout && validLoopBound &&
+    validTimeout && validLoopBound &&
       validRecursionBound &&
-      (timeoutTextField.getText != timeout.toString ||
+      (backgroundCheckBox.isSelected != backgroundAnalysis ||
+        timeoutTextField.getText != timeout.toString ||
         autoCheckBox.isSelected != autoEnabled ||
         checkSatCheckBox.isSelected != checkSat ||
         hintCheckBox.isSelected != hint ||
@@ -217,6 +221,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
     reset()
 
+    fgColor = logoLabel.getForeground
+
     timeoutTextField.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = updateTimeout()
 
@@ -254,6 +260,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def disposeUIResources(): Unit = {}
 
   override def apply(): Unit = {
+    backgroundAnalysis = backgroundCheckBox.isSelected
     timeout = parseGe200(timeoutTextField.getText).getOrElse(timeout)
     autoEnabled = autoCheckBox.isSelected
     checkSat = checkSatCheckBox.isSelected
@@ -270,6 +277,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   }
 
   override def reset(): Unit = {
+    backgroundCheckBox.setSelected(backgroundAnalysis)
     timeoutTextField.setText(timeout.toString)
     autoCheckBox.setSelected(autoEnabled)
     checkSatCheckBox.setSelected(checkSat)

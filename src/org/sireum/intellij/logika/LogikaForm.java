@@ -37,6 +37,7 @@ public abstract class LogikaForm {
     protected JPanel headerPanel;
     protected JLabel titleLabel;
     protected JLabel subtitleLabel;
+    protected JCheckBox backgroundCheckBox;
     protected JCheckBox hintCheckBox;
     protected JCheckBox inscribeSummoningsCheckBox;
     protected JRadioButton forwardRadioButton;

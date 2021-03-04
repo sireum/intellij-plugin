@@ -27,10 +27,8 @@ package org.sireum.intellij
 
 import java.io._
 import java.util.concurrent.BlockingQueue
-import com.intellij.ide.plugins.PluginManager
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.components._
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileChooser._
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
