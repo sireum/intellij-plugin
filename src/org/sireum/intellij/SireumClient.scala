@@ -162,31 +162,34 @@ object SireumClient {
           val defaultFrame = icons.length / 2 + 1
           var idle = false
           while (!terminated && !shutdown) {
-            this.synchronized {
-              editorMap.synchronized {
-                if (editorMap.nonEmpty || request.nonEmpty) {
-                  frame = (frame + 1) % icons.length
-                  statusTooltip = if (editorMap.nonEmpty) statusWorking else statusWaiting
+            if (editorMap.nonEmpty || request.nonEmpty) {
+              idle = false
+              frame = (frame + 1) % icons.length
+              statusTooltip =
+                if (editorMap.nonEmpty) statusWorking
+                else statusWaiting
+              statusBar.updateWidget(statusBarWidget.ID())
+            } else {
+              if (!idle) {
+                idle = true
+                val f = frame
+                frame = defaultFrame
+                statusTooltip = statusIdle
+                if (f != defaultFrame)
                   statusBar.updateWidget(statusBarWidget.ID())
-                  idle = false
-                } else {
-                  if (!idle) {
-                    val f = frame
-                    frame = defaultFrame
-                    statusTooltip = statusIdle
-                    if (f != defaultFrame) statusBar.updateWidget(statusBarWidget.ID())
-                    idle = true
-                  }
-                }
-                request match {
-                  case Some(r: Request) =>
-                    if (System.currentTimeMillis - r.time > SireumApplicationComponent.idle) {
-                      request = None
+              }
+            }
+            this.synchronized {
+              request match {
+                case Some(r: Request) =>
+                  if (System.currentTimeMillis - r.time > SireumApplicationComponent.idle) {
+                    request = None
+                    editorMap.synchronized {
                       editorMap(r.requestId) = (r.project, r.file, r.editor, r.input)
-                      queue.add(r.msgGen())
                     }
-                  case None =>
-                }
+                    queue.add(r.msgGen())
+                  }
+                case None =>
               }
             }
             Thread.sleep(175)
