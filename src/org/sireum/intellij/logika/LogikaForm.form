@@ -143,9 +143,9 @@
           </grid>
         </constraints>
         <properties>
-          <enabled value="false"/>
+          <enabled value="true"/>
           <selected value="true"/>
-          <text value="&amp;Check facts and contracts satisfiability"/>
+          <text value="&amp;Check assumption satisfiability"/>
           <toolTipText value="Check satisfiability of facts and contracts in programming logic"/>
         </properties>
       </component>

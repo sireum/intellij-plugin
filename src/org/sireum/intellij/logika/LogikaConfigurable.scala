@@ -53,7 +53,7 @@ object LogikaConfigurable {
   private[intellij] var backgroundAnalysis = true
   private[intellij] var timeout: Int = 2000
   private[intellij] var autoEnabled = true
-  private[intellij] var checkSat = true
+  private[intellij] var checkSat = false
   private[intellij] var hint = true
   private[intellij] var hintUnicode = SystemInfo.isMac
   private[intellij] var inscribeSummonings = true

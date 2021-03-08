@@ -221,6 +221,7 @@ object SireumClient {
         org.sireum.server.protocol.JSON.fromRequest(Logika.Verify.Config(
           LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
           org.sireum.server.service.LogikaService.defaultConfig(
+            sat = LogikaConfigurable.checkSat,
             defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout
           )
@@ -363,9 +364,6 @@ object SireumClient {
     override val toString: String = s"[$line, $column] $message"
   }
 
-  // TODO
-  // private[intellij] final case class CheckSatReportItem(message: String) extends ReportItem
-
   private[intellij] final case class HintReportItem(message: String) extends ReportItem
 
   private[intellij] final case class SummoningReportItem(project: Project,
@@ -416,9 +414,6 @@ object SireumClient {
         }
         val line = r.posOpt.get.beginLine.toInt
         return scala.Some((line, HintReportItem(text)))
-      // TODO
-      //case Level.Warning if msg.kind === "checksat" =>
-      //  return Some((line, CheckSatReportItem(msg.text.value)))
       case _ =>
     }
     None
