@@ -237,6 +237,15 @@ object SireumClient {
       )
     }
 
+    editorMap.synchronized {
+      val cancels = for (rid <- editorMap.keys.toVector) yield {
+        editorMap -= rid
+        org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Cancel(rid), true).value
+      }
+      if (cancels.nonEmpty) queue.add(cancels)
+    }
+
+
     if (isBackground) {
       this.synchronized {
         request = Some(Request(t, requestId, project, file, editor, input, f _))
