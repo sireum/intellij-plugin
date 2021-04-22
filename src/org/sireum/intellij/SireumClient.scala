@@ -415,7 +415,7 @@ object SireumClient {
           replace("Result:", "").trim).toArray.mkString(": ")
         return Some((line, SummoningReportItem(project, file, header, offset, text)))
       case r: Logika.Verify.State =>
-        import org.sireum._
+        import org.sireum.{project => _, _}
         val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.ClaimDefs.empty)
         val text = normalizeChars(
           st"""{

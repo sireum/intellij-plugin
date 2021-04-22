@@ -30,7 +30,7 @@ import java.util.concurrent.BlockingQueue
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.components._
 import com.intellij.openapi.fileChooser._
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
@@ -60,8 +60,8 @@ object SireumApplicationComponent {
 
   private var terminated: Boolean = false
 
-  final def getSireumHome(project: Project = null): Option[org.sireum.Os.Path] = {
-    import org.sireum._
+  final def getSireumHome(project: IProject = null): Option[org.sireum.Os.Path] = {
+    import org.sireum.{project => _, _}
     if (sireumHomeOpt.isEmpty) {
       val env = System.getenv("SIREUM_HOME")
       sireumHomeOpt = if (env == null) scala.None else checkSireumDir(Os.path(env))
@@ -94,7 +94,7 @@ object SireumApplicationComponent {
 
   def vmArgsString: String = vmArgs.mkString(" ")
 
-  def browseSireumHome(project: Project = null): Option[org.sireum.Os.Path] = {
+  def browseSireumHome(project: IProject = null): Option[org.sireum.Os.Path] = {
     var pathOpt: Option[org.sireum.Os.Path] = None
     val desc = FileChooserDescriptorFactory.createSingleFolderDescriptor()
     desc.setTitle("Select Sireum directory")
@@ -113,13 +113,13 @@ object SireumApplicationComponent {
     s"""Could not confirm a working Sireum installation in $path (with the specified VM arguments and environment variables in the settings).
        |Make sure to run Sireum at least once from the command-line.""".stripMargin
 
-  def runSireum(project: Project, input: Option[String], args: String*): Option[String] =
+  def runSireum(project: IProject, input: Option[String], args: String*): Option[String] =
     getSireumHome(project) match {
       case Some(d) => runSireum(d, vmArgs, envVars, input, args)
       case _ => None
     }
 
-  def getSireumProcess(project: Project,
+  def getSireumProcess(project: IProject,
                        queue: BlockingQueue[Vector[String]],
                        processOutput: String => Unit,
                        args: String*): Option[scala.sys.process.Process] =
