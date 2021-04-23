@@ -54,6 +54,62 @@ object Util {
       case _ => (false, false)
     }
 
+  def isProyek(project: Project): Boolean = {
+    val root = org.sireum.Os.path(project.getBasePath)
+    return (root / "bin" / "project.cmd").isFile
+  }
+
+  def recommendReload(iproject: Project): Boolean = {
+    import org.sireum._
+    if (!isProyek(iproject)) {
+      return false
+    }
+    val root = Os.path(iproject.getBasePath)
+    SireumApplicationComponent.getSireumHome(iproject) match {
+      case scala.Some(home) => System.setProperty("org.sireum.home", home.string.value)
+      case _ => return false
+    }
+    val prjOpt = org.sireum.cli.Proyek.getProject(root, None(), None())
+    val vsOpt = org.sireum.cli.Proyek.getVersions(root, ISZ())
+    val errorF = root / ".idea" / "error.txt"
+    errorF.removeAll()
+    if (prjOpt.isEmpty) {
+      errorF.writeOver("Could not load project\n")
+    }
+    if (vsOpt.isEmpty) {
+      errorF.writeAppend("Could not load versions\n")
+    }
+    if (errorF.exists) {
+      errorF.removeOnExit()
+      return true
+    }
+    val prj = prjOpt.get
+    val versions = vsOpt.get
+    val projectJson = root / ".idea" / "project.json"
+    val versionsJson = root / ".idea" / "versions.json"
+    project.ProjectUtil.load(projectJson) match {
+      case Some(prjCache) if prjCache == prj =>
+      case _ =>
+        if (projectJson.exists) {
+          val backup = projectJson.up / "project.old.json"
+          projectJson.moveTo(backup)
+          backup.removeOnExit()
+        }
+        return true
+    }
+    proyek.Proyek.loadVersions(versionsJson) match {
+      case Some(versionsCache) if versionsCache == versions =>
+      case _ =>
+        if (versionsJson.exists) {
+          val backup = versionsJson.up / "versions.old.json"
+          versionsJson.moveTo(backup)
+          backup.removeOnExit()
+        }
+        return true
+    }
+    return false
+  }
+
   def isSireumOrLogikaFile(path: org.sireum.Os.Path): (Boolean, Boolean) = {
     if (!path.exists) return (false, false)
     val p = path.string.value
@@ -62,15 +118,19 @@ object Util {
   }
 
   def notify(n: Notification, project: Project, shouldExpire: Boolean): Unit =
-    if (shouldExpire)
-      new Thread() {
-        override def run(): Unit = {
-          Notifications.Bus.notify(n, project)
+    notify(n, project, if (shouldExpire) Some(5000) else None)
 
-          Thread.sleep(5000)
-          ApplicationManager.getApplication.invokeLater(() => n.expire())
-        }
-      }.start()
-    else
-      Notifications.Bus.notify(n, project)
+  def notify(n: Notification, project: Project, expireOpt: Option[Int]): Unit =
+    expireOpt match {
+      case Some(time) =>
+        new Thread() {
+          override def run(): Unit = {
+            Notifications.Bus.notify(n, project)
+            Thread.sleep(time)
+            ApplicationManager.getApplication.invokeLater(() => n.expire())
+          }
+        }.start()
+      case _ =>
+        Notifications.Bus.notify(n, project)
+    }
 }

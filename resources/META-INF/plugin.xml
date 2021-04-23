@@ -72,6 +72,12 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
+
+        <action id="ProyekSyncAction" class="org.sireum.intellij.ProyekSyncAction"
+                text="Synchronize Proyek" icon="icon/sync.png"
+                description="Synchronize Proyek">
+            <add-to-group group-id="SireumGroup" anchor="last"/>
+        </action>
     </actions>
 
     <application-components>

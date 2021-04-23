@@ -60,8 +60,8 @@ object SireumApplicationComponent {
 
   private var terminated: Boolean = false
 
-  final def getSireumHome(project: IProject = null): Option[org.sireum.Os.Path] = {
-    import org.sireum.{project => _, _}
+  final def getSireumHome(iproject: IProject = null): Option[org.sireum.Os.Path] = {
+    import org.sireum._
     if (sireumHomeOpt.isEmpty) {
       val env = System.getenv("SIREUM_HOME")
       sireumHomeOpt = if (env == null) scala.None else checkSireumDir(Os.path(env))
@@ -79,7 +79,7 @@ object SireumApplicationComponent {
         sireumHomeOpt = checkSireumDir(Os.path(System.getProperty("user.home") + "/Applications/Sireum" + dev))
       }
       if (sireumHomeOpt.isEmpty) {
-        browseSireumHome(project).foreach(p =>
+        browseSireumHome(iproject).foreach(p =>
           sireumHomeOpt = checkSireumDir(p))
       }
     }

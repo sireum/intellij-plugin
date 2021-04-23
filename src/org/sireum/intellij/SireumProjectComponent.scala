@@ -25,39 +25,56 @@
 
 package org.sireum.intellij
 
+import com.intellij.notification.{Notification, NotificationListener, NotificationType}
 import com.intellij.openapi.components.ProjectComponent
 import com.intellij.openapi.fileEditor.{FileEditorManager, FileEditorManagerEvent, FileEditorManagerListener}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.{ToolWindowAnchor, ToolWindowManager}
 
-class SireumProjectComponent(project: Project) extends ProjectComponent {
+import javax.swing.event.HyperlinkEvent
+
+class SireumProjectComponent(iproject: Project) extends ProjectComponent {
   override def projectClosed(): Unit = {
-    SireumToolWindowFactory.removeToolWindow(project)
+    SireumToolWindowFactory.removeToolWindow(iproject)
   }
 
   override def projectOpened(): Unit = {
-    val tw = ToolWindowManager.getInstance(project).
-      registerToolWindow("Sireum", false, ToolWindowAnchor.RIGHT)
-    SireumToolWindowFactory.createToolWindowContent(project, tw)
 
-    project.getMessageBus.connect(project).
+    val tw = ToolWindowManager.getInstance(iproject).
+      registerToolWindow("Sireum", false, ToolWindowAnchor.RIGHT)
+    SireumToolWindowFactory.createToolWindowContent(iproject, tw)
+
+    iproject.getMessageBus.connect(iproject).
       subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
         new FileEditorManagerListener {
           override def fileClosed(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
-            SireumClient.editorClosed(project)
+            SireumClient.editorClosed(iproject)
           }
 
           override def fileOpened(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
             val editor = source.getSelectedTextEditor
-            SireumClient.editorOpened(project, file, editor)
+            SireumClient.editorOpened(iproject, file, editor)
           }
 
-          override def
-          selectionChanged(event: FileEditorManagerEvent): Unit = {}
+          override def selectionChanged(event: FileEditorManagerEvent): Unit = {}
         })
+
+    new Thread(() => {
+      Thread.sleep(5000)
+      if (Util.recommendReload(iproject)) {
+        iproject.getBaseDir.refresh(false, true)
+        Util.notify(new Notification(SireumClient.groupId, "Proyek reload?",
+          """<p>Project definition and/or version dependencies have changed. <a href="">Reload</a>?</p>""",
+          NotificationType.INFORMATION, new NotificationListener.Adapter {
+            override def hyperlinkActivated(notification: Notification, hyperlinkEvent: HyperlinkEvent): Unit = {
+              ProyekSyncAction.sync(iproject, false)
+            }
+          }), iproject, scala.None)
+      }
+    }).start()
   }
 
   override def initComponent(): Unit = {}

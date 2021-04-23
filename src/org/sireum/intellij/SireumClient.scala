@@ -54,6 +54,7 @@ object SireumClient {
 
   object EditorEnabled
 
+  val groupId: Predef.String = "Sireum"
   val icons: Seq[Icon] = {
     var r = (0 to 6).map(n => IconLoader.getIcon(s"/icon/sireum-$n.png"))
     r ++= r.drop(1).reverse.drop(1)
@@ -314,13 +315,13 @@ object SireumClient {
             if (r.hasLogika) {
               if (r.isIllFormed) {
                 Util.notify(new Notification(
-                  "Sireum", "Slang Error",
+                  groupId, "Slang Error",
                   s"Ill-formed program with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
               else {
                 Util.notify(new Notification(
-                  "Sireum", "Logika Error",
+                  groupId, "Logika Error",
                   s"Programming logic proof is rejected with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
@@ -329,7 +330,7 @@ object SireumClient {
           editorOpt.foreach(_.putUserData(statusKey, false))
         } else if (r.hasLogika && r.numOfWarnings > 0) {
           Util.notify(new Notification(
-            "Sireum", "Logika Warning",
+            groupId, "Logika Warning",
             s"Programming logic proof is accepted with ${r.numOfWarnings} warning(s)",
             NotificationType.WARNING, null), project, shouldExpire = true)
           editorOpt.foreach(_.putUserData(statusKey, true))
@@ -337,7 +338,7 @@ object SireumClient {
           val title = "Logika Verified"
           val icon = verifiedInfoIcon
           if (r.hasLogika && (!r.isBackground || !(statusOpt.getOrElse(false)))) {
-            Util.notify(new Notification("Sireum", title, "Programming logic proof is accepted",
+            Util.notify(new Notification(groupId, title, "Programming logic proof is accepted",
               NotificationType.INFORMATION, null) {
               override def getIcon: Icon = icon
             }, project, shouldExpire = true)
@@ -350,7 +351,7 @@ object SireumClient {
         r.message.level match {
           case Level.InternalError =>
             Util.notify(new Notification(
-              "Sireum", "Logika Internal Error",
+              groupId, "Logika Internal Error",
               r.message.text.value,
               NotificationType.ERROR), project, shouldExpire = true)
             editorOpt.foreach(_.putUserData(statusKey, false))
@@ -386,7 +387,7 @@ object SireumClient {
     override def toString: String = messageHeader
   }
 
-  private def processReport(project: Project,
+  private def processReport(iproject: Project,
                             file: VirtualFile,
                             r: org.sireum.server.protocol.Response): Option[(Int, ReportItem)] = {
     import org.sireum.server.protocol._
@@ -399,13 +400,13 @@ object SireumClient {
         }
         msg.level match {
           case Level.InternalError =>
-            return Some((line, ConsoleReportItem(project, file, Level.Error, line, column, offset, length, msg.text.value)))
+            return Some((line, ConsoleReportItem(iproject, file, Level.Error, line, column, offset, length, msg.text.value)))
           case Level.Error =>
-            return Some((line, ConsoleReportItem(project, file, Level.Error, line, column, offset, length, msg.text.value)))
+            return Some((line, ConsoleReportItem(iproject, file, Level.Error, line, column, offset, length, msg.text.value)))
           case Level.Warning =>
-            return Some((line, ConsoleReportItem(project, file, Level.Warning, line, column, offset, length, msg.text.value)))
+            return Some((line, ConsoleReportItem(iproject, file, Level.Warning, line, column, offset, length, msg.text.value)))
           case Level.Info =>
-            return Some((line, ConsoleReportItem(project, file, Level.Info, line, column, offset, length, msg.text.value)))
+            return Some((line, ConsoleReportItem(iproject, file, Level.Info, line, column, offset, length, msg.text.value)))
         }
       case r: Logika.Verify.Smt2Query =>
         val text = r.result.query.value
@@ -413,9 +414,9 @@ object SireumClient {
         val offset = r.pos.offset.toInt
         val header = text.lines().limit(2).map(line => line.replace(';', ' ').
           replace("Result:", "").trim).toArray.mkString(": ")
-        return Some((line, SummoningReportItem(project, file, header, offset, text)))
+        return Some((line, SummoningReportItem(iproject, file, header, offset, text)))
       case r: Logika.Verify.State =>
-        import org.sireum.{project => _, _}
+        import org.sireum._
         val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.ClaimDefs.empty)
         val text = normalizeChars(
           st"""{
@@ -424,7 +425,7 @@ object SireumClient {
         val pos = r.posOpt.get
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
-        return scala.Some((line, HintReportItem(project, file, offset, text)))
+        return scala.Some((line, HintReportItem(iproject, file, offset, text)))
       case _ =>
     }
     None
@@ -628,6 +629,7 @@ object SireumClient {
                   saveSetDividerLocation(f.logika.logikaToolSplitPane, 1.0)
                   val list = f.logika.logikaList
                   list.synchronized(list.setModel(listModel))
+                  tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
                 })
               })))
             rhLine.putUserData(reportItemKey, ci)
@@ -681,6 +683,7 @@ object SireumClient {
                       saveSetDividerLocation(f.logika.logikaToolSplitPane, 0.0)
                       f.logika.logikaTextArea.setText(normalizeChars(ri.message))
                       f.logika.logikaTextArea.setCaretPosition(0)
+                      tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
                     })
                   })
                 ))
@@ -749,6 +752,7 @@ object SireumClient {
                         }
                         list.setSelectedIndex(selection)
                       }
+                      tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
                     })
                   })))
                 rhs = rhs + ((line, rhl :+ rhLine))

@@ -9,6 +9,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Scala" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Sireum" level="project" />
+    <orderEntry type="library" name="Sireum" level="project" />
   </component>
 </module>

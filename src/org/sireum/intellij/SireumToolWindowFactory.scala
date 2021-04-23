@@ -25,26 +25,41 @@
 
 package org.sireum.intellij
 
-import java.util.concurrent.ConcurrentHashMap
+import com.intellij.execution.filters.TextConsoleBuilderFactory
+import com.intellij.execution.ui.ConsoleView
+import com.intellij.openapi.actionSystem.{ActionManager, AnAction}
 
+import java.util.concurrent.ConcurrentHashMap
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.content.ContentFactory
 import org.sireum.intellij.logika.LogikaToolWindowForm
 
 object SireumToolWindowFactory {
 
-  final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm)
+  final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm, consoleView: ConsoleView)
 
   val windows = new ConcurrentHashMap[Project, Forms]()
 
   def createToolWindowContent(project: Project, toolWindow: ToolWindow): Unit = {
     toolWindow.setAutoHide(false)
+    toolWindow match {
+      case toolWindow: ToolWindowEx =>
+        val list = new java.util.ArrayList[AnAction]
+        list.add(ActionManager.getInstance().getAction("ProyekSyncAction"))
+        toolWindow.setTitleActions(list)
+      case _ =>
+    }
     val contentFactory = ContentFactory.SERVICE.getInstance
     val logikaForm = new LogikaToolWindowForm()
-    val content = contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Output", false)
-    toolWindow.getContentManager.addContent(content)
-    windows.put(project, Forms(toolWindow, logikaForm))
+    toolWindow.getContentManager.addContent(
+      contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Output", false))
+    val console = TextConsoleBuilderFactory.getInstance().createBuilder(project).getConsole
+    console.requestScrollingToEnd()
+    toolWindow.getContentManager.addContent(
+      contentFactory.createContent(console.getComponent, "Console", false))
+    windows.put(project, Forms(toolWindow, logikaForm, console))
   }
 
   def removeToolWindow(project: Project): Unit = {
