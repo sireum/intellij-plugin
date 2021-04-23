@@ -52,14 +52,17 @@ object ProyekSyncAction {
               try {
                 import coursier._
                 val libKey = project.DependencyManager.libraryKey
-                Fetch().addDependencies(Coursier_Ext.toDeps(ISZ(
-                  s"$libKey${Sireum.versions.get(libKey).get}"
-                )): _*).
-                  withRepositories(Seq(MavenRepository((Os.home / ".m2" / "repository").toUri.value))).
+                val dep = s"$libKey${Sireum.versions.get(libKey).get}"
+                Coursier_Ext.setScalaVersion(Sireum.versions.get(project.DependencyManager.scalaKey).get)
+                Fetch().addDependencies(Coursier_Ext.toDeps(ISZ(dep)): _*).
+                  withRepositories(Seq(
+                    MavenRepository((Os.home / ".m2" / "repository").toUri.value),
+                    Repositories.sonatype("releases"))).
                   withMainArtifacts().
                   run()
               } catch {
-                case _: Throwable =>
+                case t: Throwable =>
+                  t.printStackTrace()
                   val cmds = new java.util.ArrayList[Predef.String]
                   cmds.add(buildCmd.string.value)
                   cmds.add("m2-lib")
