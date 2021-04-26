@@ -25,7 +25,7 @@
 
 package org.sireum.intellij
 
-import com.intellij.notification.{Notifications, Notification}
+import com.intellij.notification.{Notification, Notifications}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.project.Project
@@ -70,20 +70,20 @@ object Util {
       case _ => return false
     }
     val prjOpt = org.sireum.cli.Proyek.getProject(root, None(), None())
-    val vsOpt = org.sireum.cli.Proyek.getVersions(root, ISZ())
     val errorF = root / ".idea" / "error.txt"
     errorF.removeAll()
     if (prjOpt.isEmpty) {
       errorF.writeOver("Could not load project\n")
-    }
-    if (vsOpt.isEmpty) {
-      errorF.writeAppend("Could not load versions\n")
-    }
-    if (errorF.exists) {
       errorF.removeOnExit()
       return true
     }
     val prj = prjOpt.get
+    val vsOpt = org.sireum.cli.Proyek.getVersions(prj, root, ISZ())
+    if (vsOpt.isEmpty) {
+      errorF.writeAppend("Could not load versions\n")
+      errorF.removeOnExit()
+      return true
+    }
     val versions = vsOpt.get
     val projectJson = root / ".idea" / "project.json"
     val versionsJson = root / ".idea" / "versions.json"
