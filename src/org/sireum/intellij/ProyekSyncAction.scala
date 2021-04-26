@@ -46,41 +46,6 @@ object ProyekSyncAction {
           override def run(indicator: ProgressIndicator): Unit = {
             indicator.setIndeterminate(true)
             indicator.setText("Importing project ...")
-            val buildCmd = home / "bin" / "build.cmd"
-            var clear = F
-            if  (buildCmd.exists) {
-              try {
-                import coursier._
-                val libKey = project.DependencyManager.libraryKey
-                val dep = s"$libKey${Sireum.versions.get(libKey).get}"
-                Coursier_Ext.setScalaVersion(Sireum.versions.get(project.DependencyManager.scalaKey).get)
-                Fetch().addDependencies(Coursier_Ext.toDeps(ISZ(dep)): _*).
-                  withRepositories(Seq(
-                    MavenRepository((Os.home / ".m2" / "repository").toUri.value),
-                    Repositories.sonatype("releases"))).
-                  withMainArtifacts().
-                  run()
-              } catch {
-                case t: Throwable =>
-                  t.printStackTrace()
-                  val cmds = new java.util.ArrayList[Predef.String]
-                  cmds.add(buildCmd.string.value)
-                  cmds.add("m2-lib")
-                  val generalCommandLine = new GeneralCommandLine(cmds)
-                  generalCommandLine.setCharset(Charset.forName("UTF-8"))
-                  val processHandler = new KillableColoredProcessHandler(generalCommandLine)
-                  SireumClient.sireumToolWindowFactory(iproject, forms => {
-                    clear = T
-                    forms.consoleView.clear()
-                    forms.consoleView.attachToProcess(processHandler)
-                    ApplicationManager.getApplication.invokeLater(() => {
-                      forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
-                    })
-                  })
-                  processHandler.startNotify()
-                  processHandler.waitFor()
-              }
-            }
             val sireum = if (Os.isWin) "sireum.bat" else "sireum"
             val cmds = new java.util.ArrayList[Predef.String]
             cmds.add(sireum)
@@ -92,15 +57,11 @@ object ProyekSyncAction {
             generalCommandLine.setCharset(Charset.forName("UTF-8"))
             val processHandler = new KillableColoredProcessHandler(generalCommandLine)
             SireumClient.sireumToolWindowFactory(iproject, forms => {
-              if (!clear) {
-                forms.consoleView.clear()
-              }
+              forms.consoleView.clear()
               forms.consoleView.attachToProcess(processHandler)
-              if (!clear) {
-                ApplicationManager.getApplication.invokeLater(() => {
-                  forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
-                })
-              }
+              ApplicationManager.getApplication.invokeLater(() => {
+                forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
+              })
             })
             processHandler.addProcessListener(new ProcessListener {
               override def processTerminated(event: ProcessEvent): Unit = {
