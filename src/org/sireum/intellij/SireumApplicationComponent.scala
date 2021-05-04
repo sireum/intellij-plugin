@@ -28,12 +28,14 @@ package org.sireum.intellij
 import java.io._
 import java.util.concurrent.BlockingQueue
 import com.intellij.ide.util.PropertiesComponent
+import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.components._
 import com.intellij.openapi.fileChooser._
 import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
+import org.sireum.intellij.SireumClient.groupId
 import org.sireum.intellij.logika.LogikaConfigurable
 
 object SireumApplicationComponent {
@@ -102,9 +104,12 @@ object SireumApplicationComponent {
       desc,
       project, null, (t: VirtualFile) => pathOpt = Some(org.sireum.Os.path(t.getCanonicalPath)))
     pathOpt.foreach(path =>
-      if (checkSireumDir(path).isEmpty)
-        Messages.showMessageDialog(project, sireumInvalid(path),
-          "Invalid Sireum Configuration", null)
+      if (checkSireumDir(path).isEmpty) {
+        Util.notify(new Notification(
+          groupId, "Invalid Sireum Configuration",
+          sireumInvalid(path),
+          NotificationType.ERROR), project, shouldExpire = true)
+      }
     )
     pathOpt
   }
