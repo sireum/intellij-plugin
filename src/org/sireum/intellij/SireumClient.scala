@@ -268,10 +268,11 @@ object SireumClient {
   }
 
   def analyzeOpt(project: Project, file: VirtualFile, editor: Editor): Unit = {
-    if (Util.isSireumOrLogikaFile(project)._2) {
+    val (isSireum, isLogika) = Util.isSireumOrLogikaFile(project)
+    if (isLogika) {
       if (SireumApplicationComponent.backgroundAnalysis)
         scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = LogikaConfigurable.backgroundAnalysis))
-    } else {
+    } else if (isSireum) {
       if (SireumApplicationComponent.backgroundAnalysis)
         scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false))
     }
