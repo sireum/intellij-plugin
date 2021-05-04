@@ -29,10 +29,10 @@ import java.io._
 import java.util.concurrent.BlockingQueue
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.notification.{Notification, NotificationType}
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components._
 import com.intellij.openapi.fileChooser._
 import com.intellij.openapi.project.{Project => IProject}
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
 import org.sireum.intellij.SireumClient.groupId
@@ -100,9 +100,12 @@ object SireumApplicationComponent {
     var pathOpt: Option[org.sireum.Os.Path] = None
     val desc = FileChooserDescriptorFactory.createSingleFolderDescriptor()
     desc.setTitle("Select Sireum directory")
-    FileChooser.chooseFile(
-      desc,
-      project, null, (t: VirtualFile) => pathOpt = Some(org.sireum.Os.path(t.getCanonicalPath)))
+    ApplicationManager.getApplication.invokeAndWait {
+      () =>
+        FileChooser.chooseFile(
+          desc,
+          project, null, (t: VirtualFile) => pathOpt = Some(org.sireum.Os.path(t.getCanonicalPath)))
+    }
     pathOpt.foreach(path =>
       if (checkSireumDir(path).isEmpty) {
         Util.notify(new Notification(
