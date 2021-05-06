@@ -592,7 +592,7 @@ object SireumClient {
 
         def consoleReportItems(ci: ConsoleReportItem, line: Int): Unit = {
           var level = ci.level
-          scala.util.Try {
+          try {
             val (message, rhl): (Predef.String, Vector[RangeHighlighter]) = rhs.get(line) match {
               case scala.Some(rhv) =>
                 var msg = ci.message
@@ -601,7 +601,7 @@ object SireumClient {
                   rh.getUserData(reportItemKey) match {
                     case cri: ConsoleReportItem =>
                       mm.removeHighlighter(rh)
-                      msg = rh.getGutterIconRenderer.getTooltipText + tooltipSep + ci.message
+                      msg = scala.Option(rh.getGutterIconRenderer).map(_.getTooltipText + tooltipSep).getOrElse("") + ci.message
                       if (cri.level.ordinal < level.ordinal) {
                         level = cri.level
                       }
@@ -647,6 +647,9 @@ object SireumClient {
               rhs = rhs + ((line, rhl :+ rhLine))
 
             }
+          } catch {
+            case t: Throwable =>
+              t.printStackTrace()
           }
         }
 
