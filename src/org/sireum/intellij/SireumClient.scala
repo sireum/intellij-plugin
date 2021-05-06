@@ -601,7 +601,7 @@ object SireumClient {
                   rh.getUserData(reportItemKey) match {
                     case cri: ConsoleReportItem =>
                       mm.removeHighlighter(rh)
-                      msg = scala.Option(rh.getGutterIconRenderer).map(_.getTooltipText + tooltipSep).getOrElse("") + ci.message
+                      msg = cri.message + tooltipSep + ci.message
                       if (cri.level.ordinal < level.ordinal) {
                         level = cri.level
                       }
