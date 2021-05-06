@@ -81,6 +81,7 @@ object SireumClient {
   var tooltipBalloonOpt: Option[Balloon] = None
   val tooltipDefaultBgColor: Color = new Color(0xff, 0xff, 0xcc)
   val tooltipDarculaBgColor: Color = new Color(0x5c, 0x5c, 0x42)
+  val maxTooltipLength: Int = 1024
 
   final case class Request(time: Long, requestId: org.sireum.ISZ[org.sireum.String],
                            project: Project, file: VirtualFile, editor: Editor,
@@ -434,7 +435,7 @@ object SireumClient {
 
   def gutterIconRenderer(tooltipText: String, icon: Icon, action: AnAction): GutterIconRenderer = {
     new GutterIconRenderer {
-      val ttext: String = if (tooltipText.length > 100) tooltipText.substring(0, 1024) + "..." else tooltipText
+      val ttext: String = if (tooltipText.length > maxTooltipLength) tooltipText.substring(0, maxTooltipLength) + "..." else tooltipText
 
       override val getTooltipText: String = ttext
 
