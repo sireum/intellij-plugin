@@ -32,6 +32,9 @@ import com.intellij.openapi.project.Project
 
 object Util {
   def getFilePath(project: Project): Option[org.sireum.Os.Path] = {
+    if (project.isDisposed) {
+      return None
+    }
     val editor = FileEditorManager.
       getInstance(project).getSelectedTextEditor
     if (editor == null) return None
