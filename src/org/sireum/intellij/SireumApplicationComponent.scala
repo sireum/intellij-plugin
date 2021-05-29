@@ -203,7 +203,7 @@ object SireumApplicationComponent {
     runSireum(path, vmArgs, envVars, None, Seq()) match {
       case Some(s) =>
         if (s.linesIterator.exists(
-          _.trim == "Sireum: A High-Assurance System Engineering Platform")) {
+          _.trim == "Sireum: A High Assurance System Engineering Platform")) {
           Some(path)
         } else None
       case _ => None
