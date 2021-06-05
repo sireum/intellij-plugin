@@ -207,7 +207,7 @@ object SireumClient {
 
   def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(sireumKey)
 
-  def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean): Unit = {
+  def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean, line: Int): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     init(project)
     val input = editor.getDocument.getText
@@ -234,7 +234,8 @@ object SireumClient {
             (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
           id = requestId,
           uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
-          content = input
+          content = input,
+          line = line
         ), true).value
       )
     }
@@ -268,14 +269,14 @@ object SireumClient {
     }
   }
 
-  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor): Unit = {
+  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int): Unit = {
     val (isSireum, isLogika) = Util.isSireumOrLogikaFile(project)
     if (isLogika) {
       if (SireumApplicationComponent.backgroundAnalysis)
-        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = LogikaConfigurable.backgroundAnalysis))
+        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = LogikaConfigurable.backgroundAnalysis, line))
     } else if (isSireum) {
       if (SireumApplicationComponent.backgroundAnalysis)
-        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false))
+        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false, line))
     }
   }
 
@@ -284,7 +285,9 @@ object SireumClient {
     editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
-        analyzeOpt(project, file, editor)
+        val offset = editor.getCaretModel.getPrimaryCaret.getOffset
+        val line = editor.getDocument.getLineNumber(offset) + 1
+        analyzeOpt(project, file, editor, line)
       }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
@@ -300,7 +303,7 @@ object SireumClient {
     if (hasSireum) {
       enableEditor(project, file, editor)
       editor.putUserData(statusKey, false)
-      analyzeOpt(project, file, editor)
+      analyzeOpt(project, file, editor, 0)
     }
   }
 

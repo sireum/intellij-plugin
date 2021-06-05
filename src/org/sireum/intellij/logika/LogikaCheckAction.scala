@@ -52,7 +52,7 @@ class LogikaCheckAction extends LogikaOnlyAction {
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     if (editor == null) return
     enableEditor(project, file, editor)
-    analyze(project, file, editor, isBackground = false, hasLogika = true)
+    analyze(project, file, editor, isBackground = false, hasLogika = true, 0)
     e.getPresentation.setEnabled(true)
   }
 }
