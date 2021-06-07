@@ -269,14 +269,15 @@ object SireumClient {
     }
   }
 
-  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int): Unit = {
+  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int, isBackground: Boolean): Unit = {
     val (isSireum, isLogika) = Util.isSireumOrLogikaFile(project)
     if (isLogika) {
       if (SireumApplicationComponent.backgroundAnalysis)
-        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = LogikaConfigurable.backgroundAnalysis, line))
+        scala.util.Try(analyze(project, file, editor, isBackground = isBackground,
+          hasLogika = LogikaConfigurable.backgroundAnalysis, line))
     } else if (isSireum) {
       if (SireumApplicationComponent.backgroundAnalysis)
-        scala.util.Try(analyze(project, file, editor, isBackground = true, hasLogika = false, line))
+        scala.util.Try(analyze(project, file, editor, isBackground = isBackground, hasLogika = false, line))
     }
   }
 
@@ -290,7 +291,7 @@ object SireumClient {
     editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
-        analyzeOpt(project, file, editor, getCurrentLine(editor))
+        analyzeOpt(project, file, editor, getCurrentLine(editor), true)
       }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
@@ -306,7 +307,7 @@ object SireumClient {
     if (hasSireum) {
       enableEditor(project, file, editor)
       editor.putUserData(statusKey, false)
-      analyzeOpt(project, file, editor, 0)
+      analyzeOpt(project, file, editor, 0, isBackground = false)
     }
   }
 
