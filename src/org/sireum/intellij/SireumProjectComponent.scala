@@ -26,6 +26,7 @@
 package org.sireum.intellij
 
 import com.intellij.notification.{Notification, NotificationListener, NotificationType}
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.ProjectComponent
 import com.intellij.openapi.fileEditor.{FileEditorManager, FileEditorManagerEvent, FileEditorManagerListener}
 import com.intellij.openapi.project.Project
@@ -55,8 +56,10 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
 
           override def fileOpened(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
-            val editor = source.getSelectedTextEditor
-            SireumClient.editorOpened(iproject, file, editor)
+            ApplicationManager.getApplication.invokeLater { () =>
+              val editor = source.getSelectedTextEditor
+              if (!editor.isDisposed) SireumClient.editorOpened(iproject, file, editor)
+            }
           }
 
           override def selectionChanged(event: FileEditorManagerEvent): Unit = {}
