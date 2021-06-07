@@ -66,9 +66,16 @@
             <add-to-group group-id="SireumLogikaGroup" anchor="last"/>
         </group>
 
-        <action id="LogikaCheckAction" class="org.sireum.intellij.logika.LogikaCheckAction"
+        <action id="LogikaCheckActionFile" class="org.sireum.intellij.logika.LogikaCheckActionFile"
                 text="Logika Check"
                 description="Check Logika Proof">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl W"/>
+        </action>
+
+        <action id="LogikaCheckActionLine" class="org.sireum.intellij.logika.LogikaCheckActionLine"
+                text="Logika Check (line)"
+                description="Check Logika Proof (line)">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
@@ -77,6 +84,27 @@
                 text="Synchronize Proyek" icon="icon/sync.png"
                 description="Synchronize Proyek">
             <add-to-group group-id="SireumGroup" anchor="last"/>
+        </action>
+
+        <action id="LogikaInsertForAll" class="org.sireum.intellij.logika.LogikaInsertForAll"
+                text="Forall"
+                description="Insert Forall Symbol">
+            <add-to-group group-id="SireumLogikaSymbolGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="A"/>
+        </action>
+
+        <action id="LogikaInsertExists" class="org.sireum.intellij.logika.LogikaInsertExists"
+                text="Exists"
+                description="Insert Exists Symbol">
+            <add-to-group group-id="SireumLogikaSymbolGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="E"/>
+        </action>
+
+        <action id="LogikaInsertSequent" class="org.sireum.intellij.logika.LogikaInsertSequent"
+                text="Sequent"
+                description="Insert Sequent Symbol">
+            <add-to-group group-id="SireumLogikaSymbolGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="BACK_SLASH"/>
         </action>
     </actions>
 

@@ -280,14 +280,17 @@ object SireumClient {
     }
   }
 
+  def getCurrentLine(editor: Editor): Int = {
+    val offset = editor.getCaretModel.getPrimaryCaret.getOffset
+    return editor.getDocument.getLineNumber(offset) + 1
+  }
+
   def enableEditor(project: Project, file: VirtualFile, editor: Editor): Unit = {
     if (editor.getUserData(sireumKey) != null) return
     editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit = {
-        val offset = editor.getCaretModel.getPrimaryCaret.getOffset
-        val line = editor.getDocument.getLineNumber(offset) + 1
-        analyzeOpt(project, file, editor, line)
+        analyzeOpt(project, file, editor, getCurrentLine(editor))
       }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
@@ -690,7 +693,7 @@ object SireumClient {
                     tw.activate(() => {
                       saveSetDividerLocation(f.logika.logikaToolSplitPane, 0.0)
                       f.logika.logikaTextArea.setText(normalizeChars(ri.message))
-                      f.logika.logikaTextArea.setCaretPosition(0)
+                      f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
                       tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
                     })
                   })

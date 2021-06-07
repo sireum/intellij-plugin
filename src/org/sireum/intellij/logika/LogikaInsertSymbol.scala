@@ -22,48 +22,39 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package org.sireum.intellij.logika
 
-import com.intellij.openapi.actionSystem._
-import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.vfs.VirtualFile
-import org.sireum.intellij.SireumClient
-import org.sireum.intellij.SireumClient._
 
-trait LogikaCheckAction extends LogikaOnlyAction {
+trait LogikaInsertSymbol extends LogikaAction {
+  def symbol: String
 
-  // init
-  {
-    getTemplatePresentation.setIcon(icon)
-
-    val am = ActionManager.getInstance
-
-    val runGroup = am.getAction("SireumLogikaGroup").
-      asInstanceOf[DefaultActionGroup]
-    runGroup.addAction(this, Constraints.FIRST)
-  }
-
-  override def actionPerformed(e: AnActionEvent): Unit = {
-    e.getPresentation.setEnabled(false)
+  final override def actionPerformed(e: AnActionEvent): Unit = {
     val project = e.getProject
     val editor = FileEditorManager.
       getInstance(project).getSelectedTextEditor
-    val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     if (editor == null) return
-    enableEditor(project, file, editor)
-    analyze(project, file, editor, isBackground = false, hasLogika = true, getLine(editor))
-    e.getPresentation.setEnabled(true)
+    val document = editor.getDocument
+    WriteCommandAction.runWriteCommandAction(project,
+      (() => {
+        val caret = editor.getCaretModel.getPrimaryCaret
+        val offset = caret.getOffset
+        document.insertString(offset, symbol)
+        caret.moveToOffset(offset + 1)
+      }): Runnable)
   }
-
-  def getLine(editor: Editor): Int
 }
 
-final class LogikaCheckActionFile extends LogikaCheckAction {
-  def getLine(editor: Editor): Int = 0
+final class LogikaInsertForAll extends LogikaInsertSymbol {
+  val symbol: String = "∀"
 }
 
-final class LogikaCheckActionLine extends LogikaCheckAction {
-  def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
+final class LogikaInsertExists extends LogikaInsertSymbol {
+  val symbol: String = "∃"
+}
+
+final class LogikaInsertSequent extends LogikaInsertSymbol {
+  val symbol: String = "⊢"
 }
