@@ -66,6 +66,7 @@ object SireumClient {
   val gutterInfoIcon: Icon = IconLoader.getIcon("/icon/gutter-info.png")
   val gutterHintIcon: Icon = IconLoader.getIcon("/icon/gutter-hint.png")
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
+  val gutterVerifiedIcon: Icon = IconLoader.getIcon("/icon/gutter-verified.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
   val queue = new LinkedBlockingQueue[Vector[String]]()
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
@@ -383,7 +384,8 @@ object SireumClient {
     override val toString: String = s"[$line, $column] $message"
   }
 
-  private[intellij] final case class HintReportItem(project: Project,
+  private[intellij] final case class HintReportItem(kindOpt: Option[org.sireum.server.protocol.Logika.Verify.Info.Kind.Type],
+                                                    project: Project,
                                                     file: VirtualFile,
                                                     offset: Int,
                                                     message: String) extends ReportItem
@@ -434,7 +436,12 @@ object SireumClient {
         val pos = r.posOpt.get
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
-        return scala.Some((line, HintReportItem(iproject, file, offset, text)))
+        return scala.Some((line, HintReportItem(scala.None, iproject, file, offset, text)))
+      case r: Logika.Verify.Info =>
+        val pos = r.pos
+        val line = pos.beginLine.toInt
+        val offset = pos.offset.toInt
+        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, offset, r.message.value)))
       case _ =>
     }
     None
@@ -688,8 +695,13 @@ object SireumClient {
                 val rhLine = mm.addLineHighlighter(line - 1, layer, null)
                 rhLine.putUserData(reportItemKey, ri)
                 rhLine.setThinErrorStripeMark(false)
-                rhLine.setGutterIconRenderer(gutterIconRenderer("Click to show some hints",
-                  gutterHintIcon, _ => sireumToolWindowFactory(project, f => {
+                val (title, icon) = ri.kindOpt match {
+                  case scala.Some(org.sireum.server.protocol.Logika.Verify.Info.Kind.Verified) =>
+                    ("Click to show verification report", gutterVerifiedIcon)
+                  case _ => ("Click to show some hints", gutterHintIcon)
+                }
+                rhLine.setGutterIconRenderer(gutterIconRenderer(
+                  title, icon, _ => sireumToolWindowFactory(project, f => {
                     val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
                     tw.activate(() => {
                       saveSetDividerLocation(f.logika.logikaToolSplitPane, 0.0)

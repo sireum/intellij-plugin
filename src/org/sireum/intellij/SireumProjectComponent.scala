@@ -58,7 +58,7 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
                                   file: VirtualFile): Unit = {
             ApplicationManager.getApplication.invokeLater { () =>
               val editor = source.getSelectedTextEditor
-              if (!editor.isDisposed) SireumClient.editorOpened(iproject, file, editor)
+              if (editor != null && !editor.isDisposed) SireumClient.editorOpened(iproject, file, editor)
             }
           }
 
@@ -73,7 +73,7 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
           """<p>Project definition and/or version dependencies have changed. <a href="">Reload</a>?</p>""",
           NotificationType.INFORMATION, new NotificationListener.Adapter {
             override def hyperlinkActivated(notification: Notification, hyperlinkEvent: HyperlinkEvent): Unit = {
-              ProyekSyncAction.sync(iproject, false)
+              ProyekSyncAction.sync(iproject, restart = false)
             }
           }), iproject, scala.None)
       }
