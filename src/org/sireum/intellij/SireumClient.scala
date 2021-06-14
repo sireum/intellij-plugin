@@ -208,37 +208,13 @@ object SireumClient {
 
   def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(sireumKey)
 
-  def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean, line: Int): Unit = {
-    if (editor.isDisposed || !isEnabled(editor)) return
+  def addRequest(reqsF:  org.sireum.ISZ[org.sireum.String] => Vector[org.sireum.server.protocol.Request],
+                 project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, input: String): Unit = {
     init(project)
-    val input = editor.getDocument.getText
     val (t, requestId) = {
       val t = System.currentTimeMillis
       val id = org.sireum.ISZ(org.sireum.String(t.toString))
       (t, id)
-    }
-
-    def f(): Vector[String] = {
-      import org.sireum.server.protocol._
-      Vector(
-        org.sireum.server.protocol.JSON.fromRequest(Logika.Verify.Config(
-          LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
-          org.sireum.server.service.LogikaService.defaultConfig(
-            sat = LogikaConfigurable.checkSat,
-            defaultLoopBound = LogikaConfigurable.loopBound,
-            timeoutInMs = LogikaConfigurable.timeout
-          )
-        ), true).value,
-        org.sireum.server.protocol.JSON.fromRequest(Slang.CheckScript(
-          isBackground = isBackground,
-          logikaEnabled = !isBackground ||
-            (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
-          id = requestId,
-          uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
-          content = input,
-          line = line
-        ), true).value
-      )
     }
 
     editorMap.synchronized {
@@ -249,10 +225,11 @@ object SireumClient {
       if (cancels.nonEmpty) queue.add(cancels)
     }
 
+    def f(): Vector[String] = for (req <- reqsF(requestId)) yield org.sireum.server.protocol.JSON.fromRequest(req, true).value
 
     if (isBackground) {
       this.synchronized {
-        request = Some(Request(t, requestId, project, file, editor, input, f _))
+        request = Some(Request(t, requestId, project, file, editor, input, f))
       }
     } else {
       editorMap.synchronized {
@@ -268,6 +245,37 @@ object SireumClient {
       }
       queue.add(f())
     }
+
+  }
+
+  def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean, line: Int): Unit = {
+    if (editor.isDisposed || !isEnabled(editor)) return
+    val input = editor.getDocument.getText
+
+    def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
+      import org.sireum.server.protocol._
+      Vector(
+        Logika.Verify.Config(
+          LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
+          org.sireum.server.service.LogikaService.defaultConfig(
+            sat = LogikaConfigurable.checkSat,
+            defaultLoopBound = LogikaConfigurable.loopBound,
+            timeoutInMs = LogikaConfigurable.timeout
+          )
+        ),
+        Slang.CheckScript(
+          isBackground = isBackground,
+          logikaEnabled = !isBackground ||
+            (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
+          id = requestId,
+          uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
+          content = input,
+          line = line
+        )
+      )
+    }
+
+    addRequest(f, project, file, editor, isBackground, input)
   }
 
   def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int, isBackground: Boolean): Unit = {
@@ -442,6 +450,7 @@ object SireumClient {
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
         return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, offset, r.message.value)))
+
       case _ =>
     }
     None
@@ -563,6 +572,7 @@ object SireumClient {
           case scala.Some(pe) =>
             r match {
               case r: org.sireum.server.protocol.Logika.Verify.End => editorMap -= r.id
+              case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
               case _: server.protocol.Logika.Verify.Start => resetSireumView(pe._1, scala.Some(pe._3))
               case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
                 notifyHelper(scala.Some(pe._1), if (pe._3.isDisposed) scala.None else scala.Some(pe._3), r)
@@ -596,6 +606,9 @@ object SireumClient {
             hintListModelMap = scala.collection.immutable.Map[Int, DefaultListModel[HintReportItem]]()
           case r: server.protocol.Logika.Verify.End =>
             notifyHelper(scala.Some(project), scala.Some(editor), r)
+            return
+          case r: server.protocol.Slang.Rewrite.Response =>
+            SireumOnlyAction.processSlangRewriteResponse(r, project, editor)
             return
           case _ =>
         }

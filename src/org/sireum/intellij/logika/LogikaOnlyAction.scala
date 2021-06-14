@@ -22,39 +22,48 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 package org.sireum.intellij.logika
 
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.actionSystem.{ActionManager, AnActionEvent, CommonDataKeys, Constraints, DefaultActionGroup}
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.vfs.VirtualFile
+import org.sireum.intellij.{SireumAction, SireumClient, Util}
 
-trait LogikaInsertSymbol extends LogikaAction {
-  def symbol: String
-
-  final override def actionPerformed(e: AnActionEvent): Unit = {
+trait LogikaOnlyAction extends SireumAction {
+  override def update(e: AnActionEvent): Unit = {
     val project = e.getProject
-    val editor = FileEditorManager.
-      getInstance(project).getSelectedTextEditor
-    if (editor == null) return
-    val document = editor.getDocument
-    WriteCommandAction.runWriteCommandAction(project,
-      (() => {
-        val caret = editor.getCaretModel.getPrimaryCaret
-        val offset = caret.getOffset
-        document.insertString(offset, symbol)
-        caret.moveToOffset(offset + 1)
-      }): Runnable)
+    e.getPresentation.setEnabledAndVisible(project != null && Util.isSireumOrLogikaFile(project) == (true, true))
   }
 }
 
-final class LogikaInsertForAll extends LogikaInsertSymbol {
-  val symbol: String = "∀"
+trait LogikaCheckAction extends LogikaOnlyAction {
+
+  // init
+  {
+    getTemplatePresentation.setIcon(SireumClient.icon)
+  }
+
+  override def actionPerformed(e: AnActionEvent): Unit = {
+    e.getPresentation.setEnabled(false)
+    val project = e.getProject
+    val editor = FileEditorManager.
+      getInstance(project).getSelectedTextEditor
+    val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
+    if (editor == null) return
+    SireumClient.enableEditor(project, file, editor)
+    SireumClient.analyze(project, file, editor, isBackground = false, hasLogika = true, getLine(editor))
+    e.getPresentation.setEnabled(true)
+  }
+
+  def getLine(editor: Editor): Int
 }
 
-final class LogikaInsertExists extends LogikaInsertSymbol {
-  val symbol: String = "∃"
+final class LogikaCheckActionFile extends LogikaCheckAction {
+  def getLine(editor: Editor): Int = 0
 }
 
-final class LogikaInsertSequent extends LogikaInsertSymbol {
-  val symbol: String = "⊢"
+final class LogikaCheckActionLine extends LogikaCheckAction {
+  def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
 }

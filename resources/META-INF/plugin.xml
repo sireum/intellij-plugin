@@ -58,52 +58,78 @@
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </group>
 
-        <group id="SireumLogikaGroup" text="Logika" popup="true">
-            <add-to-group group-id="SireumGroup" anchor="last"/>
-        </group>
-
-        <group id="SireumLogikaSymbolGroup" text="Insert Symbols" popup="true">
-            <add-to-group group-id="SireumLogikaGroup" anchor="last"/>
-        </group>
-
-        <action id="LogikaCheckActionFile" class="org.sireum.intellij.logika.LogikaCheckActionFile"
-                text="Logika Check"
-                description="Check Logika Proof">
-            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl W"/>
-        </action>
-
-        <action id="LogikaCheckActionLine" class="org.sireum.intellij.logika.LogikaCheckActionLine"
-                text="Logika Check (line)"
-                description="Check Logika Proof (line)">
-            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
-        </action>
-
         <action id="ProyekSyncAction" class="org.sireum.intellij.ProyekSyncAction"
                 text="Synchronize Proyek" icon="icon/sync.png"
                 description="Synchronize Proyek">
             <add-to-group group-id="SireumGroup" anchor="last"/>
         </action>
 
-        <action id="LogikaInsertForAll" class="org.sireum.intellij.logika.LogikaInsertForAll"
+        <group id="SireumInsertGroup" text="Insert ..." popup="true">
+            <add-to-group group-id="SireumGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </group>
+
+        <group id="LogikaGroup" text="Logika" popup="true">
+            <add-to-group group-id="SireumGroup" anchor="last"/>
+        </group>
+
+        <group id="SlangGroup" text="Slang" popup="true">
+            <add-to-group group-id="SireumGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </group>
+
+        <action id="LogikaCheckActionFile" class="org.sireum.intellij.logika.LogikaCheckActionFile"
+                text="Logika Check"
+                description="Check logika proof">
+            <add-to-group group-id="LogikaGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl W"/>
+        </action>
+
+        <action id="LogikaCheckActionLine" class="org.sireum.intellij.logika.LogikaCheckActionLine"
+                text="Logika Check (Line)"
+                description="Check Logika proof (line)">
+            <add-to-group group-id="LogikaGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
+        </action>
+
+        <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"
+                text="Insert val Modifiers"
+                description="Insert constructor parameter val modifiers">
+            <add-to-group group-id="SlangGroup"/>
+        </action>
+
+        <action id="SlangRenumberProofSteps" class="org.sireum.intellij.SlangRenumberProofStepsAction"
+                text="Renumber Proof Steps"
+                description="Renumber proof steps">
+            <add-to-group group-id="SlangGroup"/>
+        </action>
+
+        <action id="SlangReplaceEnumSymbols" class="org.sireum.intellij.SlangReplaceEnumSymbolsAction"
+                text="Replace Enum Symbols"
+                description="Replace enum symbols with strings">
+            <add-to-group group-id="SlangGroup"/>
+        </action>
+
+        <action id="SireumInsertForAll" class="org.sireum.intellij.SireumInsertForAll"
                 text="Forall"
-                description="Insert Forall Symbol">
-            <add-to-group group-id="SireumLogikaSymbolGroup"/>
+                description="Insert forall symbol">
+            <add-to-group group-id="SireumInsertGroup"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="A"/>
         </action>
 
-        <action id="LogikaInsertExists" class="org.sireum.intellij.logika.LogikaInsertExists"
+        <action id="SireumInsertExists" class="org.sireum.intellij.SireumInsertExists"
                 text="Exists"
-                description="Insert Exists Symbol">
-            <add-to-group group-id="SireumLogikaSymbolGroup"/>
+                description="Insert exists symbol">
+            <add-to-group group-id="SireumInsertGroup"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="E"/>
         </action>
 
-        <action id="LogikaInsertSequent" class="org.sireum.intellij.logika.LogikaInsertSequent"
+        <action id="SireumInsertSequent" class="org.sireum.intellij.SireumInsertSequent"
                 text="Sequent"
-                description="Insert Sequent Symbol">
-            <add-to-group group-id="SireumLogikaSymbolGroup"/>
+                description="Insert sequent symbol">
+            <add-to-group group-id="SireumInsertGroup"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="BACK_SLASH"/>
         </action>
     </actions>
