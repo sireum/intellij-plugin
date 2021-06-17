@@ -25,7 +25,7 @@
 
 package org.sireum.intellij.logika
 
-import com.intellij.openapi.actionSystem.{ActionManager, AnActionEvent, CommonDataKeys, Constraints, DefaultActionGroup}
+import com.intellij.openapi.actionSystem.{AnActionEvent, CommonDataKeys}
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.VirtualFile

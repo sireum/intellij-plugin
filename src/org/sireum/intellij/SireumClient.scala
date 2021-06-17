@@ -209,44 +209,44 @@ object SireumClient {
   def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(sireumKey)
 
   def addRequest(reqsF:  org.sireum.ISZ[org.sireum.String] => Vector[org.sireum.server.protocol.Request],
-                 project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, input: String): Unit = {
-    init(project)
-    val (t, requestId) = {
-      val t = System.currentTimeMillis
-      val id = org.sireum.ISZ(org.sireum.String(t.toString))
-      (t, id)
-    }
-
-    editorMap.synchronized {
-      val cancels = for (rid <- editorMap.keys.toVector) yield {
-        editorMap -= rid
-        org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Cancel(rid), true).value
+                 project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, input: String): Unit =
+    Util.async { () =>
+      init(project)
+      val (t, requestId) = {
+        val t = System.currentTimeMillis
+        val id = org.sireum.ISZ(org.sireum.String(t.toString))
+        (t, id)
       }
-      if (cancels.nonEmpty) queue.add(cancels)
-    }
 
-    def f(): Vector[String] = for (req <- reqsF(requestId)) yield org.sireum.server.protocol.JSON.fromRequest(req, true).value
-
-    if (isBackground) {
-      this.synchronized {
-        request = Some(Request(t, requestId, project, file, editor, input, f))
-      }
-    } else {
       editorMap.synchronized {
-        this.synchronized {
-          request match {
-            case Some(r: Request) =>
-              editorMap -= r.requestId
-            case _ =>
-          }
-          request = None
+        val cancels = for (rid <- editorMap.keys.toVector) yield {
+          editorMap -= rid
+          org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Cancel(rid), true).value
         }
-        editorMap(requestId) = (project, file, editor, input)
+        if (cancels.nonEmpty) queue.add(cancels)
       }
-      queue.add(f())
-    }
 
-  }
+      def f(): Vector[String] = for (req <- reqsF(requestId)) yield org.sireum.server.protocol.JSON.fromRequest(req, true).value
+
+      if (isBackground) {
+        this.synchronized {
+          request = Some(Request(t, requestId, project, file, editor, input, f))
+        }
+      } else {
+        editorMap.synchronized {
+          this.synchronized {
+            request match {
+              case Some(r: Request) =>
+                editorMap -= r.requestId
+              case _ =>
+            }
+            request = None
+          }
+          editorMap(requestId) = (project, file, editor, input)
+        }
+        queue.add(f())
+      }
+    }
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean, line: Int): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return

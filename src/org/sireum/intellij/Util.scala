@@ -136,4 +136,32 @@ object Util {
       case _ =>
         Notifications.Bus.notify(n, project)
     }
+
+  val queue: java.util.concurrent.LinkedBlockingQueue[Option[() => Unit]] = new java.util.concurrent.LinkedBlockingQueue
+  private var threadOpt: Option[Thread] = None
+
+  def async(f: () => Unit): Unit = synchronized {
+    threadOpt match {
+      case Some(_) =>
+      case _ =>
+        val t = new Thread {
+          override def run(): Unit = {
+            var terminated = false
+            while (!terminated) {
+              queue.take() match {
+                case Some(f) => f()
+                case _ => terminated = true
+              }
+            }
+          }
+        }
+        t.start()
+        threadOpt = Some(t)
+    }
+    queue.add(Some(f))
+  }
+
+  def finalise(): Unit = {
+    queue.add(None)
+  }
 }

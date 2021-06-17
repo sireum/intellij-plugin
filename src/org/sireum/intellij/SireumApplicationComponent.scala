@@ -264,5 +264,6 @@ class SireumApplicationComponent extends ApplicationComponent {
       for (p <- SireumClient.processInit) p.destroy()
       SireumClient.processInit = None
     }
+    Util.finalise()
   }
 }
