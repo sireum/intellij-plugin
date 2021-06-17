@@ -79,8 +79,8 @@
         </group>
 
         <action id="LogikaCheckActionFile" class="org.sireum.intellij.logika.LogikaCheckActionFile"
-                text="Logika Check"
-                description="Check logika proof">
+                text="Logika Check (All in File)"
+                description="Check all Logika proofs in the file">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl W"/>
@@ -88,7 +88,7 @@
 
         <action id="LogikaCheckActionLine" class="org.sireum.intellij.logika.LogikaCheckActionLine"
                 text="Logika Check (Line)"
-                description="Check Logika proof (line)">
+                description="Check Logika proofs focused on the cursor line">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
