@@ -31,7 +31,7 @@
     </vendor>
 
     <description><![CDATA[
-        <a href="http://sireum.org">Sireum</a> is a high-assurance system engineering platform being
+        <a href="http://sireum.org">Sireum</a> is a high assurance system engineering platform being
         developed at SAnToS Laboratory, Kansas State University.
         This plugin integrates Sireum tools such as the Logika program verifier for Slang.
     ]]></description>
