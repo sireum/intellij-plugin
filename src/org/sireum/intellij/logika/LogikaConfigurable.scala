@@ -151,10 +151,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
         // TODO
         //selectedKind != checkerKind ||
-        selectedBitWidth != bitWidth ||
-        loopBoundTextField.getText != loopBound.toString ||
-        recursionBoundTextField.getText != recursionBound.toString ||
-        methodContractCheckBox.isSelected != methodContract)
+        selectedBitWidth != bitWidth //||
+        //loopBoundTextField.getText != loopBound.toString ||
+        //recursionBoundTextField.getText != recursionBound.toString ||
+        //methodContractCheckBox.isSelected != methodContract
+  )
 
   /* TODO
   private def selectedKind: CheckerKind.Value =
@@ -184,21 +185,21 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       timeoutLabel.setForeground(if (validTimeout) fgColor else JBColor.red)
       timeoutTextField.setToolTipText(if (validTimeout) "OK" else "Must be at least 200.")
     }
-    def updateLoopBound() = {
-      val text = loopBoundTextField.getText
-      validLoopBound = parsePosInteger(text).nonEmpty
-      loopBoundLabel.setForeground(if (validLoopBound) fgColor else JBColor.red)
-      loopBoundTextField.setToolTipText(if (validLoopBound) "OK" else "Must be at least 1.")
-    }
-    def updateRecursionBound() = {
-      val text = recursionBoundTextField.getText
-      validRecursionBound = parsePosInteger(text).nonEmpty
-      recursionBoundLabel.setForeground(if (validRecursionBound) fgColor else JBColor.red)
-      recursionBoundTextField.setToolTipText(if (validRecursionBound) "OK" else "Must be at least 1.")
-    }
+//    def updateLoopBound() = {
+//      val text = loopBoundTextField.getText
+//      validLoopBound = parsePosInteger(text).nonEmpty
+//      loopBoundLabel.setForeground(if (validLoopBound) fgColor else JBColor.red)
+//      loopBoundTextField.setToolTipText(if (validLoopBound) "OK" else "Must be at least 1.")
+//    }
+//    def updateRecursionBound() = {
+//      val text = recursionBoundTextField.getText
+//      validRecursionBound = parsePosInteger(text).nonEmpty
+//      recursionBoundLabel.setForeground(if (validRecursionBound) fgColor else JBColor.red)
+//      recursionBoundTextField.setToolTipText(if (validRecursionBound) "OK" else "Must be at least 1.")
+//    }
     def updateSymExe() = {
-      val isUnrolling = unrollingSymExeRadioButton.isSelected
-      val isSymExe = symExeRadioButton.isSelected || isUnrolling
+//      val isUnrolling = unrollingSymExeRadioButton.isSelected
+      val isSymExe = true // symExeRadioButton.isSelected || isUnrolling
       bitsLabel.setEnabled(isSymExe)
       bitsUnboundedRadioButton.setEnabled(isSymExe)
       // TODO
@@ -207,10 +208,10 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       //bits32RadioButton.setEnabled(isSymExe)
       //bits64RadioButton.setEnabled(isSymExe)
       autoCheckBox.setEnabled(!isSymExe)
-      loopBoundLabel.setEnabled(isUnrolling)
-      loopBoundTextField.setEnabled(isUnrolling)
-      recursionBoundLabel.setEnabled(isUnrolling)
-      recursionBoundTextField.setEnabled(isUnrolling)
+//      loopBoundLabel.setEnabled(isUnrolling)
+//      loopBoundTextField.setEnabled(isUnrolling)
+//      recursionBoundLabel.setEnabled(isUnrolling)
+//      recursionBoundTextField.setEnabled(isUnrolling)
       //methodContractCheckBox.setEnabled(isUnrolling)
     }
     def updateHintUnicode() = {
@@ -231,24 +232,24 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       override def removeUpdate(e: DocumentEvent): Unit = updateTimeout()
     })
 
-    loopBoundTextField.getDocument.addDocumentListener(new DocumentListener {
-      override def insertUpdate(e: DocumentEvent): Unit = updateLoopBound()
+//    loopBoundTextField.getDocument.addDocumentListener(new DocumentListener {
+//      override def insertUpdate(e: DocumentEvent): Unit = updateLoopBound()
+//
+//      override def changedUpdate(e: DocumentEvent): Unit = updateLoopBound()
+//
+//      override def removeUpdate(e: DocumentEvent): Unit = updateLoopBound()
+//    })
 
-      override def changedUpdate(e: DocumentEvent): Unit = updateLoopBound()
+//    recursionBoundTextField.getDocument.addDocumentListener(new DocumentListener {
+//      override def insertUpdate(e: DocumentEvent): Unit = updateRecursionBound()
+//
+//      override def changedUpdate(e: DocumentEvent): Unit = updateRecursionBound()
+//
+//      override def removeUpdate(e: DocumentEvent): Unit = updateRecursionBound()
+//    })
 
-      override def removeUpdate(e: DocumentEvent): Unit = updateLoopBound()
-    })
-
-    recursionBoundTextField.getDocument.addDocumentListener(new DocumentListener {
-      override def insertUpdate(e: DocumentEvent): Unit = updateRecursionBound()
-
-      override def changedUpdate(e: DocumentEvent): Unit = updateRecursionBound()
-
-      override def removeUpdate(e: DocumentEvent): Unit = updateRecursionBound()
-    })
-
-    symExeRadioButton.addChangeListener(_ => updateSymExe())
-    unrollingSymExeRadioButton.addChangeListener(_ => updateSymExe())
+//    symExeRadioButton.addChangeListener(_ => updateSymExe())
+//    unrollingSymExeRadioButton.addChangeListener(_ => updateSymExe())
     hintCheckBox.addChangeListener(_ => updateHintUnicode())
 
     updateSymExe()
@@ -270,9 +271,9 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     // TODO
     //checkerKind = selectedKind
     bitWidth = selectedBitWidth
-    loopBound = parsePosInteger(loopBoundTextField.getText).getOrElse(loopBound)
-    recursionBound = parsePosInteger(recursionBoundTextField.getText).getOrElse(recursionBound)
-    methodContract = methodContractCheckBox.isSelected
+//    loopBound = parsePosInteger(loopBoundTextField.getText).getOrElse(loopBound)
+//    recursionBound = parsePosInteger(recursionBoundTextField.getText).getOrElse(recursionBound)
+//    methodContract = methodContractCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -299,8 +300,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       case 32 => bits32RadioButton.setSelected(true)
       case 64 => bits64RadioButton.setSelected(true)
     }
-    loopBoundTextField.setText(loopBound.toString)
-    recursionBoundTextField.setText(recursionBound.toString)
-    methodContractCheckBox.setSelected(methodContract)
+//    loopBoundTextField.setText(loopBound.toString)
+//    recursionBoundTextField.setText(recursionBound.toString)
+//    methodContractCheckBox.setSelected(methodContract)
   }
 }

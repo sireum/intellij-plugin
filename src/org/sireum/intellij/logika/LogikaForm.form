@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.sireum.intellij.logika.LogikaForm">
-  <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="10" column-count="6" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+  <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="9" column-count="7" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="992" height="420"/>
+      <xy x="20" y="20" width="749" height="437"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -20,7 +20,7 @@
       <grid id="7d8ff" binding="headerPanel" layout-manager="GridLayoutManager" row-count="3" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="1" column="1" row-span="1" col-span="4" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <grid row="1" column="1" row-span="1" col-span="5" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties/>
         <border type="none"/>
@@ -90,7 +90,7 @@
       </component>
       <vspacer id="bcb2a">
         <constraints>
-          <grid row="9" column="4" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+          <grid row="8" column="5" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
             <minimum-size width="-1" height="5"/>
             <preferred-size width="437" height="14"/>
           </grid>
@@ -98,27 +98,18 @@
       </vspacer>
       <vspacer id="aeb5f">
         <constraints>
-          <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+          <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
             <minimum-size width="-1" height="5"/>
             <preferred-size width="200" height="5"/>
             <maximum-size width="-1" height="5"/>
           </grid>
         </constraints>
       </vspacer>
-      <component id="8d7c" class="javax.swing.JTextField" binding="timeoutTextField">
-        <constraints>
-          <grid row="3" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-            <preferred-size width="200" height="24"/>
-          </grid>
-        </constraints>
-        <properties/>
-      </component>
       <component id="caaa0" class="javax.swing.JLabel" binding="timeoutLabel">
         <constraints>
           <grid row="3" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <labelFor value="8d7c"/>
           <text value="&amp;Timeout (ms)"/>
           <toolTipText value="Timeout (&gt;= 200) for algebra and auto"/>
         </properties>
@@ -182,26 +173,17 @@
           <toolTipText value="Expose incantations used in summonings"/>
         </properties>
       </component>
-      <grid id="8a332" binding="devPanel" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="8a332" binding="devPanel" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="8" column="1" row-span="1" col-span="4" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <grid row="7" column="1" row-span="1" col-span="5" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties/>
         <border type="none"/>
         <children>
-          <component id="20012" class="javax.swing.JLabel" binding="checkerKindLabel">
-            <constraints>
-              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-            </constraints>
-            <properties>
-              <text value="Checker kind"/>
-              <toolTipText value="Proof checker kind for programming logic"/>
-            </properties>
-          </component>
           <component id="6ba87" class="javax.swing.JLabel" binding="bitsLabel">
             <constraints>
-              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <enabled value="false"/>
@@ -209,142 +191,10 @@
               <toolTipText value="Default bit-width in SymExe (non-modulo)"/>
             </properties>
           </component>
-          <grid id="3fc20" binding="checkerKindPanel" layout-manager="GridLayoutManager" row-count="2" column-count="5" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-            <margin top="0" left="0" bottom="0" right="0"/>
-            <constraints>
-              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
-            </constraints>
-            <properties/>
-            <border type="none"/>
-            <children>
-              <component id="bdada" class="javax.swing.JRadioButton" binding="forwardRadioButton">
-                <constraints>
-                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <enabled value="false"/>
-                  <selected value="false"/>
-                  <text value="&amp;Forward"/>
-                  <toolTipText value="Forward reasoning"/>
-                </properties>
-              </component>
-              <hspacer id="cb811">
-                <constraints>
-                  <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                </constraints>
-              </hspacer>
-              <component id="65c4f" class="javax.swing.JRadioButton" binding="backwardRadioButton">
-                <constraints>
-                  <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <enabled value="false"/>
-                  <text value="Back&amp;ward"/>
-                  <toolTipText value="Backward reasoning"/>
-                </properties>
-              </component>
-              <component id="21971" class="javax.swing.JRadioButton" binding="symExeRadioButton">
-                <constraints>
-                  <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <enabled value="false"/>
-                  <selected value="true"/>
-                  <text value="Summarizing SymE&amp;xe"/>
-                  <toolTipText value="Automated symbolic execution"/>
-                </properties>
-              </component>
-              <component id="952f2" class="javax.swing.JRadioButton" binding="unrollingSymExeRadioButton" default-binding="true">
-                <constraints>
-                  <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <enabled value="false"/>
-                  <text value="&amp;Unrolling SymExe"/>
-                </properties>
-              </component>
-              <grid id="c5039" binding="boundsPanel" layout-manager="GridLayoutManager" row-count="1" column-count="5" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                <margin top="0" left="0" bottom="0" right="0"/>
-                <constraints>
-                  <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties/>
-                <border type="none"/>
-                <children>
-                  <component id="ee87f" class="javax.swing.JLabel" binding="loopBoundLabel">
-                    <constraints>
-                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <enabled value="false"/>
-                      <labelFor value="be8b4"/>
-                      <text value="Loop"/>
-                      <toolTipText value="Loop Bound (format: positive integer)"/>
-                    </properties>
-                  </component>
-                  <hspacer id="c50a6">
-                    <constraints>
-                      <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                  </hspacer>
-                  <component id="be8b4" class="javax.swing.JTextField" binding="loopBoundTextField">
-                    <constraints>
-                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
-                        <minimum-size width="50" height="-1"/>
-                        <preferred-size width="50" height="-1"/>
-                        <maximum-size width="50" height="-1"/>
-                      </grid>
-                    </constraints>
-                    <properties>
-                      <enabled value="false"/>
-                      <text value="3"/>
-                      <toolTipText value=""/>
-                    </properties>
-                  </component>
-                  <component id="d42d3" class="javax.swing.JLabel" binding="recursionBoundLabel">
-                    <constraints>
-                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <enabled value="false"/>
-                      <labelFor value="e2ea"/>
-                      <text value="Recursion"/>
-                      <toolTipText value="Recursion Bound (format: positive integer)"/>
-                    </properties>
-                  </component>
-                  <component id="e2ea" class="javax.swing.JTextField" binding="recursionBoundTextField">
-                    <constraints>
-                      <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                        <minimum-size width="50" height="-1"/>
-                        <preferred-size width="50" height="-1"/>
-                        <maximum-size width="50" height="-1"/>
-                      </grid>
-                    </constraints>
-                    <properties>
-                      <enabled value="false"/>
-                      <text value="1"/>
-                      <toolTipText value=""/>
-                    </properties>
-                  </component>
-                </children>
-              </grid>
-              <component id="bb6d9" class="javax.swing.JCheckBox" binding="methodContractCheckBox">
-                <constraints>
-                  <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <enabled value="false"/>
-                  <selected value="true"/>
-                  <text value="Use method cont&amp;ract"/>
-                  <toolTipText value="Use compositional reasoning on methods with contract"/>
-                </properties>
-              </component>
-            </children>
-          </grid>
           <grid id="c03d5" binding="bitWidthPanel" layout-manager="GridLayoutManager" row-count="1" column-count="6" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
             <margin top="0" left="0" bottom="0" right="0"/>
             <constraints>
-              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <enabled value="true"/>
@@ -411,15 +261,6 @@
           </grid>
         </children>
       </grid>
-      <vspacer id="989c4">
-        <constraints>
-          <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
-            <minimum-size width="-1" height="15"/>
-            <preferred-size width="203" height="15"/>
-            <maximum-size width="-1" height="15"/>
-          </grid>
-        </constraints>
-      </vspacer>
       <component id="6576e" class="javax.swing.JCheckBox" binding="hintUnicodeCheckBox">
         <constraints>
           <grid row="5" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
@@ -432,9 +273,17 @@
       </component>
       <hspacer id="fa117">
         <constraints>
-          <grid row="3" column="5" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <grid row="3" column="6" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
         </constraints>
       </hspacer>
+      <component id="177e3" class="javax.swing.JTextField" binding="timeoutTextField">
+        <constraints>
+          <grid row="3" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+            <preferred-size width="150" height="-1"/>
+          </grid>
+        </constraints>
+        <properties/>
+      </component>
     </children>
   </grid>
   <buttonGroups>

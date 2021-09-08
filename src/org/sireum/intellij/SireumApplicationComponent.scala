@@ -45,6 +45,7 @@ object SireumApplicationComponent {
   private val sireumEnvVarsKey = sireumKey + "envvars"
   private val backgroundAnalysisKey = sireumKey + "background"
   private val idleKey = sireumKey + "idle"
+  private val bgcoresKey = sireumKey + "bgcores"
   private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
 
@@ -53,6 +54,7 @@ object SireumApplicationComponent {
   private[intellij] var envVars = scala.collection.mutable.LinkedHashMap[String, String]()
   private[intellij] var backgroundAnalysis = true
   private[intellij] var idle: Int = 1500
+  private[intellij] var bgcores: Int = 1
 
   private[intellij] val platform: String =
     if (scala.util.Properties.isMac) "mac"
@@ -238,6 +240,7 @@ object SireumApplicationComponent {
     sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
     backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
     idle = pc.getInt(idleKey, idle)
+    bgcores = pc.getInt(bgcoresKey, bgcores)
   }
 
   def saveConfiguration(): Unit = {
@@ -247,6 +250,7 @@ object SireumApplicationComponent {
     pc.setValue(sireumVarArgsKey, vmArgs.mkString(" "))
     pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
     pc.setValue(idleKey, idle.toString)
+    pc.setValue(bgcoresKey, bgcores.toString)
   }
 }
 

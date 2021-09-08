@@ -30,7 +30,6 @@ import javax.swing.*;
 public abstract class LogikaForm {
     protected JPanel logikaPanel;
     protected JLabel timeoutLabel;
-    protected JTextField timeoutTextField;
     protected JCheckBox checkSatCheckBox;
     protected JCheckBox autoCheckBox;
     protected JLabel logoLabel;
@@ -40,26 +39,15 @@ public abstract class LogikaForm {
     protected JCheckBox backgroundCheckBox;
     protected JCheckBox hintCheckBox;
     protected JCheckBox inscribeSummoningsCheckBox;
-    protected JRadioButton forwardRadioButton;
-    protected JRadioButton backwardRadioButton;
-    protected JRadioButton symExeRadioButton;
-    protected JLabel checkerKindLabel;
     protected JPanel devPanel;
     protected JLabel bitsLabel;
     protected JRadioButton bitsUnboundedRadioButton;
-    protected JPanel checkerKindPanel;
     protected JPanel bitWidthPanel;
     protected JRadioButton bits8RadioButton;
     protected JRadioButton bits16RadioButton;
     protected JRadioButton bits32RadioButton;
     protected JRadioButton bits64RadioButton;
-    protected JRadioButton unrollingSymExeRadioButton;
-    protected JPanel boundsPanel;
-    protected JLabel loopBoundLabel;
-    protected JTextField loopBoundTextField;
-    protected JLabel recursionBoundLabel;
-    protected JTextField recursionBoundTextField;
-    protected JCheckBox methodContractCheckBox;
     protected JCheckBox hintUnicodeCheckBox;
     protected JPanel logoPanel;
+    protected JTextField timeoutTextField;
 }

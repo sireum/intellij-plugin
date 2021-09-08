@@ -26,7 +26,7 @@
 package org.sireum.intellij
 
 import java.awt.Color
-import javax.swing.JComponent
+import javax.swing.{JComponent, SpinnerNumberModel}
 import javax.swing.event.{DocumentEvent, DocumentListener}
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
@@ -56,8 +56,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
         vmArgsString != vmArgsTextField.getText ||
         envVarsString != envVarsTextArea.getText ||
         backgroundAnalysis != backgroundCheckBox.isSelected ||
-        idle.toString != idleTextField.getText
-        )
+        idle.toString != idleTextField.getText ||
+        bgcores != parSpinner.getValue.asInstanceOf[Int])
   }
 
   def parseGe200(text: String): Option[Int] =
@@ -155,6 +155,10 @@ final class SireumConfigurable extends SireumForm with Configurable {
 
       def update(): Unit = updateIdle(idleTextField.getText)
     })
+
+    val maxCores = Runtime.getRuntime.availableProcessors
+    parLabel.setText(s"CPU cores (max: $maxCores)")
+    parSpinner.setModel(new SpinnerNumberModel(bgcores, 1, maxCores, 1))
 
     updateEnvVars(envVarsString)
     updateVmArgs(vmArgsString)

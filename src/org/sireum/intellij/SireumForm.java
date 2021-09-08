@@ -46,4 +46,6 @@ public abstract class SireumForm {
     protected JPanel idlePanel;
     protected JLabel idleLabel;
     protected JTextField idleTextField;
+    protected JLabel parLabel;
+    protected JSpinner parSpinner;
 }
