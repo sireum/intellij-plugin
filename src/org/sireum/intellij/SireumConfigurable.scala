@@ -57,7 +57,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
         envVarsString != envVarsTextArea.getText ||
         backgroundAnalysis != backgroundCheckBox.isSelected ||
         idle.toString != idleTextField.getText ||
-        bgcores != parSpinner.getValue.asInstanceOf[Int])
+        bgCores != parSpinner.getValue.asInstanceOf[Int])
   }
 
   def parseGe200(text: String): Option[Int] =
@@ -156,9 +156,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
       def update(): Unit = updateIdle(idleTextField.getText)
     })
 
-    val maxCores = Runtime.getRuntime.availableProcessors
     parLabel.setText(s"CPU cores (max: $maxCores)")
-    parSpinner.setModel(new SpinnerNumberModel(bgcores, 1, maxCores, 1))
+    parSpinner.setModel(new SpinnerNumberModel(bgCores, 1, maxCores, 1))
 
     updateEnvVars(envVarsString)
     updateVmArgs(vmArgsString)
@@ -178,7 +177,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     sireumHomeOpt = checkSireumDir(path, vmArgs, envVars)
     backgroundAnalysis = backgroundCheckBox.isSelected
     idle = parseGe200(idleTextField.getText).getOrElse(idle)
-    bgcores = parSpinner.getValue.asInstanceOf[Int]
+    bgCores = parSpinner.getValue.asInstanceOf[Int]
     if (sireumHomeOpt.nonEmpty) saveConfiguration()
     else {
       Messages.showMessageDialog(null: Project, sireumInvalid(path),
