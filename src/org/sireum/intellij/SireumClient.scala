@@ -268,6 +268,7 @@ object SireumClient {
           logikaEnabled = !isBackground ||
             (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
           id = requestId,
+          par = SireumApplicationComponent.bgcores,
           uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
           content = input,
           line = line

@@ -178,6 +178,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     sireumHomeOpt = checkSireumDir(path, vmArgs, envVars)
     backgroundAnalysis = backgroundCheckBox.isSelected
     idle = parseGe200(idleTextField.getText).getOrElse(idle)
+    bgcores = parSpinner.getValue.asInstanceOf[Int]
     if (sireumHomeOpt.nonEmpty) saveConfiguration()
     else {
       Messages.showMessageDialog(null: Project, sireumInvalid(path),
