@@ -260,7 +260,8 @@ object SireumClient {
           org.sireum.server.service.LogikaService.defaultConfig(
             sat = LogikaConfigurable.checkSat,
             defaultLoopBound = LogikaConfigurable.loopBound,
-            timeoutInMs = LogikaConfigurable.timeout
+            timeoutInMs = LogikaConfigurable.timeout,
+            useReal = LogikaConfigurable.useReal
           )
         ),
         Slang.CheckScript(

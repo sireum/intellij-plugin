@@ -192,5 +192,6 @@ final class SireumConfigurable extends SireumForm with Configurable {
     envVarsTextArea.setText(envVarsString)
     backgroundCheckBox.setSelected(backgroundAnalysis)
     idleTextField.setText(idle.toString)
+    parSpinner.setValue(bgCores)
   }
 }

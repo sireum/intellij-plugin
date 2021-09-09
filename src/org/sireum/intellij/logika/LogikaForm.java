@@ -50,4 +50,5 @@ public abstract class LogikaForm {
     protected JCheckBox hintUnicodeCheckBox;
     protected JPanel logoPanel;
     protected JTextField timeoutTextField;
+    protected JCheckBox useRealCheckBox;
 }

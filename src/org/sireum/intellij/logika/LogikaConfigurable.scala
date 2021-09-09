@@ -49,6 +49,7 @@ object LogikaConfigurable {
   private val loopBoundKey = logikaKey + "loopBound"
   private val recursionBoundKey = logikaKey + "recursionBound"
   private val methodContractKey = logikaKey + "methodContract"
+  private val useRealKey = logikaKey + "useReal"
 
   private[intellij] var backgroundAnalysis = true
   private[intellij] var timeout: Int = 2000
@@ -63,6 +64,7 @@ object LogikaConfigurable {
   private[intellij] var loopBound = 3
   private[intellij] var recursionBound = 1
   private[intellij] var methodContract = true
+  private[intellij] var useReal = false
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -79,6 +81,7 @@ object LogikaConfigurable {
     loopBound = pc.getInt(loopBoundKey, loopBound)
     recursionBound = pc.getInt(recursionBoundKey, recursionBound)
     methodContract = pc.getBoolean(methodContractKey, methodContract)
+    useReal = pc.getBoolean(useRealKey, useReal)
   }
 
   def saveConfiguration(): Unit = {
@@ -96,6 +99,7 @@ object LogikaConfigurable {
     pc.setValue(loopBoundKey, loopBound.toString)
     pc.setValue(recursionBoundKey, recursionBound.toString)
     pc.setValue(methodContractKey, methodContract.toString)
+    pc.setValue(useRealKey, useReal.toString)
   }
 
   def parseGe200(text: String): Option[Int] =
@@ -151,10 +155,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
         // TODO
         //selectedKind != checkerKind ||
-        selectedBitWidth != bitWidth //||
+        selectedBitWidth != bitWidth ||
         //loopBoundTextField.getText != loopBound.toString ||
         //recursionBoundTextField.getText != recursionBound.toString ||
         //methodContractCheckBox.isSelected != methodContract
+        useRealCheckBox.isSelected != useReal
   )
 
   /* TODO
@@ -274,6 +279,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //    loopBound = parsePosInteger(loopBoundTextField.getText).getOrElse(loopBound)
 //    recursionBound = parsePosInteger(recursionBoundTextField.getText).getOrElse(recursionBound)
 //    methodContract = methodContractCheckBox.isSelected
+    useReal = useRealCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -303,5 +309,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //    loopBoundTextField.setText(loopBound.toString)
 //    recursionBoundTextField.setText(recursionBound.toString)
 //    methodContractCheckBox.setSelected(methodContract)
+    useRealCheckBox.setSelected(useReal)
   }
 }
