@@ -46,9 +46,14 @@ object ProyekSyncAction {
           override def run(indicator: ProgressIndicator): Unit = {
             indicator.setIndeterminate(true)
             indicator.setText("Importing project ...")
-            val sireum = if (Os.isWin) "sireum.bat" else "./sireum"
             val cmds = new java.util.ArrayList[Predef.String]
-            cmds.add(sireum)
+            if (Os.isWin) {
+              cmds.add("cmd")
+              cmds.add("/c")
+              cmds.add("sireum.bat")
+            } else {
+              cmds.add("./sireum")
+            }
             cmds.add("proyek")
             cmds.add("ive")
             cmds.add(iproject.getBasePath)
