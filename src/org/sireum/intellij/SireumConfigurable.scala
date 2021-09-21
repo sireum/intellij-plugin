@@ -141,10 +141,15 @@ final class SireumConfigurable extends SireumForm with Configurable {
       def update(): Unit = updateEnvVars(envVarsTextArea.getText.trim)
     })
 
-    backgroundCheckBox.addActionListener(_ => {
-      idleLabel.setEnabled(backgroundCheckBox.isSelected)
-      idleTextField.setEnabled(backgroundCheckBox.isSelected)
-    })
+    def updateBackground(): Unit = {
+      val enabled = backgroundCheckBox.isSelected
+      idleLabel.setEnabled(enabled)
+      idleTextField.setEnabled(enabled)
+      parLabel.setEnabled(enabled)
+      parSpinner.setEnabled(enabled)
+    }
+
+    backgroundCheckBox.addActionListener(_ => updateBackground())
 
     idleTextField.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = update()
@@ -162,6 +167,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     updateEnvVars(envVarsString)
     updateVmArgs(vmArgsString)
     updateIdle(idle.toString)
+    updateBackground()
 
     sireumPanel
   }
