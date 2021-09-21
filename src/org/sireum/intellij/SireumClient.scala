@@ -32,7 +32,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
 import com.intellij.openapi.editor.event._
 import com.intellij.openapi.editor.markup._
-import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor}
+import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor, TextEditor}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
@@ -114,9 +114,8 @@ object SireumClient {
                 case _: Throwable => err()
               }
             } else {
-              //              val msg = s"Unrecognized server message: $trimmed"
-              //              System.out.println(msg)
-              //              System.out.flush()
+              System.out.println(s)
+              System.out.flush()
             }
           }, "x", "server", "-m", "json")
       if (processInit.isEmpty) return
@@ -208,7 +207,7 @@ object SireumClient {
 
   def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(sireumKey)
 
-  def addRequest(reqsF:  org.sireum.ISZ[org.sireum.String] => Vector[org.sireum.server.protocol.Request],
+  def addRequest(reqsF: org.sireum.ISZ[org.sireum.String] => Vector[org.sireum.server.protocol.Request],
                  project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, input: String): Unit =
     Util.async { () =>
       init(project)
@@ -264,16 +263,57 @@ object SireumClient {
             useReal = LogikaConfigurable.useReal
           )
         ),
-        Slang.CheckScript(
-          isBackground = isBackground,
-          logikaEnabled = !isBackground ||
-            (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
-          id = requestId,
-          par = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
-          uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
-          content = input,
-          line = line
-        )
+        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists ||
+          org.sireum.Os.path(file.getCanonicalPath).ext.value == "sc") {
+          Slang.Check.Script(
+            isBackground = isBackground,
+            logikaEnabled = !isBackground ||
+              (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
+            id = requestId,
+            par = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
+            uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
+            content = input,
+            line = line
+          )
+        } else {
+          var files = org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String]
+          var vfiles = org.sireum.ISZ[org.sireum.String]()
+          scala.util.Try {
+            val content = editor.getDocument.getText
+            val p = org.sireum.Os.path(file.getCanonicalPath)
+            val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
+            if (hasSireum) {
+              files = files + p.string ~> content
+              if (compactFirstLine.contains("#Logika")) {
+                vfiles = vfiles :+ p.string
+              }
+            }
+          }
+          for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) scala.util.Try {
+            val path = fileEditor.getFile.getCanonicalPath
+            fileEditor match {
+              case fileEditor: TextEditor if path != file.getCanonicalPath =>
+                val e = fileEditor.getEditor
+                val p = org.sireum.Os.path(path)
+                if (p.ext.value == "scala") {
+                  val content = e.getDocument.getText
+                  if (p.read.value != content && org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)._1) {
+                    files = files + p.string ~> content
+                  }
+                }
+              case _ =>
+            }
+          }
+          Slang.Check.Project(
+            isBackground = isBackground,
+            id = requestId,
+            par = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
+            proyek = org.sireum.Os.path(project.getBasePath).string,
+            files = files,
+            vfiles = vfiles,
+            line = line
+          )
+        }
       )
     }
 

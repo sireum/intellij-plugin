@@ -68,11 +68,13 @@ object Util {
       return false
     }
     val root = Os.path(iproject.getBasePath)
-    SireumApplicationComponent.getSireumHome(iproject) match {
-      case scala.Some(home) => System.setProperty("org.sireum.home", home.string.value)
+    val sireumHome = SireumApplicationComponent.getSireumHome(iproject) match {
+      case scala.Some(home) =>
+        System.setProperty("org.sireum.home", home.string.value)
+        home
       case _ => return false
     }
-    val prjOpt = org.sireum.cli.Proyek.getProject(root, None(), None())
+    val prjOpt = org.sireum.proyek.Proyek.getProject(sireumHome, root, None(), None())
     val errorF = root / ".idea" / "error.txt"
     errorF.removeAll()
     if (prjOpt.isEmpty) {
@@ -81,7 +83,7 @@ object Util {
       return true
     }
     val prj = prjOpt.get
-    val vsOpt = org.sireum.cli.Proyek.getVersions(prj, root, ISZ())
+    val vsOpt = org.sireum.proyek.Proyek.getVersions(prj, root, ISZ(), SireumApi.versions.entries)
     if (vsOpt.isEmpty) {
       errorF.writeAppend("Could not load versions\n")
       errorF.removeOnExit()
