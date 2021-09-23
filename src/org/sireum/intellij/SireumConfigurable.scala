@@ -55,7 +55,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
       (sireumHomeString != sireumHomeTextField.getText ||
         vmArgsString != vmArgsTextField.getText ||
         envVarsString != envVarsTextArea.getText ||
-        backgroundAnalysis != backgroundCheckBox.isSelected ||
+        backgroundAnalysis != bgValue ||
         idle.toString != idleTextField.getText ||
         bgCores != parSpinner.getValue.asInstanceOf[Int])
   }
@@ -89,9 +89,9 @@ final class SireumConfigurable extends SireumForm with Configurable {
       envVarsLabel.setToolTipText(if (validEnvVars) "OK" else "Ill-formed (format: key of [a-zA-Z_][a-zA-Z0-9_]* = value, per line).")
     }
 
-    def updateIdle(text: String) = {
+    def updateBg(text: String): Unit = {
       validIdle = parseGe200(text).nonEmpty
-      idleLabel.setForeground(if (validIdle) fgColor else JBColor.red)
+      bgIdleRadioButton.setForeground(if (validIdle) fgColor else JBColor.red)
       idleTextField.setToolTipText(if (validIdle) "OK" else "Must be at least 200.")
     }
 
@@ -142,14 +142,15 @@ final class SireumConfigurable extends SireumForm with Configurable {
     })
 
     def updateBackground(): Unit = {
-      val enabled = backgroundCheckBox.isSelected
-      idleLabel.setEnabled(enabled)
+      val enabled = bgValue != 0
       idleTextField.setEnabled(enabled)
       parLabel.setEnabled(enabled)
       parSpinner.setEnabled(enabled)
     }
 
-    backgroundCheckBox.addActionListener(_ => updateBackground())
+    bgDisabledRadioButton.addActionListener(_ => updateBackground())
+    bgSaveRadioButton.addActionListener(_ => updateBackground())
+    bgIdleRadioButton.addActionListener(_ => updateBackground())
 
     idleTextField.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = update()
@@ -158,7 +159,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
 
       override def removeUpdate(e: DocumentEvent): Unit = update()
 
-      def update(): Unit = updateIdle(idleTextField.getText)
+      def update(): Unit = updateBg(idleTextField.getText)
     })
 
     parLabel.setText(s"CPU cores (max: $maxCores)")
@@ -166,7 +167,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
 
     updateEnvVars(envVarsString)
     updateVmArgs(vmArgsString)
-    updateIdle(idle.toString)
+    updateBg(idle.toString)
     updateBackground()
 
     sireumPanel
@@ -181,7 +182,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
     val path = org.sireum.Os.path(sireumHomeTextField.getText)
     sireumHomeOpt = checkSireumDir(path, vmArgs, envVars)
-    backgroundAnalysis = backgroundCheckBox.isSelected
+    backgroundAnalysis = bgValue
     idle = parseGe200(idleTextField.getText).getOrElse(idle)
     bgCores = parSpinner.getValue.asInstanceOf[Int]
     if (sireumHomeOpt.nonEmpty) saveConfiguration()
@@ -192,11 +193,17 @@ final class SireumConfigurable extends SireumForm with Configurable {
     }
   }
 
+  def bgValue: Int = if (bgDisabledRadioButton.isSelected) 0 else if (bgSaveRadioButton.isSelected) 1 else 2
+
   override def reset(): Unit = {
     sireumHomeTextField.setText(sireumHomeString)
     vmArgsTextField.setText(vmArgsString)
     envVarsTextArea.setText(envVarsString)
-    backgroundCheckBox.setSelected(backgroundAnalysis)
+    backgroundAnalysis match {
+      case 0 => bgDisabledRadioButton.setSelected(true)
+      case 1 => bgSaveRadioButton.setSelected(true)
+      case _ => bgIdleRadioButton.setSelected(true)
+    }
     idleTextField.setText(idle.toString)
     parSpinner.setValue(bgCores)
   }

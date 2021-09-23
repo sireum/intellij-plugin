@@ -53,7 +53,8 @@ trait LogikaCheckAction extends LogikaOnlyAction {
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     if (editor == null) return
     SireumClient.enableEditor(project, file, editor)
-    SireumClient.analyze(project, file, editor, isBackground = false, hasLogika = true, getLine(editor))
+    SireumClient.analyze(project, file, editor, getLine(editor), SireumClient.getOtherModifiedFiles(project, file),
+      isBackground = false, hasLogika = true)
     e.getPresentation.setEnabled(true)
   }
 

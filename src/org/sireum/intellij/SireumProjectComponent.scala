@@ -46,8 +46,7 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
       registerToolWindow("Sireum", false, ToolWindowAnchor.RIGHT)
     SireumToolWindowFactory.createToolWindowContent(iproject, tw)
 
-    iproject.getMessageBus.connect(iproject).
-      subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
+    iproject.getMessageBus.connect(iproject).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
         new FileEditorManagerListener {
           override def fileClosed(source: FileEditorManager,
                                   file: VirtualFile): Unit = {

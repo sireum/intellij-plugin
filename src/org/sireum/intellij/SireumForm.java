@@ -42,10 +42,12 @@ public abstract class SireumForm {
     protected JLabel subtitleLabel;
     protected JPanel logoPanel;
     protected JLabel logoLabel;
-    protected JCheckBox backgroundCheckBox;
     protected JPanel idlePanel;
-    protected JLabel idleLabel;
     protected JTextField idleTextField;
     protected JLabel parLabel;
     protected JSpinner parSpinner;
+    protected JRadioButton bgDisabledRadioButton;
+    protected JRadioButton bgSaveRadioButton;
+    protected JRadioButton bgIdleRadioButton;
+    protected JLabel bgLabel;
 }

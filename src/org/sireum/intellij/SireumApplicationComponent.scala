@@ -25,17 +25,21 @@
 
 package org.sireum.intellij
 
+import com.intellij.AppTopics
+
 import java.io._
 import java.util.concurrent.BlockingQueue
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components._
+import com.intellij.openapi.editor.{Document, Editor, EditorFactory}
 import com.intellij.openapi.fileChooser._
+import com.intellij.openapi.fileEditor.{FileDocumentManager, FileDocumentManagerListener}
 import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
-import org.sireum.intellij.SireumClient.groupId
+import org.sireum.intellij.SireumClient.{getOtherModifiedFiles, groupId}
 import org.sireum.intellij.logika.LogikaConfigurable
 
 object SireumApplicationComponent {
@@ -54,7 +58,7 @@ object SireumApplicationComponent {
   private[intellij] var sireumHomeOpt: Option[org.sireum.Os.Path] = None
   private[intellij] var vmArgs: Seq[String] = Vector("-Xss2m")
   private[intellij] var envVars = scala.collection.mutable.LinkedHashMap[String, String]()
-  private[intellij] var backgroundAnalysis = true
+  private[intellij] var backgroundAnalysis = 2
   private[intellij] var idle: Int = 1500
   private[intellij] var bgCores: Int = 1
 
@@ -240,7 +244,7 @@ object SireumApplicationComponent {
     envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
     vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
     sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
-    backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
+    backgroundAnalysis = pc.getInt(backgroundAnalysisKey, backgroundAnalysis)
     idle = pc.getInt(idleKey, idle)
     bgCores = pc.getInt(bgcoresKey, bgCores)
   }
@@ -262,6 +266,35 @@ class SireumApplicationComponent extends ApplicationComponent {
   override def initComponent(): Unit = {
     SireumApplicationComponent.loadConfiguration()
     LogikaConfigurable.loadConfiguration()
+
+    ApplicationManager.getApplication.getMessageBus.connect.subscribe(AppTopics.FILE_DOCUMENT_SYNC,
+        new FileDocumentManagerListener {
+          override def beforeDocumentSaving(d: Document): Unit = if (SireumApplicationComponent.backgroundAnalysis == 1) {
+            val file = getFile(d)
+            val editor = getEditor(d)
+            if (file == null || editor == null || !editor.getProject.isInitialized) return
+            val project = editor.getProject
+            SireumClient.analyzeOpt(project, file, editor, SireumClient.getCurrentLine(editor),
+              getOtherModifiedFiles(project, file), isBackground = true)
+          }
+
+          def getFile(d: Document): VirtualFile = {
+            if (d == null) return null
+            val instance = FileDocumentManager.getInstance
+            if (instance == null) return null
+            return instance.getFile(d)
+          }
+
+          def getEditor(d: Document): Editor = {
+            val editors = EditorFactory.getInstance().getEditors(d)
+            if (editors.nonEmpty) {
+              return editors(0)
+            }
+            return null
+          }
+        }
+      )
+
   }
 
   override def disposeComponent(): Unit = {

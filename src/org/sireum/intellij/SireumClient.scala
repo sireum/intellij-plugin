@@ -32,7 +32,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
 import com.intellij.openapi.editor.event._
 import com.intellij.openapi.editor.markup._
-import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor, TextEditor}
+import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager, OpenFileDescriptor, TextEditor}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
@@ -247,7 +247,9 @@ object SireumClient {
       }
     }
 
-  def analyze(project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, hasLogika: Boolean, line: Int): Unit = {
+  def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
+              ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
+              isBackground: Boolean, hasLogika: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
 
@@ -268,7 +270,7 @@ object SireumClient {
           Slang.Check.Script(
             isBackground = isBackground,
             logikaEnabled = !isBackground ||
-              (SireumApplicationComponent.backgroundAnalysis && LogikaConfigurable.backgroundAnalysis),
+              (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis),
             id = requestId,
             par = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
@@ -276,7 +278,7 @@ object SireumClient {
             line = line
           )
         } else {
-          var files = org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String]
+          var files = ofiles
           var vfiles = org.sireum.ISZ[org.sireum.String]()
           scala.util.Try {
             val content = editor.getDocument.getText
@@ -287,21 +289,6 @@ object SireumClient {
               if (compactFirstLine.contains("#Logika")) {
                 vfiles = vfiles :+ p.string
               }
-            }
-          }
-          for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) scala.util.Try {
-            val path = fileEditor.getFile.getCanonicalPath
-            fileEditor match {
-              case fileEditor: TextEditor if path != file.getCanonicalPath =>
-                val e = fileEditor.getEditor
-                val p = org.sireum.Os.path(path)
-                if (p.ext.value == "scala") {
-                  val content = e.getDocument.getText
-                  if (p.read.value != content && org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)._1) {
-                    files = files + p.string ~> content
-                  }
-                }
-              case _ =>
             }
           }
           Slang.Check.Project(
@@ -320,16 +307,39 @@ object SireumClient {
     addRequest(f, project, file, editor, isBackground, input)
   }
 
-  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int, isBackground: Boolean): Unit = {
-    val (isSireum, isLogika) = Util.isSireumOrLogikaFile(project)
+  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int,
+                 ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String], isBackground: Boolean): Unit = {
+    val (isSireum, isLogika) = Util.isSireumOrLogikaFile(org.sireum.Os.path(file.getCanonicalPath))
     if (isLogika) {
-      if (SireumApplicationComponent.backgroundAnalysis)
-        scala.util.Try(analyze(project, file, editor, isBackground = isBackground,
-          hasLogika = LogikaConfigurable.backgroundAnalysis, line))
+      if (SireumApplicationComponent.backgroundAnalysis != 0)
+        scala.util.Try(analyze(project, file, editor, line, ofiles, isBackground = isBackground,
+          hasLogika = LogikaConfigurable.backgroundAnalysis))
     } else if (isSireum) {
-      if (SireumApplicationComponent.backgroundAnalysis)
-        scala.util.Try(analyze(project, file, editor, isBackground = isBackground, hasLogika = false, line))
+      if (SireumApplicationComponent.backgroundAnalysis != 0)
+        scala.util.Try(analyze(project, file, editor, line, ofiles, isBackground = isBackground, hasLogika = false))
     }
+  }
+
+  def getOtherModifiedFiles(project: Project, file: VirtualFile): org.sireum.HashSMap[org.sireum.String, org.sireum.String] = {
+    var r = org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String]
+    val filecp = file.getCanonicalPath
+    if  (filecp.endsWith(".sc")) return r
+    for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors if fileEditor.isModified) scala.util.Try {
+      val path = fileEditor.getFile.getCanonicalPath
+      fileEditor match {
+        case fileEditor: TextEditor if path != filecp =>
+          val e = fileEditor.getEditor
+          val p = org.sireum.Os.path(path)
+          if (p.ext.value == "scala") {
+            val content = e.getDocument.getText
+            if (org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)._1) {
+              r = r + p.string ~> content
+            }
+          }
+        case _ =>
+      }
+    }
+    return r
   }
 
   def getCurrentLine(editor: Editor): Int = {
@@ -341,8 +351,8 @@ object SireumClient {
     if (editor.getUserData(sireumKey) != null) return
     editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
-      override def documentChanged(event: DocumentEvent): Unit = {
-        analyzeOpt(project, file, editor, getCurrentLine(editor), true)
+      override def documentChanged(event: DocumentEvent): Unit = if (SireumApplicationComponent.backgroundAnalysis == 2) {
+        analyzeOpt(project, file, editor, getCurrentLine(editor), getOtherModifiedFiles(project, file), isBackground = true)
       }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
@@ -358,7 +368,7 @@ object SireumClient {
     if (hasSireum) {
       enableEditor(project, file, editor)
       editor.putUserData(statusKey, false)
-      analyzeOpt(project, file, editor, 0, isBackground = false)
+      analyzeOpt(project, file, editor, 0, getOtherModifiedFiles(project, file), isBackground = false)
     }
   }
 
@@ -606,7 +616,34 @@ object SireumClient {
     else text
   }
 
-  def processResult(r: org.sireum.server.protocol.Response): Unit =
+  def processResult(r: org.sireum.server.protocol.Response): Unit = {
+    def getProjectFileEditorInput(pe: (Project, VirtualFile, Editor, String)): Option[(Project, VirtualFile, Editor, String)] = {
+      r match {
+        case r: org.sireum.server.protocol.Report =>
+          r.message.posOpt match {
+            case org.sireum.Some(pos) =>
+              pos.uriOpt match {
+                case org.sireum.Some(uri) =>
+                  val p = org.sireum.Os.path(pe._2.getCanonicalPath)
+                  if (uri == p.toUri) return Some(pe)
+                  val project = pe._1
+                  for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
+                    fileEditor match {
+                      case fileEditor: TextEditor if org.sireum.Os.path(fileEditor.getFile.getCanonicalPath).toUri == uri =>
+                        val editor = fileEditor.getEditor
+                        return Some((project, fileEditor.getFile, editor, editor.getDocument.getText))
+                      case _ =>
+                    }
+                  }
+                  return None
+                case _ =>
+              }
+            case _ =>
+          }
+        case _ =>
+      }
+      return Some(pe)
+    }
     ApplicationManager.getApplication.invokeLater(() => analysisDataKey.synchronized {
       import org.sireum._
       val (project, file, editor, input) = editorMap.synchronized {
@@ -620,7 +657,10 @@ object SireumClient {
                 notifyHelper(scala.Some(pe._1), if (pe._3.isDisposed) scala.None else scala.Some(pe._3), r)
               case _ =>
             }
-            pe
+            getProjectFileEditorInput(pe) match {
+              case scala.Some(v) => v
+              case _ => return
+            }
           case _ =>
             notifyHelper(scala.None, scala.None, r)
             return
@@ -841,4 +881,5 @@ object SireumClient {
         editor.putUserData(analysisDataKey, (rhs, listModel, summoningListModelMap, hintListModelMap))
       }
     })
+  }
 }
