@@ -258,7 +258,7 @@ object SireumClient {
       Vector(
         Logika.Verify.Config(
           LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
-          org.sireum.server.service.LogikaService.defaultConfig(
+          org.sireum.server.service.AnalysisService.defaultConfig(
             sat = LogikaConfigurable.checkSat,
             defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout,
