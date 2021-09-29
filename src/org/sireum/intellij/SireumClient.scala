@@ -262,7 +262,8 @@ object SireumClient {
             sat = LogikaConfigurable.checkSat,
             defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout,
-            useReal = LogikaConfigurable.useReal
+            useReal = LogikaConfigurable.useReal,
+            fpRoundingMode = LogikaConfigurable.fpRoundingMode
           )
         ),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists ||

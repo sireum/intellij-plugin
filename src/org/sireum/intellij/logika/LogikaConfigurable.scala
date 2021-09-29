@@ -50,6 +50,7 @@ object LogikaConfigurable {
   private val recursionBoundKey = logikaKey + "recursionBound"
   private val methodContractKey = logikaKey + "methodContract"
   private val useRealKey = logikaKey + "useReal"
+  private val fpRoundingModeKey = logikaKey + "fpRounding"
 
   private[intellij] var backgroundAnalysis = true
   private[intellij] var timeout: Int = 2000
@@ -65,6 +66,7 @@ object LogikaConfigurable {
   private[intellij] var recursionBound = 1
   private[intellij] var methodContract = true
   private[intellij] var useReal = false
+  private[intellij] var fpRoundingMode = "RNE"
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -82,6 +84,7 @@ object LogikaConfigurable {
     recursionBound = pc.getInt(recursionBoundKey, recursionBound)
     methodContract = pc.getBoolean(methodContractKey, methodContract)
     useReal = pc.getBoolean(useRealKey, useReal)
+    fpRoundingMode = pc.getValue(fpRoundingModeKey, fpRoundingMode)
   }
 
   def saveConfiguration(): Unit = {
@@ -100,6 +103,7 @@ object LogikaConfigurable {
     pc.setValue(recursionBoundKey, recursionBound.toString)
     pc.setValue(methodContractKey, methodContract.toString)
     pc.setValue(useRealKey, useReal.toString)
+    pc.setValue(fpRoundingModeKey, fpRoundingMode)
   }
 
   def parseGe200(text: String): Option[Int] =
@@ -159,7 +163,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         //loopBoundTextField.getText != loopBound.toString ||
         //recursionBoundTextField.getText != recursionBound.toString ||
         //methodContractCheckBox.isSelected != methodContract
-        useRealCheckBox.isSelected != useReal
+        useRealCheckBox.isSelected != useReal ||
+        selectedFPRoundingMode != fpRoundingMode
   )
 
   /* TODO
@@ -171,6 +176,15 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     else sys.error("Unexpected checker kind.")
 
    */
+
+  def selectedFPRoundingMode: String = {
+    if (fpRNERadioButton.isSelected) "RNE"
+    else if (fpRNARadioButton.isSelected) "RNA"
+    else if (fpRTPRadioButton.isSelected) "RTP"
+    else if (fpRTNRadioButton.isSelected) "RTN"
+    else if (fpRTZRadioButton.isSelected) "RTZ"
+    else sys.error("Unexpected FP rounding mode")
+  }
 
   private def selectedBitWidth: Int =
     if (bitsUnboundedRadioButton.isSelected) 0
@@ -223,6 +237,15 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       hintUnicodeCheckBox.setEnabled(hintCheckBox.isSelected)
     }
 
+    def updateFPRoundingMode() = {
+      val enabled = !useRealCheckBox.isSelected
+      fpRNERadioButton.setEnabled(enabled)
+      fpRNARadioButton.setEnabled(enabled)
+      fpRTPRadioButton.setEnabled(enabled)
+      fpRTNRadioButton.setEnabled(enabled)
+      fpRTZRadioButton.setEnabled(enabled)
+    }
+
     logoLabel.setIcon(logo)
 
     reset()
@@ -257,8 +280,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //    unrollingSymExeRadioButton.addChangeListener(_ => updateSymExe())
     hintCheckBox.addChangeListener(_ => updateHintUnicode())
 
+    useRealCheckBox.addChangeListener(_ => updateFPRoundingMode())
+
     updateSymExe()
     updateHintUnicode()
+    updateFPRoundingMode()
 
     logikaPanel
   }
@@ -280,6 +306,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //    recursionBound = parsePosInteger(recursionBoundTextField.getText).getOrElse(recursionBound)
 //    methodContract = methodContractCheckBox.isSelected
     useReal = useRealCheckBox.isSelected
+    fpRoundingMode = selectedFPRoundingMode
     saveConfiguration()
   }
 
@@ -310,5 +337,12 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //    recursionBoundTextField.setText(recursionBound.toString)
 //    methodContractCheckBox.setSelected(methodContract)
     useRealCheckBox.setSelected(useReal)
+    fpRoundingMode match {
+      case "RNE" => fpRNERadioButton.setSelected(true)
+      case "RNA" => fpRNARadioButton.setSelected(true)
+      case "RTP" => fpRTPRadioButton.setSelected(true)
+      case "RTN" => fpRTNRadioButton.setSelected(true)
+      case "RTZ" => fpRTZRadioButton.setSelected(true)
+    }
   }
 }

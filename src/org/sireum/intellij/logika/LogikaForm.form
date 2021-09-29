@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.sireum.intellij.logika.LogikaForm">
-  <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="9" column-count="7" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+  <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="10" column-count="7" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="749" height="437"/>
+      <xy x="20" y="20" width="756" height="380"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -90,7 +90,7 @@
       </component>
       <vspacer id="bcb2a">
         <constraints>
-          <grid row="8" column="5" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+          <grid row="9" column="5" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
             <minimum-size width="-1" height="5"/>
             <preferred-size width="437" height="14"/>
           </grid>
@@ -284,14 +284,103 @@
         </constraints>
         <properties/>
       </component>
-      <component id="2fc71" class="javax.swing.JCheckBox" binding="useRealCheckBox">
+      <grid id="c46a2" binding="fpPanel" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
-          <grid row="4" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="8" column="1" row-span="1" col-span="4" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
         </constraints>
-        <properties>
-          <text value="Use real for FP"/>
-        </properties>
-      </component>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="2fc71" class="javax.swing.JCheckBox" binding="useRealCheckBox">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Use real for FP"/>
+            </properties>
+          </component>
+          <grid id="da1d0" binding="fpRoundingModePanel" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+            <margin top="0" left="0" bottom="0" right="0"/>
+            <constraints>
+              <grid row="0" column="1" row-span="2" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="30129" class="javax.swing.JLabel" binding="fpRoundingModeLabel">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="    FP Rounding Mode"/>
+                </properties>
+              </component>
+              <grid id="1ec6c" binding="fpRoundingModeChoicePanel" layout-manager="GridLayoutManager" row-count="3" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                <margin top="0" left="0" bottom="0" right="0"/>
+                <constraints>
+                  <grid row="0" column="1" row-span="2" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <component id="417b" class="javax.swing.JRadioButton" binding="fpRNERadioButton">
+                    <constraints>
+                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <selected value="true"/>
+                      <text value="Nearest Ties To Even (RNE)"/>
+                    </properties>
+                  </component>
+                  <component id="d8159" class="javax.swing.JRadioButton" binding="fpRNARadioButton">
+                    <constraints>
+                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Nearest Ties to Away (RNA)"/>
+                    </properties>
+                  </component>
+                  <component id="aec8c" class="javax.swing.JRadioButton" binding="fpRTPRadioButton">
+                    <constraints>
+                      <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Toward Positive (RTP)"/>
+                    </properties>
+                  </component>
+                  <component id="64621" class="javax.swing.JRadioButton" binding="fpRTNRadioButton">
+                    <constraints>
+                      <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Toward Negative (RTN)"/>
+                    </properties>
+                  </component>
+                  <component id="4a67" class="javax.swing.JRadioButton" binding="fpRTZRadioButton">
+                    <constraints>
+                      <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Toward Zero (RTZ)"/>
+                    </properties>
+                  </component>
+                </children>
+              </grid>
+              <vspacer id="7e08e">
+                <constraints>
+                  <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+                </constraints>
+              </vspacer>
+            </children>
+          </grid>
+          <vspacer id="3170c">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+            </constraints>
+          </vspacer>
+        </children>
+      </grid>
     </children>
   </grid>
   <buttonGroups>
@@ -307,6 +396,13 @@
       <member id="26cb7"/>
       <member id="ffbeb"/>
       <member id="95ae4"/>
+    </group>
+    <group name="fpRoundingModeButtonGroup">
+      <member id="417b"/>
+      <member id="d8159"/>
+      <member id="aec8c"/>
+      <member id="64621"/>
+      <member id="4a67"/>
     </group>
   </buttonGroups>
 </form>

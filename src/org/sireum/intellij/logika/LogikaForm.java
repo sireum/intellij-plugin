@@ -51,4 +51,13 @@ public abstract class LogikaForm {
     protected JPanel logoPanel;
     protected JTextField timeoutTextField;
     protected JCheckBox useRealCheckBox;
+    protected JLabel fpRoundingModeLabel;
+    protected JPanel fpPanel;
+    protected JPanel fpRoundingModePanel;
+    protected JPanel fpRoundingModeChoicePanel;
+    protected JRadioButton fpRNERadioButton;
+    protected JRadioButton fpRNARadioButton;
+    protected JRadioButton fpRTPRadioButton;
+    protected JRadioButton fpRTNRadioButton;
+    protected JRadioButton fpRTZRadioButton;
 }
