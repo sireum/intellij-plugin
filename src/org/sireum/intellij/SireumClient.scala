@@ -32,7 +32,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
 import com.intellij.openapi.editor.event._
 import com.intellij.openapi.editor.markup._
-import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager, OpenFileDescriptor, TextEditor}
+import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor, TextEditor}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
@@ -454,6 +454,7 @@ object SireumClient {
   private[intellij] final case class SummoningReportItem(project: Project,
                                                          file: VirtualFile,
                                                          messageHeader: String,
+                                                         info: String,
                                                          offset: Int,
                                                          message: String) extends ReportItem {
     override def toString: String = messageHeader
@@ -481,12 +482,12 @@ object SireumClient {
             return Some((line, ConsoleReportItem(iproject, file, Level.Info, line, column, offset, length, msg.text.value)))
         }
       case r: Logika.Verify.Smt2Query =>
-        val text = r.result.query.value
+        val text: Predef.String = r.query.value
         val line = r.pos.beginLine.toInt
         val offset = r.pos.offset.toInt
-        val header = text.lines().limit(2).map(line => line.replace(';', ' ').
+        val header = r.info.value.lines().limit(2).map(line => line.replace(';', ' ').
           replace("Result:", "").trim).toArray.mkString(": ")
-        return Some((line, SummoningReportItem(iproject, file, header, offset, text)))
+        return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset, text)))
       case r: Logika.Verify.State =>
         import org.sireum._
         val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.Util.ClaimDefs.empty)
@@ -584,8 +585,12 @@ object SireumClient {
           if (0 <= i && i < list.getModel.getSize)
             list.getModel.getElementAt(i) match {
               case sri: SummoningReportItem =>
+                val content: Predef.String = if (sri.message.startsWith(";")) sri.message else {
+                  val p = org.sireum.Os.path(sri.message)
+                  scala.util.Try(p.read.value).getOrElse(sri.info)
+                }
                 f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
-                f.logika.logikaTextArea.setText(normalizeChars(sri.message))
+                f.logika.logikaTextArea.setText(normalizeChars(content))
                 f.logika.logikaTextArea.setCaretPosition(0)
                 for (editor <- editorOpt if !editor.isDisposed)
                   TransactionGuard.submitTransaction(project, (() =>
