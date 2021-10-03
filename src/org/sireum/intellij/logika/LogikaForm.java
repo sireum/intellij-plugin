@@ -60,4 +60,19 @@ public abstract class LogikaForm {
     protected JRadioButton fpRTPRadioButton;
     protected JRadioButton fpRTNRadioButton;
     protected JRadioButton fpRTZRadioButton;
+    protected JPanel smt2Panel;
+    protected JLabel cvcLabel;
+    protected JPanel cvcPanel;
+    protected JPanel z3Panel;
+    protected JLabel cvcRLimitLabel;
+    protected JLabel cvcValidOptsLabel;
+    protected JLabel z3ValidOptsLabel;
+    protected JLabel cvcSatOptsLabel;
+    protected JLabel z3SatOptsLabel;
+    protected JTextField cvcRLimitTextField;
+    protected JTextField cvcValidOptsTextField;
+    protected JTextField cvcSatOptsTextField;
+    protected JTextField z3ValidOptsTextField;
+    protected JTextField z3SatOptsTextField;
+    protected JLabel z3Label;
 }

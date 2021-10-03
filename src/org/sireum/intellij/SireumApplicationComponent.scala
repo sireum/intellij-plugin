@@ -47,6 +47,7 @@ object SireumApplicationComponent {
   private val sireumHomeKey = sireumKey.dropRight(1)
   private val sireumVarArgsKey = sireumKey + "vmargs"
   private val sireumEnvVarsKey = sireumKey + "envvars"
+  private val sireumCacheInputKey = sireumKey + "cacheInput"
   private val backgroundAnalysisKey = sireumKey + "background"
   private val idleKey = sireumKey + "idle"
   private val bgcoresKey = sireumKey + "bgcores"
@@ -61,6 +62,7 @@ object SireumApplicationComponent {
   private[intellij] var backgroundAnalysis = 2
   private[intellij] var idle: Int = 1500
   private[intellij] var bgCores: Int = 1
+  private[intellij] var cacheInput: Boolean = true
 
   private[intellij] val platform: String =
     if (scala.util.Properties.isMac) "mac"
@@ -138,7 +140,7 @@ object SireumApplicationComponent {
   def getSireumProcess(project: IProject,
                        queue: BlockingQueue[Vector[String]],
                        processOutput: String => Unit,
-                       args: String*): Option[scala.sys.process.Process] =
+                       args: Vector[String]): Option[scala.sys.process.Process] =
     getSireumHome(project) match {
       case Some(d) =>
         import org.sireum._
@@ -241,9 +243,10 @@ object SireumApplicationComponent {
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
-    envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
-    vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
     sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
+    vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
+    envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
+    cacheInput = pc.getBoolean(sireumCacheInputKey, cacheInput)
     backgroundAnalysis = pc.getInt(backgroundAnalysisKey, backgroundAnalysis)
     idle = pc.getInt(idleKey, idle)
     bgCores = pc.getInt(bgcoresKey, bgCores)
@@ -252,8 +255,9 @@ object SireumApplicationComponent {
   def saveConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
     pc.setValue(sireumHomeKey, sireumHomeOpt.map(_.string.value).orNull)
-    pc.setValue(sireumEnvVarsKey, envVarsString)
     pc.setValue(sireumVarArgsKey, vmArgs.mkString(" "))
+    pc.setValue(sireumEnvVarsKey, envVarsString)
+    pc.setValue(sireumCacheInputKey, cacheInput.toString)
     pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
     pc.setValue(idleKey, idle.toString)
     pc.setValue(bgcoresKey, bgCores.toString)

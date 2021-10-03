@@ -51,22 +51,32 @@ object LogikaConfigurable {
   private val methodContractKey = logikaKey + "methodContract"
   private val useRealKey = logikaKey + "useReal"
   private val fpRoundingModeKey = logikaKey + "fpRounding"
+  private val cvcRLimitKey = logikaKey + "cvc.rlimit"
+  private val cvcValidOptsKey = logikaKey + "cvc.vopts"
+  private val cvcSatOptsKey = logikaKey + "cvc.sopts"
+  private val z3ValidOptsKey = logikaKey + "z3.vopts"
+  private val z3SatOptsKey = logikaKey + "z3.sopts"
 
-  private[intellij] var backgroundAnalysis = true
+  private[intellij] var backgroundAnalysis: Boolean = true
   private[intellij] var timeout: Int = 2000
-  private[intellij] var autoEnabled = true
-  private[intellij] var checkSat = false
-  private[intellij] var hint = true
-  private[intellij] var hintUnicode = SystemInfo.isMac
-  private[intellij] var inscribeSummonings = true
+  private[intellij] var autoEnabled: Boolean = true
+  private[intellij] var checkSat: Boolean = false
+  private[intellij] var hint: Boolean = true
+  private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
+  private[intellij] var inscribeSummonings: Boolean = true
   // TODO
   //private[intellij] var checkerKind = CheckerKind.Forward
-  private[intellij] var bitWidth = 0
-  private[intellij] var loopBound = 3
-  private[intellij] var recursionBound = 1
-  private[intellij] var methodContract = true
-  private[intellij] var useReal = false
-  private[intellij] var fpRoundingMode = "RNE"
+  private[intellij] var bitWidth: Int = 0
+  private[intellij] var loopBound: Int = 3
+  private[intellij] var recursionBound: Int = 1
+  private[intellij] var methodContract: Boolean = true
+  private[intellij] var useReal: Boolean = false
+  private[intellij] var fpRoundingMode: String = "RNE"
+  private[intellij] var cvcRLimit: Int = 1000000
+  private[intellij] var cvcValidOpts: String = "--full-saturate-quant"
+  private[intellij] var cvcSatOpts: String = ""
+  private[intellij] var z3ValidOpts: String = ""
+  private[intellij] var z3SatOpts: String = ""
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -85,6 +95,11 @@ object LogikaConfigurable {
     methodContract = pc.getBoolean(methodContractKey, methodContract)
     useReal = pc.getBoolean(useRealKey, useReal)
     fpRoundingMode = pc.getValue(fpRoundingModeKey, fpRoundingMode)
+    cvcRLimit = pc.getInt(cvcRLimitKey, cvcRLimit)
+    cvcValidOpts = pc.getValue(cvcValidOptsKey, cvcValidOpts)
+    cvcSatOpts = pc.getValue(cvcSatOptsKey, cvcSatOpts)
+    z3ValidOpts = pc.getValue(z3ValidOptsKey, z3ValidOpts)
+    z3SatOpts = pc.getValue(z3SatOptsKey, z3SatOpts)
   }
 
   def saveConfiguration(): Unit = {
@@ -104,6 +119,11 @@ object LogikaConfigurable {
     pc.setValue(methodContractKey, methodContract.toString)
     pc.setValue(useRealKey, useReal.toString)
     pc.setValue(fpRoundingModeKey, fpRoundingMode)
+    pc.setValue(cvcRLimitKey, cvcRLimit.toString)
+    pc.setValue(cvcValidOptsKey, cvcValidOpts)
+    pc.setValue(cvcSatOptsKey, cvcSatOpts)
+    pc.setValue(z3ValidOptsKey, z3ValidOpts)
+    pc.setValue(z3SatOptsKey, z3SatOpts)
   }
 
   def parseGe200(text: String): Option[Int] =
@@ -122,6 +142,11 @@ object LogikaConfigurable {
       case _: Throwable => None
     }
 
+  def parseSmt2Opts(text: String): Option[String] = {
+    if ("" != text) for (e <- text.split(' ') if !e.startsWith("-")) return None
+    return Some(text)
+  }
+
   def parseFileExts(text: String): Option[Seq[String]] = {
     var r = Vector[String]()
     for (e <- text.split(";")) {
@@ -138,9 +163,14 @@ import LogikaConfigurable._
 
 final class LogikaConfigurable extends LogikaForm with Configurable {
 
-  private var validTimeout = true
-  private var validLoopBound = true
-  private var validRecursionBound = true
+  private var validTimeout: Boolean = true
+  private var validLoopBound: Boolean = true
+  private var validRecursionBound: Boolean = true
+  private var validCvcRLimit: Boolean = true
+  private var validCvcValidOpts: Boolean = true
+  private var validCvcSatOpts: Boolean = true
+  private var validZ3ValidOpts: Boolean = true
+  private var validZ3SatOpts: Boolean = true
   private var fgColor: Color = _
 
   override def getDisplayName: String = "Logika"
@@ -148,8 +178,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def getHelpTopic: String = null
 
   override def isModified: Boolean =
-    validTimeout && validLoopBound &&
-      validRecursionBound &&
+    validTimeout && validLoopBound && validRecursionBound &&
+      validCvcRLimit && validCvcValidOpts & validCvcSatOpts && validZ3ValidOpts && validZ3SatOpts &&
       (backgroundCheckBox.isSelected != backgroundAnalysis ||
         timeoutTextField.getText != timeout.toString ||
         autoCheckBox.isSelected != autoEnabled ||
@@ -164,8 +194,12 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         //recursionBoundTextField.getText != recursionBound.toString ||
         //methodContractCheckBox.isSelected != methodContract
         useRealCheckBox.isSelected != useReal ||
-        selectedFPRoundingMode != fpRoundingMode
-  )
+        selectedFPRoundingMode != fpRoundingMode ||
+        cvcRLimitTextField.getText != cvcRLimit.toString ||
+        cvcValidOptsTextField.getText != cvcValidOpts ||
+        cvcSatOptsTextField.getText != cvcSatOpts ||
+        z3ValidOptsTextField.getText != z3ValidOpts ||
+        z3SatOptsTextField.getText != z3SatOpts)
 
   /* TODO
   private def selectedKind: CheckerKind.Value =
@@ -246,6 +280,41 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       fpRTZRadioButton.setEnabled(enabled)
     }
 
+    def updateCvcRLimit() = {
+      val text = cvcRLimitTextField.getText
+      validCvcRLimit = parsePosInteger(text).nonEmpty
+      cvcRLimitLabel.setForeground(if (validCvcRLimit) fgColor else JBColor.red)
+      cvcRLimitTextField.setToolTipText(if (validCvcRLimit) "OK" else "Must be positive integer.")
+    }
+
+    def updateCvcValidOpts() = {
+      val text = cvcValidOptsTextField.getText
+      validCvcValidOpts = parseSmt2Opts(text).nonEmpty
+      cvcValidOptsLabel.setForeground(if (validCvcValidOpts) fgColor else JBColor.red)
+      cvcValidOptsTextField.setToolTipText(if (validCvcValidOpts) "OK" else "Each element starts with a dash (-).")
+    }
+
+    def updateCvcSatOpts() = {
+      val text = cvcSatOptsTextField.getText
+      validCvcSatOpts = parseSmt2Opts(text).nonEmpty
+      cvcSatOptsLabel.setForeground(if (validCvcSatOpts) fgColor else JBColor.red)
+      cvcSatOptsTextField.setToolTipText(if (validCvcSatOpts) "OK" else "Each element starts with a dash (-).")
+    }
+
+    def updateZ3ValidOpts() = {
+      val text = z3ValidOptsTextField.getText
+      validZ3ValidOpts = parseSmt2Opts(text).nonEmpty
+      z3ValidOptsLabel.setForeground(if (validZ3ValidOpts) fgColor else JBColor.red)
+      z3ValidOptsTextField.setToolTipText(if (validZ3ValidOpts) "OK" else "Each element starts with a dash (-).")
+    }
+
+    def updateZ3SatOpts() = {
+      val text = z3SatOptsTextField.getText
+      validZ3SatOpts = parseSmt2Opts(text).nonEmpty
+      z3SatOptsLabel.setForeground(if (validZ3SatOpts) fgColor else JBColor.red)
+      z3SatOptsTextField.setToolTipText(if (validZ3SatOpts) "OK" else "Each element starts with a dash (-).")
+    }
+
     logoLabel.setIcon(logo)
 
     reset()
@@ -260,7 +329,47 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       override def removeUpdate(e: DocumentEvent): Unit = updateTimeout()
     })
 
-//    loopBoundTextField.getDocument.addDocumentListener(new DocumentListener {
+    cvcRLimitTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateCvcRLimit()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateCvcRLimit()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateCvcRLimit()
+    })
+
+    cvcValidOptsTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateCvcValidOpts()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateCvcValidOpts()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateCvcValidOpts()
+    })
+
+    cvcSatOptsTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateCvcSatOpts()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateCvcSatOpts()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateCvcSatOpts()
+    })
+
+    z3ValidOptsTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateZ3ValidOpts()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateZ3ValidOpts()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateZ3ValidOpts()
+    })
+
+    z3SatOptsTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateZ3SatOpts()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateZ3SatOpts()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateZ3SatOpts()
+    })
+
+    //    loopBoundTextField.getDocument.addDocumentListener(new DocumentListener {
 //      override def insertUpdate(e: DocumentEvent): Unit = updateLoopBound()
 //
 //      override def changedUpdate(e: DocumentEvent): Unit = updateLoopBound()
@@ -307,6 +416,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //    methodContract = methodContractCheckBox.isSelected
     useReal = useRealCheckBox.isSelected
     fpRoundingMode = selectedFPRoundingMode
+    cvcRLimit = parsePosInteger(cvcRLimitTextField.getText).getOrElse(cvcRLimit)
+    cvcValidOpts = parseSmt2Opts(cvcValidOptsTextField.getText).getOrElse(cvcValidOpts)
+    cvcSatOpts = parseSmt2Opts(cvcSatOptsTextField.getText).getOrElse(cvcSatOpts)
+    z3ValidOpts = parseSmt2Opts(z3ValidOptsTextField.getText).getOrElse(z3ValidOpts)
+    z3SatOpts = parseSmt2Opts(z3SatOptsTextField.getText).getOrElse(z3SatOpts)
     saveConfiguration()
   }
 
@@ -344,5 +458,10 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       case "RTN" => fpRTNRadioButton.setSelected(true)
       case "RTZ" => fpRTZRadioButton.setSelected(true)
     }
+    cvcRLimitTextField.setText(cvcRLimit.toString)
+    cvcValidOptsTextField.setText(cvcValidOpts)
+    cvcSatOptsTextField.setText(cvcSatOpts)
+    z3ValidOptsTextField.setText(z3ValidOpts)
+    z3SatOptsTextField.setText(z3SatOpts)
   }
 }

@@ -50,4 +50,7 @@ public abstract class SireumForm {
     protected JRadioButton bgSaveRadioButton;
     protected JRadioButton bgIdleRadioButton;
     protected JLabel bgLabel;
+    protected JPanel miscPanel;
+    protected JCheckBox cacheInputCheckBox;
+    private JLabel cachingLabel;
 }

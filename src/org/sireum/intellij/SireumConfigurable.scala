@@ -25,11 +25,13 @@
 
 package org.sireum.intellij
 
+import com.intellij.openapi.application.ApplicationManager
+
 import java.awt.Color
 import javax.swing.{JComponent, SpinnerNumberModel}
 import javax.swing.event.{DocumentEvent, DocumentListener}
 import com.intellij.openapi.options.Configurable
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.{Project, ProjectManager}
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.JBColor
@@ -55,6 +57,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
       (sireumHomeString != sireumHomeTextField.getText ||
         vmArgsString != vmArgsTextField.getText ||
         envVarsString != envVarsTextArea.getText ||
+        cacheInput != cacheInputCheckBox.isSelected ||
         backgroundAnalysis != bgValue ||
         idle.toString != idleTextField.getText ||
         bgCores != parSpinner.getValue.asInstanceOf[Int])
@@ -178,15 +181,32 @@ final class SireumConfigurable extends SireumForm with Configurable {
   }
 
   override def apply(): Unit = {
-    envVars = parseEnvVars(envVarsTextArea.getText).getOrElse(scala.collection.mutable.LinkedHashMap())
-    vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
     val path = org.sireum.Os.path(sireumHomeTextField.getText)
-    sireumHomeOpt = checkSireumDir(path, vmArgs, envVars)
-    backgroundAnalysis = bgValue
-    idle = parseGe200(idleTextField.getText).getOrElse(idle)
-    bgCores = parSpinner.getValue.asInstanceOf[Int]
-    if (sireumHomeOpt.nonEmpty) saveConfiguration()
-    else {
+    val homeOpt = checkSireumDir(path, vmArgs, envVars)
+    if (homeOpt.nonEmpty) {
+      val oldVmArgs = vmArgsString
+      val oldEnvVars = envVarsString
+      val oldCacheInput = cacheInput
+      sireumHomeOpt = homeOpt
+      vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
+      envVars = parseEnvVars(envVarsTextArea.getText).getOrElse(scala.collection.mutable.LinkedHashMap())
+      cacheInput = cacheInputCheckBox.isSelected
+      backgroundAnalysis = bgValue
+      idle = parseGe200(idleTextField.getText).getOrElse(idle)
+      bgCores = parSpinner.getValue.asInstanceOf[Int]
+      saveConfiguration()
+      if (SireumClient.processInit.nonEmpty && (oldCacheInput != cacheInput || oldVmArgs != vmArgsString ||
+        oldEnvVars != envVarsString)) {
+        ApplicationManager.getApplication.invokeLater { () =>
+          SireumClient.shutdownServer()
+          var found = false
+          for (p <- ProjectManager.getInstance.getOpenProjects if !found && p.isInitialized && p.isOpen) {
+            found = true
+            SireumClient.init(p)
+          }
+        }
+      }
+    } else {
       Messages.showMessageDialog(null: Project, sireumInvalid(path),
         "Invalid Sireum Configuration", null)
       SireumApplicationComponent.loadConfiguration()
@@ -199,6 +219,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     sireumHomeTextField.setText(sireumHomeString)
     vmArgsTextField.setText(vmArgsString)
     envVarsTextArea.setText(envVarsString)
+    cacheInputCheckBox.setSelected(cacheInput)
     backgroundAnalysis match {
       case 0 => bgDisabledRadioButton.setSelected(true)
       case 1 => bgSaveRadioButton.setSelected(true)
