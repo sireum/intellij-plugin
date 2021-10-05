@@ -39,18 +39,21 @@ import com.intellij.openapi.fileEditor.{FileDocumentManager, FileDocumentManager
 import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
-import org.sireum.intellij.SireumClient.{getOtherModifiedFiles, groupId}
+import org.sireum.intellij.SireumClient.{getModifiedFiles, groupId, shutdownServer}
 import org.sireum.intellij.logika.LogikaConfigurable
 
 object SireumApplicationComponent {
   private val sireumKey = "org.sireum."
   private val sireumHomeKey = sireumKey.dropRight(1)
+  private val sireumStartupKey = sireumKey + "startup"
   private val sireumVarArgsKey = sireumKey + "vmargs"
   private val sireumEnvVarsKey = sireumKey + "envvars"
   private val sireumCacheInputKey = sireumKey + "cacheInput"
+  private val sireumCacheTypeKey = sireumKey + "cacheType"
   private val backgroundAnalysisKey = sireumKey + "background"
   private val idleKey = sireumKey + "idle"
   private val bgcoresKey = sireumKey + "bgcores"
+
   private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
 
@@ -63,6 +66,8 @@ object SireumApplicationComponent {
   private[intellij] var idle: Int = 1500
   private[intellij] var bgCores: Int = 1
   private[intellij] var cacheInput: Boolean = true
+  private[intellij] var cacheType: Boolean = true
+  private[intellij] var startup: Boolean = false
 
   private[intellij] val platform: String =
     if (scala.util.Properties.isMac) "mac"
@@ -114,7 +119,7 @@ object SireumApplicationComponent {
       () =>
         FileChooser.chooseFile(
           desc,
-          project, null, (t: VirtualFile) => pathOpt = Some(org.sireum.Os.path(t.getCanonicalPath)))
+          project, null, (t: VirtualFile) => pathOpt = Some(Util.getPath(t)))
     }
     pathOpt.foreach(path =>
       if (checkSireumDir(path).isEmpty) {
@@ -244,9 +249,11 @@ object SireumApplicationComponent {
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
     sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
+    startup = pc.getBoolean(sireumStartupKey, startup)
     vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
     envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
     cacheInput = pc.getBoolean(sireumCacheInputKey, cacheInput)
+    cacheType = pc.getBoolean(sireumCacheTypeKey, cacheType)
     backgroundAnalysis = pc.getInt(backgroundAnalysisKey, backgroundAnalysis)
     idle = pc.getInt(idleKey, idle)
     bgCores = pc.getInt(bgcoresKey, bgCores)
@@ -255,9 +262,11 @@ object SireumApplicationComponent {
   def saveConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
     pc.setValue(sireumHomeKey, sireumHomeOpt.map(_.string.value).orNull)
+    pc.setValue(sireumStartupKey, startup.toString)
     pc.setValue(sireumVarArgsKey, vmArgs.mkString(" "))
     pc.setValue(sireumEnvVarsKey, envVarsString)
     pc.setValue(sireumCacheInputKey, cacheInput.toString)
+    pc.setValue(sireumCacheTypeKey, cacheType.toString)
     pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
     pc.setValue(idleKey, idle.toString)
     pc.setValue(bgcoresKey, bgCores.toString)
@@ -279,14 +288,20 @@ class SireumApplicationComponent extends ApplicationComponent {
             if (file == null || editor == null || !editor.getProject.isInitialized) return
             val project = editor.getProject
             SireumClient.analyzeOpt(project, file, editor, SireumClient.getCurrentLine(editor),
-              getOtherModifiedFiles(project, file), isBackground = true)
+              getModifiedFiles(project, file), isBackground = true)
           }
 
           def getFile(d: Document): VirtualFile = {
             if (d == null) return null
             val instance = FileDocumentManager.getInstance
             if (instance == null) return null
-            return instance.getFile(d)
+            val f = instance.getFile(d)
+            try {
+              Util.getPath(f)
+              f
+            } catch {
+              case _: Throwable => null
+            }
           }
 
           def getEditor(d: Document): Editor = {
@@ -303,10 +318,7 @@ class SireumApplicationComponent extends ApplicationComponent {
 
   override def disposeComponent(): Unit = {
     SireumApplicationComponent.terminated = true
-    SireumClient.editorMap.synchronized {
-      for (p <- SireumClient.processInit) p.destroy()
-      SireumClient.processInit = None
-    }
+    shutdownServer()
     Util.finalise()
   }
 }

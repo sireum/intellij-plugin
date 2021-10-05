@@ -29,8 +29,11 @@ import com.intellij.notification.{Notification, Notifications}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 
 object Util {
+  def getPath(file: VirtualFile): org.sireum.Os.Path = org.sireum.Os.path(file.toNioPath.toFile.getCanonicalPath)
+
   def getFilePath(project: Project): Option[org.sireum.Os.Path] = {
     if (project.isDisposed) {
       return None
@@ -41,7 +44,7 @@ object Util {
     val fdm = FileDocumentManager.getInstance
     val file = fdm.getFile(editor.getDocument)
     if (file == null) return None
-    Some(org.sireum.Os.path(file.getCanonicalPath))
+    Some(getPath(file))
   }
 
   def getFileExt(project: Project): String = {
@@ -51,9 +54,9 @@ object Util {
     }
   }
 
-  def isSireumOrLogikaFile(project: Project): (Boolean, Boolean) =
+  def isSireumOrLogikaFile(project: Project)(content: => org.sireum.String): (Boolean, Boolean) =
     getFilePath(project) match {
-      case Some(p) => isSireumOrLogikaFile(p)
+      case Some(p) => isSireumOrLogikaFile(p)(content)
       case _ => (false, false)
     }
 
@@ -115,10 +118,10 @@ object Util {
     return false
   }
 
-  def isSireumOrLogikaFile(path: org.sireum.Os.Path): (Boolean, Boolean) = {
+  def isSireumOrLogikaFile(path: org.sireum.Os.Path)(content: => org.sireum.String = path.read): (Boolean, Boolean) = {
     if (!path.exists) return (false, false)
     val p = path.string.value
-    val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p), path.read)
+    val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p), content)
     return (hasSireum, compactFirstLine.contains("#Logika"))
   }
 

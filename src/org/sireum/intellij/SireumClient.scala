@@ -42,8 +42,10 @@ import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresenta
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, WindowManager}
 import com.intellij.util.Consumer
+import org.sireum.$internal.MutableMarker
 import org.sireum.intellij.logika.LogikaConfigurable
-import org.sireum.logika.{CvcConfig, Z3Config}
+import org.sireum.logika.State.Claim
+import org.sireum.logika.{CvcConfig, State, Z3Config}
 import org.sireum.message.Level
 
 import java.awt.event.MouseEvent
@@ -54,6 +56,35 @@ import javax.swing.{DefaultListModel, Icon, JSplitPane}
 object SireumClient {
 
   object EditorEnabled
+
+  class SireumStatusWidget extends StatusBarWidget {
+
+    var statusTooltip: String = statusIdle
+    var frame: Int = defaultFrame
+
+    override def ID(): String = "Sireum"
+
+    override def install(statusBar: StatusBar): Unit = {}
+
+    override def getPresentation: WidgetPresentation =
+      new IconPresentation {
+        override def getClickConsumer: Consumer[MouseEvent] = _ =>
+          if (Messages.showYesNoDialog(
+            WindowManager.getInstance.findVisibleFrame, "Shutdown Sireum background server?",
+            "Sireum", null) == Messages.YES) shutdownServer()
+
+        override def getTooltipText: String = statusTooltip
+
+        override def getIcon: Icon = icons(frame)
+      }
+
+    override def dispose(): Unit = {}
+
+    def reset(): Unit = {
+      statusTooltip = statusIdle
+      frame = defaultFrame
+    }
+  }
 
   val groupId: Predef.String = "Sireum"
   val icons: Seq[Icon] = {
@@ -75,6 +106,11 @@ object SireumClient {
   val analysisDataKey = new Key[(Map[Int, Vector[RangeHighlighter]], DefaultListModel[Object], Map[Int, DefaultListModel[SummoningReportItem]], Map[Int, DefaultListModel[HintReportItem]])]("Logika Analysis Data")
   val statusKey = new Key[Boolean]("Sireum Analysis Status")
   val reportItemKey = new Key[ReportItem]("Sireum Report Item")
+
+  val statusIdle = "Sireum is idle"
+  val statusWaiting = "Sireum is waiting to work"
+  val statusWorking = "Sireum is working"
+
   var request: Option[Request] = None
   var processInit: Option[scala.sys.process.Process] = None
   var terminated = false
@@ -87,8 +123,9 @@ object SireumClient {
   val statusRequest: Vector[String] = Vector(org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Status.Request(), true).value)
   var usedMemory: org.sireum.Z = 0
   var shutdown: Boolean = false
-  var statusBar: StatusBar = _
-  var statusBarWidget: StatusBarWidget = _
+  lazy val defaultFrame = icons.length / 2 + 1
+  lazy val statusBarWidget: SireumStatusWidget = new SireumStatusWidget
+
   var lastStatusUpdate: Long = System.currentTimeMillis
 
   final case class Request(time: Long, requestId: org.sireum.ISZ[org.sireum.String],
@@ -102,21 +139,21 @@ object SireumClient {
       processInit.foreach(_.destroy())
       processInit = None
       shutdown = true
-      statusBar.removeWidget(statusBarWidget.ID())
-      statusBar = null
-      statusBarWidget = null
+      for (frame <- WindowManager.getInstance.getAllProjectFrames) {
+        frame.getStatusBar.removeWidget(statusBarWidget.ID())
+      }
     }
   }
 
   def init(p: Project): Unit = editorMap.synchronized {
     if (processInit.isEmpty) {
-      statusBar = WindowManager.getInstance().getStatusBar(p)
-      if (statusBar == null) {
-        return
-      }
+      statusBarWidget.reset()
       var serverArgs = Vector[String]("server", "-m", "json")
       if (SireumApplicationComponent.cacheInput) {
         serverArgs = serverArgs :+ "-i"
+      }
+      if (SireumApplicationComponent.cacheType) {
+        serverArgs = serverArgs :+ "-t"
       }
       processInit =
         SireumApplicationComponent.getSireumProcess(p,
@@ -147,57 +184,42 @@ object SireumClient {
             }
           }, serverArgs)
       if (processInit.isEmpty) return
-      var frame = 0
-      val statusIdle = "Sireum is idle"
-      val statusWaiting = "Sireum is waiting to work"
-      val statusWorking = "Sireum is working"
       def memory: String =
         if (usedMemory > 1024 * 1024 * 1024) f"${usedMemory.toLong / 1024d / 1024d / 1024d}%.2f GB"
         else f"${usedMemory.toLong / 1024d / 1024d}%.2f MB"
       def statusText(status: String): String =
         s"$status${if (usedMemory =!= 0) s" ($memory)" else ""} [click to shutdown]"
-      var statusTooltip = statusIdle
       shutdown = false
-      statusBarWidget = new StatusBarWidget {
-
-        override def ID(): String = "Sireum"
-
-        override def install(statusBar: StatusBar): Unit = {}
-
-        override def getPresentation: WidgetPresentation =
-          new IconPresentation {
-            override def getClickConsumer: Consumer[MouseEvent] = _ =>
-              if (Messages.showYesNoDialog(
-                p, "Shutdown Sireum background server?",
-                "Sireum", null) == Messages.YES) shutdownServer()
-
-            override def getTooltipText: String = statusTooltip
-
-            override def getIcon: Icon = icons(frame)
-          }
-
-        override def dispose(): Unit = {}
+      val id = statusBarWidget.ID()
+      for (frame <- WindowManager.getInstance.getAllProjectFrames) {
+        val statusBar = frame.getStatusBar
+        if (statusBar.getWidget(id) == null) {
+          statusBar.addWidget(statusBarWidget)
+        }
+        statusBar.updateWidget(id)
       }
-      statusBar.addWidget(statusBarWidget)
-      statusBar.updateWidget(statusBarWidget.ID())
+      def updateWidget(): Unit = {
+        val id = statusBarWidget.ID()
+        for (frame <- WindowManager.getInstance.getAllProjectFrames) {
+          frame.getStatusBar.updateWidget(id)
+        }
+      }
       val t = new Thread {
         override def run(): Unit = {
-          val defaultFrame = icons.length / 2 + 1
           var idle = false
           while (!terminated && !shutdown) {
             if (editorMap.nonEmpty || request.nonEmpty) {
               idle = false
-              frame = (frame + 1) % icons.length
-              statusTooltip = statusText(if (editorMap.nonEmpty) statusWorking else statusWaiting)
-              statusBar.updateWidget(statusBarWidget.ID())
+              statusBarWidget.frame = (statusBarWidget.frame + 1) % icons.length
+              statusBarWidget.statusTooltip = statusText(if (editorMap.nonEmpty) statusWorking else statusWaiting)
+              updateWidget()
             } else {
               if (!idle) {
                 idle = true
-                val f = frame
-                frame = defaultFrame
-                statusTooltip = statusText(statusIdle)
-                if (f != defaultFrame)
-                  statusBar.updateWidget(statusBarWidget.ID())
+                val f = statusBarWidget.frame
+                statusBarWidget.frame = defaultFrame
+                statusBarWidget.statusTooltip = statusText(statusIdle)
+                if (f != defaultFrame) updateWidget()
               }
               if (System.currentTimeMillis - lastStatusUpdate > 5000) {
                 lastStatusUpdate = System.currentTimeMillis
@@ -285,6 +307,7 @@ object SireumClient {
           c(validOpts = org.sireum.ISZ(LogikaConfigurable.z3ValidOpts.split(' ').map(org.sireum.String(_)): _*),
             satOpts = org.sireum.ISZ(LogikaConfigurable.z3SatOpts.split(' ').map(org.sireum.String(_)): _*))
       })
+      val p = Util.getPath(file)
       Vector(
         Logika.Verify.Config(
           LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
@@ -297,8 +320,7 @@ object SireumClient {
             cvc4RLimit = LogikaConfigurable.cvcRLimit
           )
         ),
-        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists ||
-          org.sireum.Os.path(file.getCanonicalPath).ext.value == "sc") {
+        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc") {
           Slang.Check.Script(
             isBackground = isBackground,
             logikaEnabled = !isBackground ||
@@ -314,7 +336,6 @@ object SireumClient {
           var vfiles = org.sireum.ISZ[org.sireum.String]()
           scala.util.Try {
             val content = editor.getDocument.getText
-            val p = org.sireum.Os.path(file.getCanonicalPath)
             val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
             if (hasSireum) {
               files = files + p.string ~> content
@@ -341,31 +362,31 @@ object SireumClient {
 
   def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int,
                  ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String], isBackground: Boolean): Unit = {
-    val (isSireum, isLogika) = Util.isSireumOrLogikaFile(org.sireum.Os.path(file.getCanonicalPath))
+    val (isSireum, isLogika) = Util.isSireumOrLogikaFile(Util.getPath(file))(org.sireum.String(editor.getDocument.getText))
     if (isLogika) {
+      enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
         scala.util.Try(analyze(project, file, editor, line, ofiles, isBackground = isBackground,
           hasLogika = LogikaConfigurable.backgroundAnalysis))
     } else if (isSireum) {
+      enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
         scala.util.Try(analyze(project, file, editor, line, ofiles, isBackground = isBackground, hasLogika = false))
     }
   }
 
-  def getOtherModifiedFiles(project: Project, file: VirtualFile): org.sireum.HashSMap[org.sireum.String, org.sireum.String] = {
+  def getModifiedFiles(project: Project, file: VirtualFile): org.sireum.HashSMap[org.sireum.String, org.sireum.String] = {
     var r = org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String]
-    val filecp = file.getCanonicalPath
-    if  (filecp.endsWith(".sc")) return r
+    if  (Util.getPath(file).ext === ".sc") return r
     for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors if fileEditor.isModified) scala.util.Try {
-      val path = fileEditor.getFile.getCanonicalPath
+      val path = Util.getPath(fileEditor.getFile)
       fileEditor match {
-        case fileEditor: TextEditor if path != filecp =>
+        case fileEditor: TextEditor =>
           val e = fileEditor.getEditor
-          val p = org.sireum.Os.path(path)
-          if (p.ext.value == "scala") {
+          if (path.ext.value == "scala") {
             val content = e.getDocument.getText
-            if (org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)._1) {
-              r = r + p.string ~> content
+            if (org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(path.toUri), content)._1) {
+              r = r + path.string ~> content
             }
           }
         case _ =>
@@ -383,9 +404,10 @@ object SireumClient {
     if (editor.getUserData(sireumKey) != null) return
     editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
-      override def documentChanged(event: DocumentEvent): Unit = if (SireumApplicationComponent.backgroundAnalysis == 2) {
-        analyzeOpt(project, file, editor, getCurrentLine(editor), getOtherModifiedFiles(project, file), isBackground = true)
-      }
+      override def documentChanged(event: DocumentEvent): Unit =
+        if (SireumApplicationComponent.backgroundAnalysis == 2 && !project.isDisposed && !editor.isDisposed) {
+          analyzeOpt(project, file, editor, getCurrentLine(editor), getModifiedFiles(project, file), isBackground = true)
+        }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
     })
@@ -396,12 +418,7 @@ object SireumClient {
   }
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit = {
-    val (hasSireum, _) = Util.isSireumOrLogikaFile(project)
-    if (hasSireum) {
-      enableEditor(project, file, editor)
-      editor.putUserData(statusKey, false)
-      analyzeOpt(project, file, editor, 0, getOtherModifiedFiles(project, file), isBackground = false)
-    }
+    analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground = false)
   }
 
   def notifyHelper(projectOpt: Option[Project], editorOpt: Option[Editor],
@@ -479,8 +496,11 @@ object SireumClient {
   private[intellij] final case class HintReportItem(kindOpt: Option[org.sireum.server.protocol.Logika.Verify.Info.Kind.Type],
                                                     project: Project,
                                                     file: VirtualFile,
+                                                    messageHeader: String,
                                                     offset: Int,
-                                                    message: String) extends ReportItem
+                                                    message: String) extends ReportItem {
+    override def toString: String = messageHeader
+  }
 
   private[intellij] final case class SummoningReportItem(project: Project,
                                                          file: VirtualFile,
@@ -529,12 +549,42 @@ object SireumClient {
         val pos = r.posOpt.get
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
-        return scala.Some((line, HintReportItem(scala.None, iproject, file, offset, text)))
+        val header = {
+          var labels = org.sireum.ISZ[String]()
+          val transformer = new org.sireum.logika.MStateTransformer {
+            private var _owner: Boolean = false
+
+            override def string: String = "MTransformer"
+
+            override def $owned: Boolean = _owner
+
+            override def $owned_=(b: Boolean): MutableMarker = { _owner = b; this }
+
+            override def $clone: MutableMarker = halt("Infeasible")
+
+            override def postStateClaimLabel(o: Claim.Label): MOption[State.Claim] = {
+              labels = labels :+ o.label.value
+              return org.sireum.logika.MStateTransformer.PostResultStateClaimLabel
+            }
+          }
+          transformer.transformState(r.state)
+          labels.elements.mkString(" / ")
+        }
+        return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text)))
       case r: Logika.Verify.Info =>
         val pos = r.pos
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
-        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, offset, r.message.value)))
+        val text = r.message.value
+        val header = {
+          val i = text.indexOf('\n')
+          var firstLine = if (i >= 0) text.substring(0, i) else text
+          if (firstLine.length >= 100) {
+            firstLine = firstLine.substring(0, 100) + " ..."
+          }
+          s"Info: $firstLine"
+        }
+        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, header, offset, text)))
 
       case _ =>
     }
@@ -633,9 +683,9 @@ object SireumClient {
                     FileEditorManager.getInstance(project).openTextEditor(
                       new OpenFileDescriptor(cri.project, cri.file, cri.offset), true)): Runnable)
               case hri: HintReportItem =>
-                f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
+                f.logika.logikaToolSplitPane.setDividerLocation(if (list.getModel.getSize <= 1) 0 else dividerWeight)
                 f.logika.logikaTextArea.setText(normalizeChars(hri.message))
-                f.logika.logikaTextArea.setCaretPosition(0)
+                f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
                 for (editor <- editorOpt if !editor.isDisposed)
                   TransactionGuard.submitTransaction(project, (() =>
                     FileEditorManager.getInstance(project).openTextEditor(
@@ -661,12 +711,12 @@ object SireumClient {
             case org.sireum.Some(pos) =>
               pos.uriOpt match {
                 case org.sireum.Some(uri) =>
-                  val p = org.sireum.Os.path(pe._2.getCanonicalPath)
+                  val p = Util.getPath(pe._2)
                   if (uri == p.toUri) return Some(pe)
                   val project = pe._1
                   for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
                     fileEditor match {
-                      case fileEditor: TextEditor if org.sireum.Os.path(fileEditor.getFile.getCanonicalPath).toUri == uri =>
+                      case fileEditor: TextEditor if Util.getPath(fileEditor.getFile).toUri == uri =>
                         val editor = fileEditor.getEditor
                         return Some((project, fileEditor.getFile, editor, editor.getDocument.getText))
                       case _ =>
@@ -842,9 +892,11 @@ object SireumClient {
                       title, icon, _ => sireumToolWindowFactory(project, f => {
                         val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
                         tw.activate(() => {
-                          saveSetDividerLocation(f.logika.logikaToolSplitPane, 0.0)
-                          f.logika.logikaTextArea.setText(normalizeChars(ri.message))
-                          f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
+                          val list = f.logika.logikaList
+                          list.synchronized {
+                            list.setModel(hintListModel.asInstanceOf[DefaultListModel[Object]])
+                            list.setSelectedIndex(0)
+                          }
                           tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
                         })
                       })

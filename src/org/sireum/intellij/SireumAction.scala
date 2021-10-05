@@ -43,7 +43,10 @@ trait SireumAction extends AnAction
 trait SireumOnlyAction extends SireumAction {
   override def update(e: AnActionEvent): Unit = {
     val project = e.getProject
-    e.getPresentation.setEnabledAndVisible(project != null && Util.isSireumOrLogikaFile(project)._1)
+    val editor = FileEditorManager.
+      getInstance(project).getSelectedTextEditor
+    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null &&
+      Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText))._1)
   }
 }
 

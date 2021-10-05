@@ -52,5 +52,7 @@ public abstract class SireumForm {
     protected JLabel bgLabel;
     protected JPanel miscPanel;
     protected JCheckBox cacheInputCheckBox;
-    private JLabel cachingLabel;
+    protected JLabel cachingLabel;
+    protected JCheckBox cacheTypeCheckBox;
+    protected JCheckBox startupCheckBox;
 }

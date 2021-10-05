@@ -55,9 +55,11 @@ final class SireumConfigurable extends SireumForm with Configurable {
   override def isModified: Boolean = {
     validSireumHome && validVmArgs && validEnvVars && validIdle &&
       (sireumHomeString != sireumHomeTextField.getText ||
+        startup != startupCheckBox.isSelected ||
         vmArgsString != vmArgsTextField.getText ||
         envVarsString != envVarsTextArea.getText ||
         cacheInput != cacheInputCheckBox.isSelected ||
+        cacheType != cacheTypeCheckBox.isSelected ||
         backgroundAnalysis != bgValue ||
         idle.toString != idleTextField.getText ||
         bgCores != parSpinner.getValue.asInstanceOf[Int])
@@ -184,27 +186,17 @@ final class SireumConfigurable extends SireumForm with Configurable {
     val path = org.sireum.Os.path(sireumHomeTextField.getText)
     val homeOpt = checkSireumDir(path, vmArgs, envVars)
     if (homeOpt.nonEmpty) {
-      val oldVmArgs = vmArgsString
-      val oldEnvVars = envVarsString
-      val oldCacheInput = cacheInput
-      sireumHomeOpt = homeOpt
-      vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
-      envVars = parseEnvVars(envVarsTextArea.getText).getOrElse(scala.collection.mutable.LinkedHashMap())
-      cacheInput = cacheInputCheckBox.isSelected
-      backgroundAnalysis = bgValue
-      idle = parseGe200(idleTextField.getText).getOrElse(idle)
-      bgCores = parSpinner.getValue.asInstanceOf[Int]
-      saveConfiguration()
-      if (SireumClient.processInit.nonEmpty && (oldCacheInput != cacheInput || oldVmArgs != vmArgsString ||
-        oldEnvVars != envVarsString)) {
-        ApplicationManager.getApplication.invokeLater { () =>
-          SireumClient.shutdownServer()
-          var found = false
-          for (p <- ProjectManager.getInstance.getOpenProjects if !found && p.isInitialized && p.isOpen) {
-            found = true
-            SireumClient.init(p)
-          }
-        }
+      restartServer { () =>
+        sireumHomeOpt = homeOpt
+        startup = startupCheckBox.isSelected
+        vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
+        envVars = parseEnvVars(envVarsTextArea.getText).getOrElse(scala.collection.mutable.LinkedHashMap())
+        cacheInput = cacheInputCheckBox.isSelected
+        cacheType = cacheTypeCheckBox.isSelected
+        backgroundAnalysis = bgValue
+        idle = parseGe200(idleTextField.getText).getOrElse(idle)
+        bgCores = parSpinner.getValue.asInstanceOf[Int]
+        saveConfiguration()
       }
     } else {
       Messages.showMessageDialog(null: Project, sireumInvalid(path),
@@ -216,16 +208,40 @@ final class SireumConfigurable extends SireumForm with Configurable {
   def bgValue: Int = if (bgDisabledRadioButton.isSelected) 0 else if (bgSaveRadioButton.isSelected) 1 else 2
 
   override def reset(): Unit = {
-    sireumHomeTextField.setText(sireumHomeString)
-    vmArgsTextField.setText(vmArgsString)
-    envVarsTextArea.setText(envVarsString)
-    cacheInputCheckBox.setSelected(cacheInput)
-    backgroundAnalysis match {
-      case 0 => bgDisabledRadioButton.setSelected(true)
-      case 1 => bgSaveRadioButton.setSelected(true)
-      case _ => bgIdleRadioButton.setSelected(true)
+    restartServer { () =>
+      sireumHomeTextField.setText(sireumHomeString)
+      startupCheckBox.setSelected(startup)
+      vmArgsTextField.setText(vmArgsString)
+      envVarsTextArea.setText(envVarsString)
+      cacheInputCheckBox.setSelected(cacheInput)
+      cacheTypeCheckBox.setSelected(cacheType)
+      backgroundAnalysis match {
+        case 0 => bgDisabledRadioButton.setSelected(true)
+        case 1 => bgSaveRadioButton.setSelected(true)
+        case _ => bgIdleRadioButton.setSelected(true)
+      }
+      idleTextField.setText(idle.toString)
+      parSpinner.setValue(bgCores)
     }
-    idleTextField.setText(idle.toString)
-    parSpinner.setValue(bgCores)
+  }
+
+  def restartServer(f: () => Unit): Unit = {
+    val oldVmArgs = vmArgsString
+    val oldEnvVars = envVarsString
+    val oldCacheInput = cacheInput
+
+    f()
+
+    if (SireumClient.processInit.nonEmpty && (oldCacheInput != cacheInput || oldVmArgs != vmArgsString ||
+      oldEnvVars != envVarsString)) {
+      ApplicationManager.getApplication.invokeLater { () =>
+        SireumClient.shutdownServer()
+        var found = false
+        for (p <- ProjectManager.getInstance.getOpenProjects if !found && p.isInitialized && p.isOpen) {
+          found = true
+          SireumClient.init(p)
+        }
+      }
+    }
   }
 }

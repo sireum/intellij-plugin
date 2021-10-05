@@ -31,7 +31,7 @@ import com.intellij.openapi.components.ProjectComponent
 import com.intellij.openapi.fileEditor.{FileEditorManager, FileEditorManagerEvent, FileEditorManagerListener}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.{ToolWindowAnchor, ToolWindowManager}
+import com.intellij.openapi.wm.{ToolWindowAnchor, ToolWindowManager, WindowManager}
 
 import javax.swing.event.HyperlinkEvent
 
@@ -41,6 +41,17 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
   }
 
   override def projectOpened(): Unit = {
+
+    if (SireumApplicationComponent.startup) {
+      SireumClient.init(iproject)
+    }
+
+    if (SireumClient.processInit.nonEmpty) {
+      val statusBar = WindowManager.getInstance.getStatusBar(iproject)
+      if (statusBar.getWidget(SireumClient.statusBarWidget.ID()) == null) {
+        statusBar.addWidget(SireumClient.statusBarWidget)
+      }
+    }
 
     val tw = ToolWindowManager.getInstance(iproject).
       registerToolWindow("Sireum", false, ToolWindowAnchor.RIGHT)
@@ -56,8 +67,13 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
           override def fileOpened(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
             ApplicationManager.getApplication.invokeLater { () =>
-              val editor = source.getSelectedTextEditor
-              if (editor != null && !editor.isDisposed) SireumClient.editorOpened(iproject, file, editor)
+              try {
+                Util.getPath(file)
+                val editor = source.getSelectedTextEditor
+                if (editor != null && !editor.isDisposed) SireumClient.editorOpened(iproject, file, editor)
+              } catch {
+                case _: Throwable =>
+              }
             }
           }
 
