@@ -157,10 +157,10 @@ object SireumClient {
     if (processInit.isEmpty) {
       statusBarWidget.reset()
       var serverArgs = Vector[String]("server", "-m", "json")
-      if (SireumApplicationComponent.cacheInput) {
+      if (!SireumApplicationComponent.cacheInput) {
         serverArgs = serverArgs :+ "-i"
       }
-      if (SireumApplicationComponent.cacheType) {
+      if (!SireumApplicationComponent.cacheType) {
         serverArgs = serverArgs :+ "-t"
       }
       processInit =
