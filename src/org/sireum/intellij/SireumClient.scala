@@ -68,10 +68,18 @@ object SireumClient {
 
     override def getPresentation: WidgetPresentation =
       new IconPresentation {
-        override def getClickConsumer: Consumer[MouseEvent] = _ =>
-          if (Messages.showYesNoDialog(
-            WindowManager.getInstance.findVisibleFrame, "Shutdown Sireum background server?",
-            "Sireum", null) == Messages.YES) shutdownServer()
+        override def getClickConsumer: Consumer[MouseEvent] = _ => {
+          var found = false
+          val wm = WindowManager.getInstance
+          for (frame <- wm.getAllProjectFrames if !found) {
+            val f = wm.getFrame(frame.getProject)
+            if (f.isActive) {
+              found = true
+              if (Messages.showYesNoDialog(f, "Shutdown Sireum background server?",
+                "Sireum", null) == Messages.YES) shutdownServer()
+            }
+          }
+        }
 
         override def getTooltipText: String = statusTooltip
 
