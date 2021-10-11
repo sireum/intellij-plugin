@@ -37,7 +37,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util._
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.{LocalFileSystem, VirtualFile}
 import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresentation}
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, WindowManager}
@@ -727,35 +727,34 @@ object SireumClient {
 
   def processResult(r: org.sireum.server.protocol.Response): Unit = {
     def getProjectFileEditorInput(pe: (Project, VirtualFile, Editor, String)): Option[(Project, VirtualFile, Editor, String)] = {
-      r match {
-        case r: org.sireum.server.protocol.Report =>
-          r.message.posOpt match {
-            case org.sireum.Some(pos) =>
-              pos.uriOpt match {
-                case org.sireum.Some(uri) =>
-                  val pOpt = Util.getPath(pe._2)
-                  pOpt match {
-                    case Some(p) =>
-                      if (uri == p.toUri) return Some(pe)
-                      val project = pe._1
-                      for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
-                        val pOpt2 = Util.getPath(fileEditor.getFile)
-                        pOpt2 match {
-                          case Some(p2) =>
-                            fileEditor match {
-                              case fileEditor: TextEditor if p2.toUri == uri =>
-                                val editor = fileEditor.getEditor
-                                return Some((project, fileEditor.getFile, editor, editor.getDocument.getText))
-                              case _ =>
-                            }
-                          case _ =>
-                        }
-                      }
-                    case _ =>
-                  }
-                  return None
-                case _ =>
+      r.posOpt match {
+        case org.sireum.Some(pos) if pos.uriOpt.nonEmpty && !pe._1.isDisposed =>
+          val uri = pos.uriOpt.get
+          val pOpt = Util.getPath(pe._2)
+          pOpt match {
+            case Some(p) =>
+              if (uri == p.toUri) return Some(pe)
+              val project = pe._1
+              for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
+                val pOpt2 = Util.getPath(fileEditor.getFile)
+                pOpt2 match {
+                  case Some(p2) =>
+                    fileEditor match {
+                      case fileEditor: TextEditor if p2.toUri == uri =>
+                        val editor = fileEditor.getEditor
+                        return Some((project, fileEditor.getFile, editor, editor.getDocument.getText))
+                      case _ =>
+                    }
+                  case _ =>
+                }
               }
+              val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
+              val offset = pos.offset.toInt
+              val editor = FileEditorManager.getInstance(project).openTextEditor(
+                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
+                else new OpenFileDescriptor(project, file),
+                true)
+              return Some((project, file, editor, editor.getDocument.getText))
             case _ =>
           }
         case _ =>
