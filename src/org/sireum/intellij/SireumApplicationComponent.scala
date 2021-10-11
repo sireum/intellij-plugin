@@ -119,7 +119,7 @@ object SireumApplicationComponent {
       () =>
         FileChooser.chooseFile(
           desc,
-          project, null, (t: VirtualFile) => pathOpt = Some(Util.getPath(t)))
+          project, null, (t: VirtualFile) => pathOpt = Util.getPath(t))
     }
     pathOpt.foreach(path =>
       if (checkSireumDir(path).isEmpty) {

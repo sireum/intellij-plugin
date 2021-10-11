@@ -32,7 +32,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
 object Util {
-  def getPath(file: VirtualFile): org.sireum.Os.Path = org.sireum.Os.path(file.toNioPath.toFile.getCanonicalPath)
+  def getPath(file: VirtualFile): Option[org.sireum.Os.Path] =
+    try Some(org.sireum.Os.path(file.toNioPath.toFile.getCanonicalPath))
+    catch { case _: Throwable => return None }
 
   def getFilePath(project: Project): Option[org.sireum.Os.Path] = {
     if (project.isDisposed) {
@@ -44,7 +46,7 @@ object Util {
     val fdm = FileDocumentManager.getInstance
     val file = fdm.getFile(editor.getDocument)
     if (file == null) return None
-    Some(getPath(file))
+    getPath(file)
   }
 
   def getFileExt(project: Project): String = {

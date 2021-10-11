@@ -25,6 +25,7 @@
 
 package org.sireum.intellij
 
+import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.application.ApplicationManager
 
 import java.awt.Color
@@ -237,9 +238,23 @@ final class SireumConfigurable extends SireumForm with Configurable {
       ApplicationManager.getApplication.invokeLater { () =>
         SireumClient.shutdownServer()
         var found = false
+        var project: Project = null
         for (p <- ProjectManager.getInstance.getOpenProjects if !found && p.isInitialized && p.isOpen) {
           found = true
+          project = p
           SireumClient.init(p)
+        }
+        SireumClient.processInit match {
+          case Some(_) if project != null =>
+            Util.notify(new Notification(
+              SireumClient.groupId, "Sireum server restarted",
+              """<p>The Sireum server has been restarted successfully</p>""",
+              NotificationType.INFORMATION), project, shouldExpire = true)
+          case _ =>
+            Util.notify(new Notification(
+              SireumClient.groupId, "Failed to restart the Sireum server",
+              """<p>Could not restart the Sireum server</p>""",
+              NotificationType.ERROR), project, shouldExpire = true)
         }
       }
     }
