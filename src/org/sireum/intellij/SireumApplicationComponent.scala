@@ -142,50 +142,48 @@ object SireumApplicationComponent {
       case _ => None
     }
 
-  def getSireumProcess(project: IProject,
-                       queue: BlockingQueue[Vector[String]],
+  def getSireumProcess(sireumHome: org.sireum.Os.Path,
+                       logFile: org.sireum.Os.Path,
+                       queue: BlockingQueue[Vector[(Boolean, String)]],
                        processOutput: String => Unit,
-                       args: Vector[String]): Option[scala.sys.process.Process] =
-    getSireumHome(project) match {
-      case Some(d) =>
-        import org.sireum._
-        val javaHome = d / "bin" / platform / "java"
-        val javaPath = javaHome / "bin" / (if (Os.isWin) "java.exe" else "java")
-        val sireumJarPath = d / "bin" / "sireum.jar"
-        scala.Some(new Exec().process((javaPath.string.value +: vmArgs) ++
-          Seq("-Dfile.encoding=UTF-8", "-Dorg.sireum.silenthalt=true", "-jar", sireumJarPath.string.value) ++
-          args, { os =>
-          try {
-            val w = new OutputStreamWriter(os)
-            val lineSep = scala.util.Properties.lineSeparator
-            while (!terminated) {
-              for (m <- queue.take()) {
-                w.write(m)
-                w.write(lineSep)
-                w.flush()
-              }
-            }
-          } catch {
-            case _: InterruptedException =>
-          } finally os.close()
-
+                       args: Vector[String]): Option[scala.sys.process.Process] = {
+    import org.sireum._
+    val javaHome = sireumHome / "bin" / platform / "java"
+    val javaPath = javaHome / "bin" / (if (Os.isWin) "java.exe" else "java")
+    val sireumJarPath = sireumHome / "bin" / "sireum.jar"
+    scala.Some(new Exec().process((javaPath.string.value +: vmArgs) ++
+      Seq("-Dfile.encoding=UTF-8", "-Dorg.sireum.silenthalt=true", "-jar", sireumJarPath.string.value) ++
+      args, { os =>
+      try {
+        val w = new OutputStreamWriter(os)
+        val lineSep = scala.util.Properties.lineSeparator
+        while (!terminated) {
+          for ((shouldLog, m) <- queue.take()) {
+            w.write(m)
+            w.write(lineSep)
+            w.flush()
+            if (shouldLog) SireumClient.writeLog(isRequest = true, logFile, m)
+          }
         }
-        , { is =>
-          try {
-            val r = new BufferedReader(new InputStreamReader(is))
-            while (!terminated) {
-              val line = r.readLine()
-              if (line != null) {
-                processOutput(line)
-              }
-            }
-          } catch {
-            case _: IOException =>
-          } finally is.close()
-        }, ("SIREUM_HOME", d.string.value)))
-      case _ => None
-    }
+      } catch {
+        case _: InterruptedException =>
+      } finally os.close()
 
+    }
+      , { is =>
+        try {
+          val r = new BufferedReader(new InputStreamReader(is))
+          while (!terminated) {
+            val line = r.readLine()
+            if (line != null) {
+              processOutput(line)
+            }
+          }
+        } catch {
+          case _: IOException =>
+        } finally is.close()
+      }, ("SIREUM_HOME", sireumHome.string.value)))
+  }
   private def runSireum(d: org.sireum.Os.Path,
                         vmArgs: Seq[String],
                         envVars: scala.collection.mutable.LinkedHashMap[String, String],

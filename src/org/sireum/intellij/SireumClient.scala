@@ -108,7 +108,7 @@ object SireumClient {
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
   val gutterVerifiedIcon: Icon = IconLoader.getIcon("/icon/gutter-verified.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
-  val queue = new LinkedBlockingQueue[Vector[String]]()
+  val queue = new LinkedBlockingQueue[Vector[(Boolean, String)]]()
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
   val analysisDataKey = new Key[(Map[Int, Vector[RangeHighlighter]], DefaultListModel[Object], Map[Int, DefaultListModel[SummoningReportItem]], Map[Int, DefaultListModel[HintReportItem]])]("Logika Analysis Data")
@@ -121,17 +121,21 @@ object SireumClient {
 
   var request: Option[Request] = None
   var processInit: Option[scala.sys.process.Process] = None
-  var terminated = false
   var dividerWeight: Double = .2
   var tooltipMessageOpt: Option[String] = None
   var tooltipBalloonOpt: Option[Balloon] = None
   val tooltipDefaultBgColor: Color = new Color(0xff, 0xff, 0xcc)
   val tooltipDarculaBgColor: Color = new Color(0x5c, 0x5c, 0x42)
   val maxTooltipLength: Int = 1024
-  val statusRequest: Vector[String] = Vector(org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Status.Request(), true).value)
+  val statusRequest: Vector[(Boolean, String)] = Vector(
+    (false, org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Status.Request(), true).value)
+  )
+  val terminateRequest: Vector[(Boolean, String)] = Vector(
+    (true, org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Terminate(), true).value)
+  )
   var usedMemory: org.sireum.Z = 0
   var shutdown: Boolean = false
-  lazy val defaultFrame = icons.length / 2 + 1
+  lazy val defaultFrame: Int = icons.length / 2 + 1
   lazy val statusBarWidget: SireumStatusWidget = new SireumStatusWidget
 
   var lastStatusUpdate: Long = System.currentTimeMillis
@@ -144,13 +148,25 @@ object SireumClient {
     this.synchronized {
       request = None
       editorMap.clear()
-      processInit.foreach(_.destroy())
+      queue.add(terminateRequest)
+      processInit.foreach(p => Executors.newSingleThreadScheduledExecutor.schedule((() => p.destroy()): Runnable, 5, TimeUnit.SECONDS))
       processInit = None
       shutdown = true
       for (frame <- WindowManager.getInstance.getAllProjectFrames) {
         frame.getStatusBar.removeWidget(statusBarWidget.ID())
       }
     }
+  }
+
+  def writeLog(isRequest: Boolean, logFile: org.sireum.Os.Path, content: String): Unit = {
+    if (content.isEmpty) return
+    if (logFile.size > org.sireum.server.Server.maxLogFileSize) {
+      logFile.writeOver("")
+    }
+    val maxSize = org.sireum.server.Server.maxLogLineSize.toInt
+    logFile.writeAppend(org.sireum.server.Server.Ext.timeStamp(isRequest))
+    logFile.writeAppend(if (content.length > maxSize) content.substring(0, maxSize) else content)
+    logFile.writeAppend(org.sireum.Os.lineSep)
   }
 
   def init(p: Project): Unit = editorMap.synchronized {
@@ -163,12 +179,20 @@ object SireumClient {
       if (!SireumApplicationComponent.cacheType) {
         serverArgs = serverArgs :+ "-t"
       }
+      val sireumHome = SireumApplicationComponent.getSireumHome(p) match {
+        case Some(home) => home
+        case _ => return
+      }
+      val logFile = sireumHome / ".client.log"
+      logFile.writeOver("")
+      writeLog(isRequest = false, logFile, s"Started sireum ${serverArgs.mkString(" ")}")
       processInit =
-        SireumApplicationComponent.getSireumProcess(p,
+        SireumApplicationComponent.getSireumProcess(sireumHome, logFile,
           queue, { s =>
             val trimmed = s.trim
-
+            var shouldLog = false
             def err(): Unit = {
+              shouldLog = true
               val msg = s"Invalid server message: $trimmed"
               notifyHelper(scala.Some(p), scala.None,
                 org.sireum.server.protocol.Report(org.sireum.ISZ(),
@@ -176,20 +200,24 @@ object SireumClient {
                     "client", msg))
               )
             }
-
             if (trimmed.startsWith("""{  "type" : """)) {
               try {
                 org.sireum.server.protocol.JSON.toResponse(trimmed) match {
-                  case org.sireum.Either.Left(r) => processResult(r)
+                  case org.sireum.Either.Left(r) =>
+                    r match {
+                      case _: org.sireum.server.protocol.Status.Response =>
+                      case _ => shouldLog = true
+                    }
+                    processResult(r)
                   case org.sireum.Either.Right(_) => err()
                 }
               } catch {
                 case _: Throwable => err()
               }
             } else {
-              System.out.println(s)
-              System.out.flush()
+              if (trimmed.nonEmpty) shouldLog = true
             }
+            if (shouldLog) writeLog(isRequest = false, logFile, trimmed)
           }, serverArgs)
       if (processInit.isEmpty) return
       def memory: String =
@@ -215,7 +243,7 @@ object SireumClient {
       val t = new Thread {
         override def run(): Unit = {
           var idle = false
-          while (!terminated && !shutdown) {
+          while (!shutdown) {
             if (editorMap.nonEmpty || request.nonEmpty) {
               idle = false
               statusBarWidget.frame = (statusBarWidget.frame + 1) % icons.length
@@ -229,7 +257,7 @@ object SireumClient {
                 statusBarWidget.statusTooltip = statusText(statusIdle)
                 if (f != defaultFrame) updateWidget()
               }
-              if (System.currentTimeMillis - lastStatusUpdate > 5000) {
+              if (System.currentTimeMillis - lastStatusUpdate > 60000) {
                 lastStatusUpdate = System.currentTimeMillis
                 queue.add(statusRequest)
               }
@@ -242,7 +270,7 @@ object SireumClient {
                     editorMap.synchronized {
                       editorMap(r.requestId) = (r.project, r.file, r.editor, r.input)
                     }
-                    queue.add(r.msgGen())
+                    queue.add(for (m <- r.msgGen()) yield (true, m))
                   }
                 case None =>
               }
@@ -274,7 +302,7 @@ object SireumClient {
       editorMap.synchronized {
         val cancels = for (rid <- editorMap.keys.toVector) yield {
           editorMap -= rid
-          org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Cancel(rid), true).value
+          (true, org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Cancel(rid), true).value)
         }
         if (cancels.nonEmpty) queue.add(cancels)
       }
@@ -297,7 +325,7 @@ object SireumClient {
           }
           editorMap(requestId) = (project, file, editor, input)
         }
-        queue.add(f())
+        queue.add(for (m <- f()) yield (true, m))
       }
     }
   }
@@ -443,6 +471,16 @@ object SireumClient {
     analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground = false)
   }
 
+  val slangErrorTitle = "Slang Error"
+
+  val logikaErrorTitle = "Logika Error"
+
+  val logikaWarningTitle = "Logika Warning"
+
+  val logikaVerifiedTitle = "Logika Verified"
+
+  val internalErrorTitle = "Internal Error"
+
   def notifyHelper(projectOpt: Option[Project], editorOpt: Option[Editor],
                    r: org.sireum.server.protocol.Response): Unit = {
     import org.sireum.message.Level
@@ -450,19 +488,19 @@ object SireumClient {
     val project = projectOpt.orNull
     val statusOpt = editorOpt.map(_.getUserData(statusKey))
     r match {
-      case r: Logika.Verify.End =>
+      case r: Analysis.End =>
         if (r.numOfErrors > 0 || r.numOfInternalErrors > 0) {
           if (!r.isBackground || statusOpt.getOrElse(true)) {
             if (r.hasLogika) {
               if (r.isIllFormed) {
                 Util.notify(new Notification(
-                  groupId, "Slang Error",
+                  groupId, slangErrorTitle,
                   s"Ill-formed program with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
               else {
                 Util.notify(new Notification(
-                  groupId, "Logika Error",
+                  groupId, logikaErrorTitle,
                   s"Programming logic proof is rejected with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
@@ -471,15 +509,14 @@ object SireumClient {
           editorOpt.foreach(_.putUserData(statusKey, false))
         } else if (r.hasLogika && r.numOfWarnings > 0) {
           Util.notify(new Notification(
-            groupId, "Logika Warning",
+            groupId, logikaWarningTitle,
             s"Programming logic proof is accepted with ${r.numOfWarnings} warning(s)",
             NotificationType.WARNING, null), project, shouldExpire = true)
           editorOpt.foreach(_.putUserData(statusKey, true))
         } else if (!r.wasCancelled) {
-          val title = "Logika Verified"
           val icon = verifiedInfoIcon
           if (r.hasLogika && (!r.isBackground || !(statusOpt.getOrElse(false)))) {
-            Util.notify(new Notification(groupId, title, "Programming logic proof is accepted",
+            Util.notify(new Notification(groupId, logikaVerifiedTitle, "Programming logic proof is accepted",
               NotificationType.INFORMATION, null) {
               override def getIcon: Icon = icon
             }, project, shouldExpire = true)
@@ -492,7 +529,7 @@ object SireumClient {
         r.message.level match {
           case Level.InternalError =>
             Util.notify(new Notification(
-              groupId, "Logika Internal Error",
+              groupId, internalErrorTitle,
               r.message.text.value,
               NotificationType.ERROR), project, shouldExpire = true)
             editorOpt.foreach(_.putUserData(statusKey, false))
@@ -774,9 +811,9 @@ object SireumClient {
               editorMap.get(r.id) match {
                 case scala.Some(pe) =>
                   r match {
-                    case r: org.sireum.server.protocol.Logika.Verify.End => editorMap -= r.id
+                    case r: org.sireum.server.protocol.Analysis.End => editorMap -= r.id
                     case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
-                    case _: server.protocol.Logika.Verify.Start => resetSireumView(pe._1, scala.Some(pe._3))
+                    case _: server.protocol.Analysis.Start => resetSireumView(pe._1, scala.Some(pe._3))
                     case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
                       notifyHelper(scala.Some(pe._1), if (pe._3.isDisposed) scala.None else scala.Some(pe._3), r)
                     case _ =>
@@ -795,7 +832,7 @@ object SireumClient {
               val tOpt = scala.Option(editor.getUserData(analysisDataKey))
               var (rhs, listModel, summoningListModelMap, hintListModelMap) = tOpt.getOrElse((null, null, null, null))
               r match {
-                case _: server.protocol.Logika.Verify.Start =>
+                case _: server.protocol.Analysis.Start =>
                   sireumToolWindowFactory(project, f => {
                     f.logika.logikaTextArea.setFont(
                       editor.getColorsScheme.getFont(EditorFontType.PLAIN))
@@ -810,7 +847,7 @@ object SireumClient {
                   listModel = new DefaultListModel[Object]()
                   summoningListModelMap = scala.collection.immutable.Map[Int, DefaultListModel[SummoningReportItem]]()
                   hintListModelMap = scala.collection.immutable.Map[Int, DefaultListModel[HintReportItem]]()
-                case r: server.protocol.Logika.Verify.End =>
+                case r: server.protocol.Analysis.End =>
                   notifyHelper(scala.Some(project), scala.Some(editor), r)
                   return
                 case r: server.protocol.Slang.Rewrite.Response =>
