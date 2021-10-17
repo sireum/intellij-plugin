@@ -46,6 +46,8 @@ object SireumApplicationComponent {
   private val sireumKey = "org.sireum."
   private val sireumHomeKey = sireumKey.dropRight(1)
   private val sireumStartupKey = sireumKey + "startup"
+  private val sireumLoggingKey = sireumKey + "logging"
+  private val sireumVerboseKey = sireumKey + "verbose"
   private val sireumVarArgsKey = sireumKey + "vmargs"
   private val sireumEnvVarsKey = sireumKey + "envvars"
   private val sireumCacheInputKey = sireumKey + "cacheInput"
@@ -68,6 +70,8 @@ object SireumApplicationComponent {
   private[intellij] var cacheInput: Boolean = true
   private[intellij] var cacheType: Boolean = true
   private[intellij] var startup: Boolean = false
+  private[intellij] var logging: Boolean = false
+  private[intellij] var verbose: Boolean = false
 
   private[intellij] val platform: String =
     if (scala.util.Properties.isMac) "mac"
@@ -143,15 +147,14 @@ object SireumApplicationComponent {
     }
 
   def getSireumProcess(sireumHome: org.sireum.Os.Path,
-                       logFile: org.sireum.Os.Path,
                        queue: BlockingQueue[Vector[(Boolean, String)]],
                        processOutput: String => Unit,
-                       args: Vector[String]): Option[scala.sys.process.Process] = {
+                       args: Vector[String]): scala.sys.process.Process = {
     import org.sireum._
     val javaHome = sireumHome / "bin" / platform / "java"
     val javaPath = javaHome / "bin" / (if (Os.isWin) "java.exe" else "java")
     val sireumJarPath = sireumHome / "bin" / "sireum.jar"
-    scala.Some(new Exec().process((javaPath.string.value +: vmArgs) ++
+    new Exec().process((javaPath.string.value +: vmArgs) ++
       Seq("-Dfile.encoding=UTF-8", "-Dorg.sireum.silenthalt=true", "-jar", sireumJarPath.string.value) ++
       args, { os =>
       try {
@@ -162,12 +165,12 @@ object SireumApplicationComponent {
             w.write(m)
             w.write(lineSep)
             w.flush()
-            if (shouldLog) SireumClient.writeLog(isRequest = true, logFile, m)
+            if (shouldLog) SireumClient.writeLog(isRequest = true, m)
           }
         }
       } catch {
-        case _: InterruptedException =>
-      } finally os.close()
+        case _: Throwable =>
+      } finally try os.close() catch { case _: Throwable => }
 
     }
       , { is =>
@@ -182,7 +185,7 @@ object SireumApplicationComponent {
         } catch {
           case _: IOException =>
         } finally is.close()
-      }, ("SIREUM_HOME", sireumHome.string.value)))
+      }, ("SIREUM_HOME", sireumHome.string.value))
   }
   private def runSireum(d: org.sireum.Os.Path,
                         vmArgs: Seq[String],
@@ -224,7 +227,7 @@ object SireumApplicationComponent {
   }
 
   def parseEnvVars(text: String): Option[scala.collection.mutable.LinkedHashMap[String, String]] = {
-    var r = scala.collection.mutable.LinkedHashMap[String, String]()
+    val r = scala.collection.mutable.LinkedHashMap[String, String]()
     for (l <- text.split('\n')) {
       val kv = l.split('=')
       if (kv.length != 2) return None
@@ -248,6 +251,8 @@ object SireumApplicationComponent {
     val pc = PropertiesComponent.getInstance
     sireumHomeOpt = Option(pc.getValue(sireumHomeKey)).flatMap(p => checkSireumDir(org.sireum.Os.path(p), vmArgs, envVars))
     startup = pc.getBoolean(sireumStartupKey, startup)
+    logging = pc.getBoolean(sireumLoggingKey, logging)
+    verbose = pc.getBoolean(sireumVerboseKey, verbose)
     vmArgs = Option(pc.getValue(sireumVarArgsKey)).flatMap(parseVmArgs).getOrElse(Seq())
     envVars = Option(pc.getValue(sireumEnvVarsKey)).flatMap(parseEnvVars).getOrElse(scala.collection.mutable.LinkedHashMap())
     cacheInput = pc.getBoolean(sireumCacheInputKey, cacheInput)
@@ -261,6 +266,8 @@ object SireumApplicationComponent {
     val pc = PropertiesComponent.getInstance
     pc.setValue(sireumHomeKey, sireumHomeOpt.map(_.string.value).orNull)
     pc.setValue(sireumStartupKey, startup.toString)
+    pc.setValue(sireumLoggingKey, logging.toString)
+    pc.setValue(sireumVerboseKey, verbose.toString)
     pc.setValue(sireumVarArgsKey, vmArgs.mkString(" "))
     pc.setValue(sireumEnvVarsKey, envVarsString)
     pc.setValue(sireumCacheInputKey, cacheInput.toString)

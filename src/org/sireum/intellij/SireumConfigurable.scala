@@ -57,6 +57,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
     validSireumHome && validVmArgs && validEnvVars && validIdle &&
       (sireumHomeString != sireumHomeTextField.getText ||
         startup != startupCheckBox.isSelected ||
+        logging != loggingCheckBox.isSelected ||
+        verbose != verboseCheckBox.isSelected ||
         vmArgsString != vmArgsTextField.getText ||
         envVarsString != envVarsTextArea.getText ||
         cacheInput != cacheInputCheckBox.isSelected ||
@@ -154,6 +156,11 @@ final class SireumConfigurable extends SireumForm with Configurable {
       parSpinner.setEnabled(enabled)
     }
 
+    def updateVerbose(): Unit = {
+      verboseCheckBox.setEnabled(loggingCheckBox.isSelected)
+    }
+
+    loggingCheckBox.addActionListener(_ => updateVerbose())
     bgDisabledRadioButton.addActionListener(_ => updateBackground())
     bgSaveRadioButton.addActionListener(_ => updateBackground())
     bgIdleRadioButton.addActionListener(_ => updateBackground())
@@ -175,6 +182,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     updateVmArgs(vmArgsString)
     updateBg(idle.toString)
     updateBackground()
+    updateVerbose()
 
     sireumPanel
   }
@@ -190,6 +198,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
       restartServer { () =>
         sireumHomeOpt = homeOpt
         startup = startupCheckBox.isSelected
+        logging = loggingCheckBox.isSelected
+        verbose = verboseCheckBox.isSelected
         vmArgs = parseVmArgs(vmArgsTextField.getText).getOrElse(Vector())
         envVars = parseEnvVars(envVarsTextArea.getText).getOrElse(scala.collection.mutable.LinkedHashMap())
         cacheInput = cacheInputCheckBox.isSelected
@@ -212,6 +222,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
     restartServer { () =>
       sireumHomeTextField.setText(sireumHomeString)
       startupCheckBox.setSelected(startup)
+      loggingCheckBox.setSelected(logging)
+      verboseCheckBox.setSelected(verbose)
       vmArgsTextField.setText(vmArgsString)
       envVarsTextArea.setText(envVarsString)
       cacheInputCheckBox.setSelected(cacheInput)
@@ -230,11 +242,14 @@ final class SireumConfigurable extends SireumForm with Configurable {
     val oldVmArgs = vmArgsString
     val oldEnvVars = envVarsString
     val oldCacheInput = cacheInput
+    val oldCacheType = cacheType
+    val oldLogging = logging
+    val oldVerbose = verbose
 
     f()
 
     if (SireumClient.processInit.nonEmpty && (oldCacheInput != cacheInput || oldVmArgs != vmArgsString ||
-      oldEnvVars != envVarsString)) {
+      oldCacheType != cacheType || oldLogging != logging || oldVerbose != verbose || oldEnvVars != envVarsString)) {
       ApplicationManager.getApplication.invokeLater { () =>
         SireumClient.shutdownServer()
         var found = false

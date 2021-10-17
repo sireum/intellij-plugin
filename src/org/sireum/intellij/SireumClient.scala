@@ -108,48 +108,52 @@ object SireumClient {
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
   val gutterVerifiedIcon: Icon = IconLoader.getIcon("/icon/gutter-verified.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
-  val queue = new LinkedBlockingQueue[Vector[(Boolean, String)]]()
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
-  val analysisDataKey = new Key[(Map[Int, Vector[RangeHighlighter]], DefaultListModel[Object], Map[Int, DefaultListModel[SummoningReportItem]], Map[Int, DefaultListModel[HintReportItem]])]("Logika Analysis Data")
+  val analysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], DefaultListModel[Object], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])]("Analysis Data")
   val statusKey = new Key[Boolean]("Sireum Analysis Status")
   val reportItemKey = new Key[ReportItem]("Sireum Report Item")
 
   val statusIdle = "Sireum is idle"
   val statusWaiting = "Sireum is waiting to work"
   val statusWorking = "Sireum is working"
+  val layer = 1000000
 
   var request: Option[Request] = None
-  var processInit: Option[scala.sys.process.Process] = None
+  var processInit: Option[(scala.sys.process.Process, org.sireum.Os.Path)] = None
   var dividerWeight: Double = .2
   var tooltipMessageOpt: Option[String] = None
   var tooltipBalloonOpt: Option[Balloon] = None
   val tooltipDefaultBgColor: Color = new Color(0xff, 0xff, 0xcc)
   val tooltipDarculaBgColor: Color = new Color(0x5c, 0x5c, 0x42)
   val maxTooltipLength: Int = 1024
+  val singleExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor
   val statusRequest: Vector[(Boolean, String)] = Vector(
     (false, org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Status.Request(), true).value)
   )
   val terminateRequest: Vector[(Boolean, String)] = Vector(
     (true, org.sireum.server.protocol.JSON.fromRequest(org.sireum.server.protocol.Terminate(), true).value)
   )
-  var usedMemory: org.sireum.Z = 0
-  var shutdown: Boolean = false
   lazy val defaultFrame: Int = icons.length / 2 + 1
   lazy val statusBarWidget: SireumStatusWidget = new SireumStatusWidget
-
+  var usedMemory: org.sireum.Z = 0
+  var shutdown: Boolean = false
+  var queue: LinkedBlockingQueue[Vector[(Boolean, String)]] = new LinkedBlockingQueue
   var lastStatusUpdate: Long = System.currentTimeMillis
 
   final case class Request(time: Long, requestId: org.sireum.ISZ[org.sireum.String],
                            project: Project, file: VirtualFile, editor: Editor,
                            input: String, msgGen: () => Vector[String])
 
+  def runLater[T](delayInMs: Int)(f: Runnable): Unit = singleExecutor.schedule(f, delayInMs, TimeUnit.MILLISECONDS)
+
   def shutdownServer(): Unit = editorMap.synchronized {
     this.synchronized {
       request = None
       editorMap.clear()
       queue.add(terminateRequest)
-      processInit.foreach(p => Executors.newSingleThreadScheduledExecutor.schedule((() => p.destroy()): Runnable, 5, TimeUnit.SECONDS))
+      queue = new LinkedBlockingQueue
+      processInit.foreach(p => runLater(5000)(() => if (p._1.isAlive()) p._1.destroy()))
       processInit = None
       shutdown = true
       for (frame <- WindowManager.getInstance.getAllProjectFrames) {
@@ -158,39 +162,58 @@ object SireumClient {
     }
   }
 
-  def writeLog(isRequest: Boolean, logFile: org.sireum.Os.Path, content: String): Unit = {
-    if (content.isEmpty) return
-    if (logFile.size > org.sireum.server.Server.maxLogFileSize) {
-      logFile.writeOver("")
+  def logStackTrace(t: Throwable): Unit = {
+    if (!SireumApplicationComponent.logging) {
+      return
     }
-    val maxSize = org.sireum.server.Server.maxLogLineSize.toInt
-    logFile.writeAppend(org.sireum.server.Server.Ext.timeStamp(isRequest))
-    logFile.writeAppend(if (content.length > maxSize) content.substring(0, maxSize) else content)
-    logFile.writeAppend(org.sireum.Os.lineSep)
+    val sw = new _root_.java.io.StringWriter
+    t.printStackTrace(new _root_.java.io.PrintWriter(sw))
+    writeLog(isRequest = false, sw.toString)
+  }
+
+  def writeLog(isRequest: Boolean, content: String): Unit = {
+    if (!SireumApplicationComponent.logging) {
+      return
+    }
+    processInit match {
+      case Some((_, logFile)) =>
+        if (content.isEmpty) return
+        val maxSize = org.sireum.server.Server.maxLogLineSize.toInt
+        if (logFile.size > org.sireum.server.Server.maxLogFileSize) logFile.removeAll()
+        logFile.writeAppend(s"${org.sireum.server.Server.Ext.timeStamp(isRequest)}${if (content.length > maxSize) content.substring(0, maxSize) else content}${org.sireum.Os.lineSep}")
+      case _ =>
+    }
   }
 
   def init(p: Project): Unit = editorMap.synchronized {
     if (processInit.isEmpty) {
       statusBarWidget.reset()
-      var serverArgs = Vector[String]("server", "-m", "json")
+      var serverArgs = Vector[String]("server", "--message", "json")
       if (!SireumApplicationComponent.cacheInput) {
-        serverArgs = serverArgs :+ "-i"
+        serverArgs = serverArgs :+ "--no-input-cache"
       }
       if (!SireumApplicationComponent.cacheType) {
-        serverArgs = serverArgs :+ "-t"
+        serverArgs = serverArgs :+ "--no-type-cache"
+      }
+      if (SireumApplicationComponent.logging) {
+        serverArgs = serverArgs :+ "--log"
+      }
+      if (SireumApplicationComponent.verbose) {
+        serverArgs = serverArgs :+ "--verbose"
       }
       val sireumHome = SireumApplicationComponent.getSireumHome(p) match {
         case Some(home) => home
         case _ => return
       }
       val logFile = sireumHome / ".client.log"
-      logFile.writeOver("")
-      writeLog(isRequest = false, logFile, s"Started sireum ${serverArgs.mkString(" ")}")
-      processInit =
-        SireumApplicationComponent.getSireumProcess(sireumHome, logFile,
+      logFile.removeAll()
+      queue = new LinkedBlockingQueue
+      processInit = Some((
+        SireumApplicationComponent.getSireumProcess(sireumHome,
           queue, { s =>
             val trimmed = s.trim
             var shouldLog = false
+
             def err(): Unit = {
               shouldLog = true
               val msg = s"Invalid server message: $trimmed"
@@ -200,6 +223,7 @@ object SireumClient {
                     "client", msg))
               )
             }
+
             if (trimmed.startsWith("""{  "type" : """)) {
               try {
                 org.sireum.server.protocol.JSON.toResponse(trimmed) match {
@@ -217,14 +241,20 @@ object SireumClient {
             } else {
               if (trimmed.nonEmpty) shouldLog = true
             }
-            if (shouldLog) writeLog(isRequest = false, logFile, trimmed)
-          }, serverArgs)
+            if (shouldLog) writeLog(isRequest = false, trimmed)
+          }, serverArgs),
+        logFile
+      ))
+      writeLog(isRequest = false, s"Started sireum ${serverArgs.mkString(" ")}")
       if (processInit.isEmpty) return
+
       def memory: String =
         if (usedMemory > 1024 * 1024 * 1024) f"${usedMemory.toLong / 1024d / 1024d / 1024d}%.2f GB"
         else f"${usedMemory.toLong / 1024d / 1024d}%.2f MB"
+
       def statusText(status: String): String =
         s"$status${if (usedMemory =!= 0) s" ($memory)" else ""} [click to shutdown]"
+
       shutdown = false
       val id = statusBarWidget.ID()
       for (frame <- WindowManager.getInstance.getAllProjectFrames) {
@@ -234,12 +264,14 @@ object SireumClient {
         }
         statusBar.updateWidget(id)
       }
+
       def updateWidget(): Unit = {
         val id = statusBarWidget.ID()
         for (frame <- WindowManager.getInstance.getAllProjectFrames) {
           frame.getStatusBar.updateWidget(id)
         }
       }
+
       val t = new Thread {
         override def run(): Unit = {
           var idle = false
@@ -377,7 +409,7 @@ object SireumClient {
         } else {
           var files = ofiles
           var vfiles = org.sireum.ISZ[org.sireum.String]()
-          scala.util.Try {
+          try {
             val content = editor.getDocument.getText
             val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
             if (hasSireum) {
@@ -386,6 +418,10 @@ object SireumClient {
                 vfiles = vfiles :+ p.string
               }
             }
+          } catch {
+            case t: Throwable =>
+              logStackTrace(t)
+              return Vector()
           }
           Slang.Check.Project(
             isBackground = isBackground,
@@ -413,12 +449,12 @@ object SireumClient {
     if (isLogika) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        scala.util.Try(analyze(project, file, editor, line, ofiles, isBackground = isBackground,
-          hasLogika = LogikaConfigurable.backgroundAnalysis))
+        analyze(project, file, editor, line, ofiles, isBackground = isBackground,
+          hasLogika = LogikaConfigurable.backgroundAnalysis)
     } else if (isSireum) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        scala.util.Try(analyze(project, file, editor, line, ofiles, isBackground = isBackground, hasLogika = false))
+        analyze(project, file, editor, line, ofiles, isBackground = isBackground, hasLogika = false)
     }
   }
 
@@ -426,7 +462,7 @@ object SireumClient {
     var r = org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String]
     val pOpt = Util.getPath(file)
     if (pOpt.isEmpty) return r
-    if  (pOpt.get.ext === ".sc") return r
+    if (pOpt.get.ext === ".sc") return r
     for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors if fileEditor.isModified) scala.util.Try {
       val pathOpt = Util.getPath(fileEditor.getFile)
       fileEditor match {
@@ -617,7 +653,10 @@ object SireumClient {
 
             override def $owned: Boolean = _owner
 
-            override def $owned_=(b: Boolean): MutableMarker = { _owner = b; this }
+            override def $owned_=(b: Boolean): MutableMarker = {
+              _owner = b;
+              this
+            }
 
             override def $clone: MutableMarker = halt("Infeasible")
 
@@ -727,7 +766,7 @@ object SireumClient {
               case sri: SummoningReportItem =>
                 val content: Predef.String = if (sri.message.startsWith(";")) sri.message else {
                   val p = org.sireum.Os.path(sri.message)
-                  scala.util.Try(p.read.value).getOrElse(sri.info)
+                  try p.read.value catch { case _: Throwable => sri.info }
                 }
                 f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
                 f.logika.logikaTextArea.setText(normalizeChars(content))
@@ -798,6 +837,197 @@ object SireumClient {
       }
       return Some(pe)
     }
+
+    def consoleReportItems(listModel: DefaultListModel[Object],
+                           rhs: scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]],
+                           editor: Editor,
+                           ci: ConsoleReportItem,
+                           line: Int): Unit = {
+      val tooltipSep = "<hr>"
+      val cs = editor.getColorsScheme
+      var level = ci.level
+      val mm = editor.getMarkupModel
+      val project = editor.getProject
+      val (message, rhl): (Predef.String, Vector[RangeHighlighter]) = rhs.get(line) match {
+        case scala.Some(rhv) =>
+          var msg = ci.message
+          var newRhv = Vector[RangeHighlighter]()
+          for (rh <- rhv) {
+            rh.getUserData(reportItemKey) match {
+              case cri: ConsoleReportItem =>
+                mm.removeHighlighter(rh)
+                msg = cri.message + tooltipSep + ci.message
+                if (cri.level.ordinal < level.ordinal) {
+                  level = cri.level
+                }
+              case _ => newRhv = newRhv :+ rh
+            }
+          }
+          (msg, newRhv)
+        case _ => (ci.message, Vector())
+      }
+      val (icon, color) = level match {
+        case Level.InternalError =>
+          (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
+        case Level.Error => (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
+        case Level.Warning => (gutterWarningIcon, cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor)
+        case Level.Info => (gutterInfoIcon, cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor)
+      }
+      val attr = new TextAttributes(null, null, color, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
+      val end = scala.math.min(ci.offset + ci.length, editor.getDocument.getTextLength)
+      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+      rhLine.putUserData(reportItemKey, ci)
+      rhLine.setThinErrorStripeMark(false)
+      rhLine.setErrorStripeMarkColor(color)
+      rhLine.setGutterIconRenderer(gutterIconRenderer(message,
+        icon, _ => sireumToolWindowFactory(project, f => {
+          val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
+          tw.activate(() => {
+            saveSetDividerLocation(f.logika.logikaToolSplitPane, 1.0)
+            val list = f.logika.logikaList
+            list.synchronized(list.setModel(listModel))
+            tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
+          })
+        })))
+      rhLine.putUserData(reportItemKey, ci)
+      if (ci.offset != -1) {
+        val rh = mm.addRangeHighlighter(ci.offset, end, layer, attr, HighlighterTargetArea.EXACT_RANGE)
+        rh.putUserData(reportItemKey, ci)
+        rh.setErrorStripeTooltip(ci.message)
+        rh.setThinErrorStripeMark(false)
+        rh.setErrorStripeMarkColor(color)
+        listModel.addElement(ci)
+        rhs.put(line, rhl :+ rhLine :+ rh)
+      } else {
+        rhs.put(line, rhl :+ rhLine)
+      }
+    }
+
+    def hintReportItem(listModelMap: scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]],
+                       rhs: scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]],
+                       editor: Editor,
+                       ri: HintReportItem,
+                       line: Int): Unit = {
+      val mm = editor.getMarkupModel
+      val project = editor.getProject
+      val rhl: Vector[RangeHighlighter] = rhs.get(line) match {
+        case scala.Some(rhv) =>
+          var newRhv = Vector[RangeHighlighter]()
+          for (rh <- rhv) {
+            rh.getUserData(reportItemKey) match {
+              case _: HintReportItem => mm.removeHighlighter(rh)
+              case _ => newRhv = newRhv :+ rh
+            }
+          }
+          newRhv
+        case _ => Vector()
+      }
+      val hintListModel = listModelMap.get(line) match {
+        case scala.Some(l) => l
+        case _ =>
+          val l = new DefaultListModel[HintReportItem]()
+          listModelMap.put(line, l)
+          l
+      }
+      hintListModel.addElement(ri)
+      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+      rhLine.putUserData(reportItemKey, ri)
+      rhLine.setThinErrorStripeMark(false)
+      val (title, icon) = ri.kindOpt match {
+        case scala.Some(org.sireum.server.protocol.Logika.Verify.Info.Kind.Verified) =>
+          ("Click to show verification report", gutterVerifiedIcon)
+        case _ => ("Click to show some hints", gutterHintIcon)
+      }
+      rhLine.setGutterIconRenderer(gutterIconRenderer(
+        title, icon, _ => sireumToolWindowFactory(project, f => {
+          val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
+          tw.activate(() => {
+            val list = f.logika.logikaList
+            list.synchronized {
+              list.setModel(hintListModel.asInstanceOf[DefaultListModel[Object]])
+              list.setSelectedIndex(0)
+            }
+            tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
+          })
+        })
+      ))
+      rhs.put(line, rhl :+ rhLine)
+    }
+
+    def summoningReportItem(listModelMap: scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]],
+                            rhs: scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]],
+                            editor: Editor,
+                            ri: SummoningReportItem,
+                            line: Int): Unit = {
+      val mm = editor.getMarkupModel
+      val project = editor.getProject
+      val rhl: Vector[RangeHighlighter] = rhs.get(line) match {
+        case scala.Some(rhv) =>
+          var newRhv = Vector[RangeHighlighter]()
+          for (rh <- rhv) {
+            rh.getUserData(reportItemKey) match {
+              case _: SummoningReportItem => mm.removeHighlighter(rh)
+              case _ => newRhv = newRhv :+ rh
+            }
+          }
+          newRhv
+        case _ => Vector()
+      }
+      val summoningListModel = listModelMap.get(line) match {
+        case scala.Some(l) => l
+        case _ =>
+          val l = new DefaultListModel[SummoningReportItem]()
+          listModelMap.put(line, l)
+          l
+      }
+      summoningListModel.addElement(ri)
+      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+      rhLine.putUserData(reportItemKey, ri)
+      rhLine.setThinErrorStripeMark(false)
+      rhLine.setGutterIconRenderer(gutterIconRenderer("Click to show scribed incantations",
+        gutterSummoningIcon, _ => sireumToolWindowFactory(project, f => {
+          val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
+          tw.activate(() => {
+            val list = f.logika.logikaList
+            list.synchronized {
+              list.setModel(summoningListModel.asInstanceOf[DefaultListModel[Object]])
+              var selection = 0
+              var i = 0
+              while (i < summoningListModel.size && selection == 0) {
+                if (summoningListModel.elementAt(i).messageHeader.contains("Invalid")) {
+                  selection = i
+                }
+                i += 1
+              }
+              i = 0
+              while (i < summoningListModel.size && selection == 0) {
+                if (summoningListModel.elementAt(i).messageHeader.contains("Don't Know")) {
+                  selection = i
+                }
+                i += 1
+              }
+              i = 0
+              while (i < summoningListModel.size && selection == 0) {
+                if (summoningListModel.elementAt(i).messageHeader.contains("Timeout")) {
+                  selection = i
+                }
+                i += 1
+              }
+              i = 0
+              while (i < summoningListModel.size && selection == 0) {
+                if (summoningListModel.elementAt(i).messageHeader.contains("Error")) {
+                  selection = i
+                }
+                i += 1
+              }
+              list.setSelectedIndex(selection)
+            }
+            tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
+          })
+        })))
+      rhs.put(line, rhl :+ rhLine)
+    }
+
     r match {
       case r: org.sireum.server.protocol.Status.Response =>
         lastStatusUpdate = System.currentTimeMillis
@@ -805,246 +1035,72 @@ object SireumClient {
       case _: org.sireum.server.protocol.Version.Response =>
       case _ =>
         def processResultH(): Unit = {
-          analysisDataKey.synchronized {
-            import org.sireum._
-            val (project, file, editor, input) = editorMap.synchronized {
-              editorMap.get(r.id) match {
-                case scala.Some(pe) =>
-                  r match {
-                    case r: org.sireum.server.protocol.Analysis.End => editorMap -= r.id
-                    case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
-                    case _: server.protocol.Analysis.Start => resetSireumView(pe._1, scala.Some(pe._3))
-                    case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
-                      notifyHelper(scala.Some(pe._1), if (pe._3.isDisposed) scala.None else scala.Some(pe._3), r)
-                    case _ =>
-                  }
-                  getProjectFileEditorInput(pe) match {
-                    case scala.Some(v) => v
-                    case _ => return
-                  }
-                case _ =>
-                  notifyHelper(scala.None, scala.None, r)
-                  return
-              }
-            }
-            if (!editor.isDisposed) {
-              val mm = editor.getMarkupModel
-              val tOpt = scala.Option(editor.getUserData(analysisDataKey))
-              var (rhs, listModel, summoningListModelMap, hintListModelMap) = tOpt.getOrElse((null, null, null, null))
-              r match {
-                case _: server.protocol.Analysis.Start =>
-                  sireumToolWindowFactory(project, f => {
-                    f.logika.logikaTextArea.setFont(
-                      editor.getColorsScheme.getFont(EditorFontType.PLAIN))
-                    f.logika.logikaTextArea.setText("")
-                  })
-                  editor.getContentComponent.setToolTipText(null)
-                  for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
-                    mm.removeHighlighter(rh)
-                  }
-                  editor.putUserData(analysisDataKey, null)
-                  rhs = scala.collection.immutable.Map[Int, Vector[RangeHighlighter]]()
-                  listModel = new DefaultListModel[Object]()
-                  summoningListModelMap = scala.collection.immutable.Map[Int, DefaultListModel[SummoningReportItem]]()
-                  hintListModelMap = scala.collection.immutable.Map[Int, DefaultListModel[HintReportItem]]()
-                case r: server.protocol.Analysis.End =>
-                  notifyHelper(scala.Some(project), scala.Some(editor), r)
-                  return
-                case r: server.protocol.Slang.Rewrite.Response =>
-                  SireumOnlyAction.processSlangRewriteResponse(r, project, editor)
-                  return
-                case _ =>
-              }
-              if (input != editor.getDocument.getText) return
-              val cs = editor.getColorsScheme
-              val layer = 1000000
-              val tooltipSep = "<hr>"
-
-              def consoleReportItems(ci: ConsoleReportItem, line: Int): Unit = {
-                var level = ci.level
-                try {
-                  val (message, rhl): (Predef.String, Vector[RangeHighlighter]) = rhs.get(line) match {
-                    case scala.Some(rhv) =>
-                      var msg = ci.message
-                      var newRhv = Vector[RangeHighlighter]()
-                      for (rh <- rhv) {
-                        rh.getUserData(reportItemKey) match {
-                          case cri: ConsoleReportItem =>
-                            mm.removeHighlighter(rh)
-                            msg = cri.message + tooltipSep + ci.message
-                            if (cri.level.ordinal < level.ordinal) {
-                              level = cri.level
-                            }
-                          case _ => newRhv = newRhv :+ rh
-                        }
-                      }
-                      (msg, newRhv)
-                    case _ => (ci.message, Vector())
-                  }
-                  val (icon, color) = level match {
-                    case Level.InternalError =>
-                      (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
-                    case Level.Error => (gutterErrorIcon, cs.getAttributes(TextAttributesKey.find("ERRORS_ATTRIBUTES")).getErrorStripeColor)
-                    case Level.Warning => (gutterWarningIcon, cs.getAttributes(TextAttributesKey.find("WARNING_ATTRIBUTES")).getErrorStripeColor)
-                    case Level.Info => (gutterInfoIcon, cs.getAttributes(TextAttributesKey.find("TYPO")).getEffectColor)
-                  }
-                  val attr = new TextAttributes(null, null, color, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
-                  val end = scala.math.min(ci.offset + ci.length, editor.getDocument.getTextLength)
-                  val rhLine = mm.addLineHighlighter(line - 1, layer, null)
-                  rhLine.putUserData(reportItemKey, ci)
-                  rhLine.setThinErrorStripeMark(false)
-                  rhLine.setErrorStripeMarkColor(color)
-                  rhLine.setGutterIconRenderer(gutterIconRenderer(message,
-                    icon, _ => sireumToolWindowFactory(project, f => {
-                      val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
-                      tw.activate(() => {
-                        saveSetDividerLocation(f.logika.logikaToolSplitPane, 1.0)
-                        val list = f.logika.logikaList
-                        list.synchronized(list.setModel(listModel))
-                        tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
-                      })
-                    })))
-                  rhLine.putUserData(reportItemKey, ci)
-                  if (ci.offset != -1) {
-                    val rh = mm.addRangeHighlighter(ci.offset, end, layer, attr, HighlighterTargetArea.EXACT_RANGE)
-                    rh.putUserData(reportItemKey, ci)
-                    rh.setErrorStripeTooltip(ci.message)
-                    rh.setThinErrorStripeMark(false)
-                    rh.setErrorStripeMarkColor(color)
-                    listModel.addElement(ci)
-                    rhs = rhs + ((line, rhl :+ rhLine :+ rh))
-                  } else {
-                    rhs = rhs + ((line, rhl :+ rhLine))
-
-                  }
-                } catch {
-                  case t: Throwable =>
-                    t.printStackTrace()
+          val (project, file, editor, input) = editorMap.synchronized {
+            editorMap.get(r.id) match {
+              case Some(pe) =>
+                r match {
+                  case r: org.sireum.server.protocol.Analysis.End => editorMap -= r.id
+                  case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
+                  case _: org.sireum.server.protocol.Analysis.Start => resetSireumView(pe._1, Some(pe._3))
+                  case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
+                    notifyHelper(Some(pe._1), if (pe._3.isDisposed) None else Some(pe._3), r)
+                  case _ =>
                 }
-              }
-
-              for ((line, ri) <- processReport(project, file, r)) {
-                ri match {
-                  case ri: ConsoleReportItem => consoleReportItems(ri, line)
-                  case ri: HintReportItem =>
-                    scala.util.Try {
-                      val rhl: Vector[RangeHighlighter] = rhs.get(line) match {
-                        case scala.Some(rhv) =>
-                          var newRhv = Vector[RangeHighlighter]()
-                          for (rh <- rhv) {
-                            rh.getUserData(reportItemKey) match {
-                              case _: HintReportItem => mm.removeHighlighter(rh)
-                              case _ => newRhv = newRhv :+ rh
-                            }
-                          }
-                          newRhv
-                        case _ => Vector()
-                      }
-                      val hintListModel = hintListModelMap.get(line) match {
-                        case scala.Some(l) => l
-                        case _ =>
-                          val l = new DefaultListModel[HintReportItem]()
-                          hintListModelMap = hintListModelMap + ((line, l))
-                          l
-                      }
-                      hintListModel.addElement(ri)
-                      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
-                      rhLine.putUserData(reportItemKey, ri)
-                      rhLine.setThinErrorStripeMark(false)
-                      val (title, icon) = ri.kindOpt match {
-                        case scala.Some(org.sireum.server.protocol.Logika.Verify.Info.Kind.Verified) =>
-                          ("Click to show verification report", gutterVerifiedIcon)
-                        case _ => ("Click to show some hints", gutterHintIcon)
-                      }
-                      rhLine.setGutterIconRenderer(gutterIconRenderer(
-                        title, icon, _ => sireumToolWindowFactory(project, f => {
-                          val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
-                          tw.activate(() => {
-                            val list = f.logika.logikaList
-                            list.synchronized {
-                              list.setModel(hintListModel.asInstanceOf[DefaultListModel[Object]])
-                              list.setSelectedIndex(0)
-                            }
-                            tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
-                          })
-                        })
-                      ))
-                      rhs = rhs + ((line, rhl :+ rhLine))
-                    }
-                  case ri: SummoningReportItem =>
-                    scala.util.Try {
-                      val rhl: Vector[RangeHighlighter] = rhs.get(line) match {
-                        case scala.Some(rhv) =>
-                          var newRhv = Vector[RangeHighlighter]()
-                          for (rh <- rhv) {
-                            rh.getUserData(reportItemKey) match {
-                              case _: SummoningReportItem => mm.removeHighlighter(rh)
-                              case _ => newRhv = newRhv :+ rh
-                            }
-                          }
-                          newRhv
-                        case _ => Vector()
-                      }
-                      val summoningListModel = summoningListModelMap.get(line) match {
-                        case scala.Some(l) => l
-                        case _ =>
-                          val l = new DefaultListModel[SummoningReportItem]()
-                          summoningListModelMap = summoningListModelMap + ((line, l))
-                          l
-                      }
-                      summoningListModel.addElement(ri)
-                      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
-                      rhLine.putUserData(reportItemKey, ri)
-                      rhLine.setThinErrorStripeMark(false)
-                      rhLine.setGutterIconRenderer(gutterIconRenderer("Click to show scribed incantations",
-                        gutterSummoningIcon, _ => sireumToolWindowFactory(project, f => {
-                          val tw = f.toolWindow.asInstanceOf[ToolWindowImpl]
-                          tw.activate(() => {
-                            val list = f.logika.logikaList
-                            list.synchronized {
-                              list.setModel(summoningListModel.asInstanceOf[DefaultListModel[Object]])
-                              var selection = 0
-                              var i = 0
-                              while (i < summoningListModel.size && selection == 0) {
-                                if (summoningListModel.elementAt(i).messageHeader.contains("Invalid")) {
-                                  selection = i
-                                }
-                                i += 1
-                              }
-                              i = 0
-                              while (i < summoningListModel.size && selection == 0) {
-                                if (summoningListModel.elementAt(i).messageHeader.contains("Don't Know")) {
-                                  selection = i
-                                }
-                                i += 1
-                              }
-                              i = 0
-                              while (i < summoningListModel.size && selection == 0) {
-                                if (summoningListModel.elementAt(i).messageHeader.contains("Timeout")) {
-                                  selection = i
-                                }
-                                i += 1
-                              }
-                              i = 0
-                              while (i < summoningListModel.size && selection == 0) {
-                                if (summoningListModel.elementAt(i).messageHeader.contains("Error")) {
-                                  selection = i
-                                }
-                                i += 1
-                              }
-                              list.setSelectedIndex(selection)
-                            }
-                            tw.getContentManager.setSelectedContent(tw.getContentManager.findContent("Output"))
-                          })
-                        })))
-                      rhs = rhs + ((line, rhl :+ rhLine))
-                    }
+                getProjectFileEditorInput(pe) match {
+                  case Some(v) if !pe._3.isDisposed => v
+                  case _ => return
                 }
-              }
-              editor.putUserData(analysisDataKey, (rhs, listModel, summoningListModelMap, hintListModelMap))
+              case _ =>
+                notifyHelper(None, None, r)
+                return
             }
           }
+          val mm = editor.getMarkupModel
+          val (rhs, listModel, summoningListModelMap, hintListModelMap) = analysisDataKey.synchronized {
+            r match {
+              case _: org.sireum.server.protocol.Analysis.Start =>
+                sireumToolWindowFactory(project, f => {
+                  f.logika.logikaTextArea.setFont(
+                    editor.getColorsScheme.getFont(EditorFontType.PLAIN))
+                  f.logika.logikaTextArea.setText("")
+                })
+                editor.getContentComponent.setToolTipText(null)
+                for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
+                  mm.removeHighlighter(rh)
+                }
+                editor.putUserData(analysisDataKey, null)
+                val q = (
+                  scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
+                  new DefaultListModel[Object](),
+                  scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
+                  scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
+                )
+                editor.putUserData(analysisDataKey, q)
+                q
+              case r: org.sireum.server.protocol.Analysis.End =>
+                notifyHelper(Some(project), Some(editor), r)
+                return
+              case r: org.sireum.server.protocol.Slang.Rewrite.Response =>
+                SireumOnlyAction.processSlangRewriteResponse(r, project, editor)
+                return
+              case _ =>
+                val q = editor.getUserData(analysisDataKey)
+                if (q == null) return
+                q
+            }
+          }
+          if (input != editor.getDocument.getText) return
+          for ((line, ri) <- processReport(project, file, r)) try {
+            ri match {
+              case ri: ConsoleReportItem => consoleReportItems(listModel, rhs, editor, ri, line)
+              case ri: HintReportItem => hintReportItem(hintListModelMap, rhs, editor, ri, line)
+              case ri: SummoningReportItem => summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
+            }
+          } catch {
+            case t: Throwable => logStackTrace(t)
+          }
         }
+
         ApplicationManager.getApplication.invokeLater(() => processResultH())
     }
   }

@@ -65,7 +65,7 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
           }
 
           override def fileOpened(source: FileEditorManager,
-                                  file: VirtualFile): Unit = {
+                                  file: VirtualFile): Unit =
             ApplicationManager.getApplication.invokeLater { () =>
               try {
                 Util.getPath(file)
@@ -75,7 +75,6 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
                 case _: Throwable =>
               }
             }
-          }
 
           override def selectionChanged(event: FileEditorManagerEvent): Unit = {}
         })
