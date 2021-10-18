@@ -28,7 +28,7 @@ package org.sireum.intellij
 import com.intellij.notification.{Notification, NotificationListener, NotificationType}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.ProjectComponent
-import com.intellij.openapi.fileEditor.{FileEditorManager, FileEditorManagerEvent, FileEditorManagerListener}
+import com.intellij.openapi.fileEditor.{FileEditorManager, FileEditorManagerEvent, FileEditorManagerListener, TextEditor}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.{ToolWindowAnchor, ToolWindowManager, WindowManager}
@@ -69,8 +69,13 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
             ApplicationManager.getApplication.invokeLater { () =>
               try {
                 Util.getPath(file)
-                val editor = source.getSelectedTextEditor
-                if (editor != null && !editor.isDisposed) SireumClient.editorOpened(iproject, file, editor)
+                for (fileEditor <- source.getAllEditors) {
+                  fileEditor match {
+                    case fileEditor: TextEditor if fileEditor.getFile == file =>
+                      SireumClient.editorOpened(iproject, file, fileEditor.getEditor)
+                    case _ =>
+                  }
+                }
               } catch {
                 case _: Throwable =>
               }

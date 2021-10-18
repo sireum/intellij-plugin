@@ -33,11 +33,11 @@ import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
 import com.intellij.openapi.editor.event._
 import com.intellij.openapi.editor.markup._
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor, TextEditor}
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.{Project, ProjectManager}
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util._
-import com.intellij.openapi.vfs.{LocalFileSystem, VirtualFile}
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresentation}
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, WindowManager}
@@ -179,7 +179,7 @@ object SireumClient {
       case Some((_, logFile)) =>
         if (content.isEmpty) return
         val maxSize = org.sireum.server.Server.maxLogLineSize.toInt
-        if (logFile.size > org.sireum.server.Server.maxLogFileSize) logFile.removeAll()
+        if (logFile.size > org.sireum.server.Server.maxLogFileSize) logFile.writeOver("")
         logFile.writeAppend(s"${org.sireum.server.Server.Ext.timeStamp(isRequest)}${if (content.length > maxSize) content.substring(0, maxSize) else content}${org.sireum.Os.lineSep}")
       case _ =>
     }
@@ -367,7 +367,6 @@ object SireumClient {
               isBackground: Boolean, hasLogika: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
-
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
       import org.sireum.server.protocol._
       var config = org.sireum.server.service.AnalysisService.defaultConfig
@@ -824,18 +823,19 @@ object SireumClient {
                   case _ =>
                 }
               }
-              val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
-              val offset = pos.offset.toInt
-              val editor = FileEditorManager.getInstance(project).openTextEditor(
-                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
-                else new OpenFileDescriptor(project, file),
-                true)
-              return Some((project, file, editor, editor.getDocument.getText))
+//              val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
+//              val offset = pos.offset.toInt
+//              val editor = FileEditorManager.getInstance(project).openTextEditor(
+//                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
+//                else new OpenFileDescriptor(project, file),
+//                true)
+//              return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
+              return None
             case _ =>
+              return None
           }
-        case _ =>
+        case _ => return Some(pe)
       }
-      return Some(pe)
     }
 
     def consoleReportItems(listModel: DefaultListModel[Object],
@@ -1035,13 +1035,43 @@ object SireumClient {
       case _: org.sireum.server.protocol.Version.Response =>
       case _ =>
         def processResultH(): Unit = {
+          r match {
+            case _: org.sireum.server.protocol.Analysis.Start =>
+              for (project <- ProjectManager.getInstance.getOpenProjects) {
+                for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
+                  fileEditor match {
+                    case fileEditor: TextEditor =>
+                      val editor = fileEditor.getEditor
+                      val mm = editor.getMarkupModel
+                      analysisDataKey.synchronized {
+                        if (editor.getUserData(analysisDataKey) != null) {
+                          for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
+                            mm.removeHighlighter(rh)
+                          }
+                          editor.putUserData(analysisDataKey, null)
+                        }
+                      }
+                    case _ =>
+                  }
+                }
+              }
+            case _ =>
+          }
           val (project, file, editor, input) = editorMap.synchronized {
             editorMap.get(r.id) match {
               case Some(pe) =>
                 r match {
                   case r: org.sireum.server.protocol.Analysis.End => editorMap -= r.id
                   case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
-                  case _: org.sireum.server.protocol.Analysis.Start => resetSireumView(pe._1, Some(pe._3))
+                  case _: org.sireum.server.protocol.Analysis.Start =>
+                    if (!pe._1.isDisposed && !pe._3.isDisposed) {
+                      resetSireumView(pe._1, Some(pe._3))
+                      sireumToolWindowFactory(pe._1, f => {
+                        f.logika.logikaTextArea.setFont(
+                          pe._3.getColorsScheme.getFont(EditorFontType.PLAIN))
+                        f.logika.logikaTextArea.setText("")
+                      })
+                    }
                   case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
                     notifyHelper(Some(pe._1), if (pe._3.isDisposed) None else Some(pe._3), r)
                   case _ =>
@@ -1055,28 +1085,8 @@ object SireumClient {
                 return
             }
           }
-          val mm = editor.getMarkupModel
           val (rhs, listModel, summoningListModelMap, hintListModelMap) = analysisDataKey.synchronized {
             r match {
-              case _: org.sireum.server.protocol.Analysis.Start =>
-                sireumToolWindowFactory(project, f => {
-                  f.logika.logikaTextArea.setFont(
-                    editor.getColorsScheme.getFont(EditorFontType.PLAIN))
-                  f.logika.logikaTextArea.setText("")
-                })
-                editor.getContentComponent.setToolTipText(null)
-                for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
-                  mm.removeHighlighter(rh)
-                }
-                editor.putUserData(analysisDataKey, null)
-                val q = (
-                  scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
-                  new DefaultListModel[Object](),
-                  scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
-                  scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
-                )
-                editor.putUserData(analysisDataKey, q)
-                q
               case r: org.sireum.server.protocol.Analysis.End =>
                 notifyHelper(Some(project), Some(editor), r)
                 return
@@ -1084,8 +1094,16 @@ object SireumClient {
                 SireumOnlyAction.processSlangRewriteResponse(r, project, editor)
                 return
               case _ =>
-                val q = editor.getUserData(analysisDataKey)
-                if (q == null) return
+                var q = editor.getUserData(analysisDataKey)
+                if (q == null) {
+                  q = (
+                    scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
+                    new DefaultListModel[Object](),
+                    scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
+                    scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
+                  )
+                  editor.putUserData(analysisDataKey, q)
+                }
                 q
             }
           }
