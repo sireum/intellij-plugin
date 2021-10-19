@@ -394,7 +394,7 @@ object SireumClient {
             cvc4RLimit = LogikaConfigurable.cvcRLimit
           )
         ),
-        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc") {
+        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
             logikaEnabled = !isBackground ||
