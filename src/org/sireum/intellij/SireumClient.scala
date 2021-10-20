@@ -213,9 +213,11 @@ object SireumClient {
           queue, { s =>
             val trimmed = s.trim
             var shouldLog = false
+            var hasError = false
 
             def err(): Unit = {
               shouldLog = true
+              hasError = true
               val msg = s"Invalid server message: $trimmed"
               notifyHelper(scala.Some(p), scala.None,
                 org.sireum.server.protocol.Report(org.sireum.ISZ(),
@@ -241,7 +243,7 @@ object SireumClient {
             } else {
               if (trimmed.nonEmpty) shouldLog = true
             }
-            if (shouldLog) writeLog(isRequest = false, trimmed)
+            if (shouldLog) writeLog(isRequest = false, if (hasError) s"Error occurred when processing response: $s" else s)
           }, serverArgs),
         logFile
       ))
