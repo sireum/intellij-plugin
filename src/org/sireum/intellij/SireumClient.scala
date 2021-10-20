@@ -1078,7 +1078,9 @@ object SireumClient {
                 }
                 getProjectFileEditorInput(pe) match {
                   case Some(v) if !pe._3.isDisposed => v
-                  case _ => return
+                  case _ =>
+                    writeLog(isRequest = false, s"There is no opened editor for response: $r")
+                    return
                 }
               case _ =>
                 notifyHelper(None, None, r)
@@ -1107,7 +1109,10 @@ object SireumClient {
                 q
             }
           }
-          if (input != editor.getDocument.getText) return
+          if (input != editor.getDocument.getText) {
+            writeLog(isRequest = false, s"Stale response: $r")
+            return
+          }
           for ((line, ri) <- processReport(project, file, r)) try {
             ri match {
               case ri: ConsoleReportItem => consoleReportItems(listModel, rhs, editor, ri, line)
