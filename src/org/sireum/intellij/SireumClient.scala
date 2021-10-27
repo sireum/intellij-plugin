@@ -1037,31 +1037,52 @@ object SireumClient {
       case _: org.sireum.server.protocol.Version.Response =>
       case _ =>
         def processResultH(): Unit = {
-          r match {
-            case _: org.sireum.server.protocol.Analysis.Start =>
-              for (project <- ProjectManager.getInstance.getOpenProjects) {
-                for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
-                  fileEditor match {
-                    case fileEditor: TextEditor =>
-                      val editor = fileEditor.getEditor
-                      val mm = editor.getMarkupModel
-                      analysisDataKey.synchronized {
-                        if (editor.getUserData(analysisDataKey) != null) {
-                          for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
-                            mm.removeHighlighter(rh)
-                          }
-                          editor.putUserData(analysisDataKey, null)
-                        }
-                      }
-                    case _ =>
+          def clearEditorH(editor: Editor): Unit = {
+            if (!editor.isDisposed) {
+              val mm = editor.getMarkupModel
+              analysisDataKey.synchronized {
+                if (editor.getUserData(analysisDataKey) != null) {
+                  for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
+                    mm.removeHighlighter(rh)
                   }
+                  editor.putUserData(analysisDataKey, null)
                 }
               }
-            case _ =>
+            }
+          }
+          def clearProgramMarkings(): Unit = {
+            r match {
+              case _: org.sireum.server.protocol.Analysis.Start =>
+                for (project <- ProjectManager.getInstance.getOpenProjects) {
+                  for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
+                    fileEditor match {
+                      case fileEditor: TextEditor =>
+                        val path = fileEditor.getFile.getPath
+                        if (path.endsWith(".scala") || path.endsWith(".slang")) {
+                          clearEditorH(fileEditor.getEditor)
+                        }
+                      case _ =>
+                    }
+                  }
+                }
+              case _ =>
+            }
+          }
+          def clearScriptMarkings(editor: Editor): Unit = {
+            r match {
+              case _: org.sireum.server.protocol.Analysis.Start => clearEditorH(editor)
+              case _ =>
+            }
           }
           val (project, file, editor, input) = editorMap.synchronized {
             editorMap.get(r.id) match {
               case Some(pe) =>
+                val path = pe._2.getPath
+                if (path.endsWith(".scala") || path.endsWith(".slang")) {
+                  clearProgramMarkings()
+                } else {
+                  clearScriptMarkings(pe._3)
+                }
                 r match {
                   case r: org.sireum.server.protocol.Analysis.End => editorMap -= r.id
                   case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
@@ -1085,6 +1106,7 @@ object SireumClient {
                     return
                 }
               case _ =>
+                clearProgramMarkings()
                 notifyHelper(None, None, r)
                 return
             }
