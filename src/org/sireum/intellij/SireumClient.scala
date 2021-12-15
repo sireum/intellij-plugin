@@ -393,7 +393,8 @@ object SireumClient {
             timeoutInMs = LogikaConfigurable.timeout,
             useReal = LogikaConfigurable.useReal,
             fpRoundingMode = LogikaConfigurable.fpRoundingMode,
-            cvcRLimit = LogikaConfigurable.cvcRLimit
+            cvcRLimit = LogikaConfigurable.cvcRLimit,
+            caching = LogikaConfigurable.cacheSmt2
           )
         ),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {

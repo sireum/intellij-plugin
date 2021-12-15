@@ -56,6 +56,7 @@ object LogikaConfigurable {
   private val cvcSatOptsKey = logikaKey + "cvc.sopts"
   private val z3ValidOptsKey = logikaKey + "z3.vopts"
   private val z3SatOptsKey = logikaKey + "z3.sopts"
+  private val cacheSmt2OptsKey = logikaKey + "smt2caching"
 
   private[intellij] var backgroundAnalysis: Boolean = true
   private[intellij] var timeout: Int = 2000
@@ -77,6 +78,7 @@ object LogikaConfigurable {
   private[intellij] var cvcSatOpts: String = ""
   private[intellij] var z3ValidOpts: String = ""
   private[intellij] var z3SatOpts: String = ""
+  private[intellij] var cacheSmt2: Boolean = true
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -87,6 +89,7 @@ object LogikaConfigurable {
     hint = pc.getBoolean(hintKey, hint)
     hintUnicode = pc.getBoolean(hintUnicodeKey, hintUnicode)
     inscribeSummonings = pc.getBoolean(inscribeSummoningsKey, inscribeSummonings)
+    cacheSmt2 = pc.getBoolean(cacheSmt2OptsKey, cacheSmt2)
     // TODO
     //checkerKind = pc.getValue(checkerKindKey, checkerKind)
     bitWidth = pc.getInt(bitWidthKey, bitWidth)
@@ -111,6 +114,7 @@ object LogikaConfigurable {
     pc.setValue(hintKey, hint.toString)
     pc.setValue(hintUnicodeKey, hintUnicode.toString)
     pc.setValue(inscribeSummoningsKey, inscribeSummonings.toString)
+    pc.setValue(cacheSmt2OptsKey, cacheSmt2.toString)
     // TODO
     //pc.setValue(checkerKindKey, checkerKind)
     pc.setValue(bitWidthKey, bitWidth.toString)
@@ -187,6 +191,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         hintCheckBox.isSelected != hint ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
+        cacheSmt2CheckBox.isSelected != cacheSmt2 ||
         // TODO
         //selectedKind != checkerKind ||
         selectedBitWidth != bitWidth ||
@@ -408,6 +413,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     hint = hintCheckBox.isSelected
     hintUnicode = hintUnicodeCheckBox.isSelected
     inscribeSummonings = inscribeSummoningsCheckBox.isSelected
+    cacheSmt2 = cacheSmt2CheckBox.isSelected
     // TODO
     //checkerKind = selectedKind
     bitWidth = selectedBitWidth
@@ -432,6 +438,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     hintCheckBox.setSelected(hint)
     hintUnicodeCheckBox.setSelected(hintUnicode)
     inscribeSummoningsCheckBox.setSelected(inscribeSummonings)
+    cacheSmt2CheckBox.setSelected(cacheSmt2)
     /* TODO
     checkerKind match {
       case CheckerKind.Forward => forwardRadioButton.setSelected(true)

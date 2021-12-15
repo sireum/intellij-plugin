@@ -75,4 +75,5 @@ public abstract class LogikaForm {
     protected JTextField z3ValidOptsTextField;
     protected JTextField z3SatOptsTextField;
     protected JLabel z3Label;
+    protected JCheckBox cacheSmt2CheckBox;
 }

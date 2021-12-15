@@ -525,6 +525,15 @@
           </vspacer>
         </children>
       </grid>
+      <component id="944a2" class="javax.swing.JCheckBox" binding="cacheSmt2CheckBox">
+        <constraints>
+          <grid row="6" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <selected value="true"/>
+          <text value="SMT2 caching"/>
+        </properties>
+      </component>
     </children>
   </grid>
   <buttonGroups>
