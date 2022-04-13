@@ -180,6 +180,8 @@ object SireumApplicationComponent {
             val line = r.readLine()
             if (line != null) {
               processOutput(line)
+            } else {
+              Thread.sleep(200)
             }
           }
         } catch {
