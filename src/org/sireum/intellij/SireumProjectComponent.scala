@@ -53,11 +53,12 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
       }
     }
 
-    val tw = ToolWindowManager.getInstance(iproject).
-      registerToolWindow("Sireum", false, ToolWindowAnchor.RIGHT)
-    SireumToolWindowFactory.createToolWindowContent(iproject, tw)
+    ToolWindowManager.getInstance(iproject).invokeLater(() => {
+      val tw = ToolWindowManager.getInstance(iproject).
+        registerToolWindow("Sireum", false, ToolWindowAnchor.RIGHT)
+      SireumToolWindowFactory.createToolWindowContent(iproject, tw)
 
-    iproject.getMessageBus.connect(iproject).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
+      iproject.getMessageBus.connect(iproject).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
         new FileEditorManagerListener {
           override def fileClosed(source: FileEditorManager,
                                   file: VirtualFile): Unit = {
@@ -83,6 +84,7 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
 
           override def selectionChanged(event: FileEditorManagerEvent): Unit = {}
         })
+    })
 
     new Thread(() => {
       Thread.sleep(5000)
