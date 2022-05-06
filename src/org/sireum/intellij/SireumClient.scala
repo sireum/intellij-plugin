@@ -171,7 +171,7 @@ object SireumClient {
     writeLog(isRequest = false, sw.toString)
   }
 
-  def writeLog(isRequest: Boolean, content: String): Unit = {
+  def writeLog(isRequest: Boolean, content: String, full: Boolean = false): Unit = {
     if (!SireumApplicationComponent.logging) {
       return
     }
@@ -180,7 +180,7 @@ object SireumClient {
         if (content.isEmpty) return
         val maxSize = org.sireum.server.Server.maxLogLineSize.toInt
         if (logFile.size > org.sireum.server.Server.maxLogFileSize) logFile.writeOver("")
-        logFile.writeAppend(s"${org.sireum.server.Server.Ext.timeStamp(isRequest)}${if (content.length > maxSize) content.substring(0, maxSize) else content}${org.sireum.Os.lineSep}")
+        logFile.writeAppend(s"${org.sireum.server.Server.Ext.timeStamp(isRequest)}${if (!full && content.length > maxSize) content.substring(0, maxSize) else content}${org.sireum.Os.lineSep}")
       case _ =>
     }
   }
@@ -371,11 +371,12 @@ object SireumClient {
     val input = editor.getDocument.getText
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
       import org.sireum.server.protocol._
-      var config = org.sireum.server.service.AnalysisService.defaultConfig
+      var config = org.sireum.server.service.AnalysisService.defaultConfig(cvcRLimit = LogikaConfigurable.cvcRLimit)
       config = config(smt2Configs = for (c <- config.smt2Configs) yield c match {
         case c: CvcConfig =>
           c(validOpts = org.sireum.ISZ(LogikaConfigurable.cvcValidOpts.split(' ').map(org.sireum.String(_)): _*),
-            satOpts = org.sireum.ISZ(LogikaConfigurable.cvcSatOpts.split(' ').map(org.sireum.String(_)): _*))
+            satOpts = org.sireum.ISZ(LogikaConfigurable.cvcSatOpts.split(' ').map(org.sireum.String(_)): _*),
+            rlimit = LogikaConfigurable.cvcRLimit)
         case c: Z3Config =>
           c(validOpts = org.sireum.ISZ(LogikaConfigurable.z3ValidOpts.split(' ').map(org.sireum.String(_)): _*),
             satOpts = org.sireum.ISZ(LogikaConfigurable.z3SatOpts.split(' ').map(org.sireum.String(_)): _*))
@@ -621,6 +622,7 @@ object SireumClient {
         }
         msg.level match {
           case Level.InternalError =>
+            writeLog(isRequest = false, msg.text.value, full = true)
             return Some((line, ConsoleReportItem(iproject, file, Level.Error, line, column, offset, length, msg.text.value)))
           case Level.Error =>
             return Some((line, ConsoleReportItem(iproject, file, Level.Error, line, column, offset, length, msg.text.value)))
