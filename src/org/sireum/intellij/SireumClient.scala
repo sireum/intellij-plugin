@@ -367,6 +367,11 @@ object SireumClient {
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
               isBackground: Boolean, hasLogika: Boolean): Unit = {
+    def splitSpace(s: String): org.sireum.ISZ[org.sireum.String] = {
+      val s2 = s.trim
+      if (s2 == "") return org.sireum.ISZ()
+      else org.sireum.ISZ(s2.split(' ').map(org.sireum.String(_)): _*)
+    }
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
@@ -374,12 +379,12 @@ object SireumClient {
       var config = org.sireum.server.service.AnalysisService.defaultConfig(cvcRLimit = LogikaConfigurable.cvcRLimit)
       config = config(smt2Configs = for (c <- config.smt2Configs) yield c match {
         case c: CvcConfig =>
-          c(validOpts = org.sireum.ISZ(LogikaConfigurable.cvcValidOpts.split(' ').map(org.sireum.String(_)): _*),
-            satOpts = org.sireum.ISZ(LogikaConfigurable.cvcSatOpts.split(' ').map(org.sireum.String(_)): _*),
+          c(validOpts = splitSpace(LogikaConfigurable.cvcValidOpts),
+            satOpts = splitSpace(LogikaConfigurable.cvcSatOpts),
             rlimit = LogikaConfigurable.cvcRLimit)
         case c: Z3Config =>
-          c(validOpts = org.sireum.ISZ(LogikaConfigurable.z3ValidOpts.split(' ').map(org.sireum.String(_)): _*),
-            satOpts = org.sireum.ISZ(LogikaConfigurable.z3SatOpts.split(' ').map(org.sireum.String(_)): _*))
+          c(validOpts = splitSpace(LogikaConfigurable.z3ValidOpts),
+            satOpts = splitSpace(LogikaConfigurable.z3SatOpts))
       })
       val p = Util.getPath(file) match {
         case Some(path) => path
