@@ -45,7 +45,7 @@ import com.intellij.util.Consumer
 import org.sireum.$internal.MutableMarker
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.logika.State.Claim
-import org.sireum.logika.{CvcConfig, State, Z3Config}
+import org.sireum.logika.{CvcConfig, Smt2Config, State, Z3Config}
 import org.sireum.message.Level
 
 import java.awt.event.MouseEvent
@@ -364,45 +364,58 @@ object SireumClient {
     }
   }
 
-  def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
-              ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
-              isBackground: Boolean, hasLogika: Boolean): Unit = {
+  def getSmt2Configs(): org.sireum.ISZ[Smt2Config] = {
     def splitSpace(s: String): org.sireum.ISZ[org.sireum.String] = {
       val s2 = s.trim
       if (s2 == "") return org.sireum.ISZ()
       else org.sireum.ISZ(s2.split(' ').map(org.sireum.String(_)): _*)
     }
+
+    var r = org.sireum.ISZ[Smt2Config]()
+
+    def addCvc4(): Unit = {
+      r = r :+ CvcConfig("cvc", splitSpace(LogikaConfigurable.cvcValidOpts), splitSpace(LogikaConfigurable.cvcSatOpts),
+        LogikaConfigurable.cvcRLimit)
+    }
+
+    def addCvc5(): Unit = {
+      r = r :+ CvcConfig("cvc5", splitSpace(LogikaConfigurable.cvcValidOpts), splitSpace(LogikaConfigurable.cvcSatOpts),
+        LogikaConfigurable.cvcRLimit)
+    }
+
+    def addZ3(): Unit = {
+      r = r :+ Z3Config("z3", splitSpace(LogikaConfigurable.z3ValidOpts), splitSpace(LogikaConfigurable.z3SatOpts))
+    }
+
+    addCvc4()
+    addCvc5()
+    addZ3()
+    r
+  }
+
+  def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
+              ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
+              isBackground: Boolean, hasLogika: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
+
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
       import org.sireum.server.protocol._
-      var config = org.sireum.server.service.AnalysisService.defaultConfig(cvcRLimit = LogikaConfigurable.cvcRLimit)
-      config = config(smt2Configs = for (c <- config.smt2Configs) yield c match {
-        case c: CvcConfig =>
-          c(validOpts = splitSpace(LogikaConfigurable.cvcValidOpts),
-            satOpts = splitSpace(LogikaConfigurable.cvcSatOpts),
-            rlimit = LogikaConfigurable.cvcRLimit)
-        case c: Z3Config =>
-          c(validOpts = splitSpace(LogikaConfigurable.z3ValidOpts),
-            satOpts = splitSpace(LogikaConfigurable.z3SatOpts))
-      })
       val p = Util.getPath(file) match {
         case Some(path) => path
         case _ => return Vector()
       }
       Vector(
-        Logika.Verify.Config(
-          LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
-          config(
+        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
+          org.sireum.server.service.AnalysisService.defaultConfig(
+            cvcRLimit = LogikaConfigurable.cvcRLimit,
             sat = LogikaConfigurable.checkSat,
             defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout,
             useReal = LogikaConfigurable.useReal,
             fpRoundingMode = LogikaConfigurable.fpRoundingMode,
-            cvcRLimit = LogikaConfigurable.cvcRLimit,
-            caching = LogikaConfigurable.cacheSmt2
-          )
-        ),
+            caching = LogikaConfigurable.cacheSmt2,
+            smt2Configs = getSmt2Configs())),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
@@ -775,7 +788,9 @@ object SireumClient {
               case sri: SummoningReportItem =>
                 val content: Predef.String = if (sri.message.startsWith(";")) sri.message else {
                   val p = org.sireum.Os.path(sri.message)
-                  try p.read.value catch { case _: Throwable => sri.info }
+                  try p.read.value catch {
+                    case _: Throwable => sri.info
+                  }
                 }
                 f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
                 f.logika.logikaTextArea.setText(normalizeChars(content))
@@ -833,13 +848,13 @@ object SireumClient {
                   case _ =>
                 }
               }
-//              val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
-//              val offset = pos.offset.toInt
-//              val editor = FileEditorManager.getInstance(project).openTextEditor(
-//                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
-//                else new OpenFileDescriptor(project, file),
-//                true)
-//              return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
+              //              val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
+              //              val offset = pos.offset.toInt
+              //              val editor = FileEditorManager.getInstance(project).openTextEditor(
+              //                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
+              //                else new OpenFileDescriptor(project, file),
+              //                true)
+              //              return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
               return None
             case _ =>
               return None
@@ -1058,6 +1073,7 @@ object SireumClient {
               }
             }
           }
+
           def clearProgramMarkings(): Unit = {
             r match {
               case _: org.sireum.server.protocol.Analysis.Start =>
@@ -1076,12 +1092,14 @@ object SireumClient {
               case _ =>
             }
           }
+
           def clearScriptMarkings(editor: Editor): Unit = {
             r match {
               case _: org.sireum.server.protocol.Analysis.Start => clearEditorH(editor)
               case _ =>
             }
           }
+
           val (project, file, editor, input) = editorMap.synchronized {
             editorMap.get(r.id) match {
               case Some(pe) =>
