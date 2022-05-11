@@ -45,7 +45,7 @@ import com.intellij.util.Consumer
 import org.sireum.$internal.MutableMarker
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.logika.State.Claim
-import org.sireum.logika.{CvcConfig, Smt2Config, State, Z3Config}
+import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke, State}
 import org.sireum.message.Level
 
 import java.awt.event.MouseEvent
@@ -364,33 +364,12 @@ object SireumClient {
     }
   }
 
-  def getSmt2Configs(): org.sireum.ISZ[Smt2Config] = {
-    def splitSpace(s: String): org.sireum.ISZ[org.sireum.String] = {
-      val s2 = s.trim
-      if (s2 == "") return org.sireum.ISZ()
-      else org.sireum.ISZ(s2.split(' ').map(org.sireum.String(_)): _*)
-    }
-
-    var r = org.sireum.ISZ[Smt2Config]()
-
-    def addCvc4(): Unit = {
-      r = r :+ CvcConfig("cvc", splitSpace(LogikaConfigurable.cvcValidOpts), splitSpace(LogikaConfigurable.cvcSatOpts),
-        LogikaConfigurable.cvcRLimit)
-    }
-
-    def addCvc5(): Unit = {
-      r = r :+ CvcConfig("cvc5", splitSpace(LogikaConfigurable.cvcValidOpts), splitSpace(LogikaConfigurable.cvcSatOpts),
-        LogikaConfigurable.cvcRLimit)
-    }
-
-    def addZ3(): Unit = {
-      r = r :+ Z3Config("z3", splitSpace(LogikaConfigurable.z3ValidOpts), splitSpace(LogikaConfigurable.z3SatOpts))
-    }
-
-    addCvc4()
-    addCvc5()
-    addZ3()
-    r
+  def getSmt2Configs(project: Project): org.sireum.ISZ[Smt2Config] = SireumApplicationComponent.getSireumHome(project) match {
+    case Some(sireumHome) =>
+      val nameExePathMap = Smt2Invoke.nameExePathMap(sireumHome)
+      Smt2.parseConfigs(nameExePathMap, false, LogikaConfigurable.smt2ValidOpts, LogikaConfigurable.timeout).left ++
+        Smt2.parseConfigs(nameExePathMap, true, LogikaConfigurable.smt2SatOpts, LogikaConfigurable.timeout).left
+    case _ => org.sireum.ISZ()
   }
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
@@ -408,14 +387,13 @@ object SireumClient {
       Vector(
         Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
           org.sireum.server.service.AnalysisService.defaultConfig(
-            cvcRLimit = LogikaConfigurable.cvcRLimit,
             sat = LogikaConfigurable.checkSat,
             defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout,
             useReal = LogikaConfigurable.useReal,
             fpRoundingMode = LogikaConfigurable.fpRoundingMode,
-            caching = LogikaConfigurable.cacheSmt2,
-            smt2Configs = getSmt2Configs())),
+            caching = LogikaConfigurable.smt2Cache,
+            smt2Configs = getSmt2Configs(project))),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
