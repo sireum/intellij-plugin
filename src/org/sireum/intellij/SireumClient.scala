@@ -25,6 +25,7 @@
 
 package org.sireum.intellij
 
+import com.intellij.ide.plugins.PluginManager
 import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem._
 import com.intellij.openapi.application.{ApplicationManager, TransactionGuard}
@@ -32,6 +33,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.{EditorFontType, TextAttributesKey}
 import com.intellij.openapi.editor.event._
 import com.intellij.openapi.editor.markup._
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor, TextEditor}
 import com.intellij.openapi.project.{Project, ProjectManager}
 import com.intellij.openapi.ui.Messages
@@ -247,7 +249,7 @@ object SireumClient {
           }, serverArgs),
         logFile
       ))
-      writeLog(isRequest = false, s"Started sireum ${serverArgs.mkString(" ")}")
+      writeLog(isRequest = false, s"Client v${PluginManager.getPlugin(PluginId.getId("org.sireum.intellij")).getVersion}: started sireum ${serverArgs.mkString(" ")}")
       if (processInit.isEmpty) return
 
       def memory: String =
