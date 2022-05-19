@@ -369,8 +369,8 @@ object SireumClient {
   def getSmt2Configs(project: Project): org.sireum.ISZ[Smt2Config] = SireumApplicationComponent.getSireumHome(project) match {
     case Some(sireumHome) =>
       val nameExePathMap = Smt2Invoke.nameExePathMap(sireumHome)
-      Smt2.parseConfigs(nameExePathMap, false, LogikaConfigurable.smt2ValidOpts, LogikaConfigurable.timeout).left ++
-        Smt2.parseConfigs(nameExePathMap, true, LogikaConfigurable.smt2SatOpts, LogikaConfigurable.timeout).left
+      Smt2.parseConfigs(nameExePathMap, false, LogikaConfigurable.smt2ValidOpts, LogikaConfigurable.timeout, LogikaConfigurable.rlimit).left ++
+        Smt2.parseConfigs(nameExePathMap, true, LogikaConfigurable.smt2SatOpts, LogikaConfigurable.timeout, LogikaConfigurable.rlimit).left
     case _ => org.sireum.ISZ()
   }
 

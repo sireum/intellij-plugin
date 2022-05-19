@@ -413,6 +413,24 @@
           <toolTipText value="Disable SMT2 solver call parallelization"/>
         </properties>
       </component>
+      <component id="279db" class="javax.swing.JLabel" binding="rlimitLabel">
+        <constraints>
+          <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <text value="Resource Limit"/>
+        </properties>
+      </component>
+      <component id="a1bde" class="javax.swing.JTextField" binding="rlimitTextField">
+        <constraints>
+          <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+            <preferred-size width="150" height="-1"/>
+          </grid>
+        </constraints>
+        <properties>
+          <toolTipText value="SMT2 Solver Resource Limit"/>
+        </properties>
+      </component>
     </children>
   </grid>
   <buttonGroups>

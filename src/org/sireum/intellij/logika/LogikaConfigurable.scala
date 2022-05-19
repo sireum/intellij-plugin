@@ -39,6 +39,7 @@ object LogikaConfigurable {
 
   private val logikaKey = "org.sireum.logika."
   private val backgroundAnalysisKey = logikaKey + "background"
+  private val rlimitKey = logikaKey + "rlimit"
   private val timeoutKey = logikaKey + "timeout"
   private val autoEnabledKey = logikaKey + "auto"
   private val checkSatKey = logikaKey + "checkSat"
@@ -57,7 +58,8 @@ object LogikaConfigurable {
   private val smt2SeqOptsKey = logikaKey + "smt2.seq"
 
   private[intellij] var backgroundAnalysis: Boolean = true
-  private[intellij] var timeout: Int = 2000
+  private[intellij] var timeout: Int = org.sireum.logika.Smt2.validTimeoutInMs.toInt
+  private[intellij] var rlimit: Int = org.sireum.logika.Smt2.rlimit.toInt
   private[intellij] var autoEnabled: Boolean = true
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
@@ -80,6 +82,7 @@ object LogikaConfigurable {
     val pc = PropertiesComponent.getInstance
     backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
     timeout = pc.getInt(timeoutKey, timeout)
+    rlimit = pc.getInt(rlimitKey, rlimit)
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
@@ -95,13 +98,20 @@ object LogikaConfigurable {
     methodContract = pc.getBoolean(methodContractKey, methodContract)
     useReal = pc.getBoolean(useRealKey, useReal)
     fpRoundingMode = pc.getValue(fpRoundingModeKey, fpRoundingMode)
-    //smt2ValidOpts = pc.getValue(smt2ValidOptsKey, smt2ValidOpts)
-    //smt2SatOpts = pc.getValue(smt2SatOptsKey, smt2SatOpts)
+    val smt2ValidOpts: String = pc.getValue(smt2ValidOptsKey, this.smt2ValidOpts)
+    val smt2SatOpts: String = pc.getValue(smt2SatOptsKey, this.smt2SatOpts)
+    if (!smt2ValidOpts.contains("--rlimit")) {
+      this.smt2ValidOpts = smt2ValidOpts
+    }
+    if (!smt2SatOpts.contains("--rlimit")) {
+      this.smt2SatOpts = smt2SatOpts
+    }
   }
 
   def saveConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
     pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
+    pc.setValue(rlimitKey, rlimit.toString)
     pc.setValue(timeoutKey, timeout.toString)
     pc.setValue(autoEnabledKey, autoEnabled.toString)
     pc.setValue(checkSatKey, checkSat.toString)
@@ -122,10 +132,10 @@ object LogikaConfigurable {
     pc.setValue(smt2SatOptsKey, smt2SatOpts)
   }
 
-  def parseGe200(text: String): Option[Int] =
+  def parseGe(text: String, min: Int): Option[Int] =
     try {
       val n = text.toInt
-      if (n < 200) None else Some(n)
+      if (n < min) None else Some(n)
     } catch {
       case _: Throwable => None
     }
@@ -159,6 +169,7 @@ import LogikaConfigurable._
 
 final class LogikaConfigurable extends LogikaForm with Configurable {
 
+  private var validRLimit: Boolean = true
   private var validTimeout: Boolean = true
   //private var validLoopBound: Boolean = true
   //private var validRecursionBound: Boolean = true
@@ -171,7 +182,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def getHelpTopic: String = null
 
   override def isModified: Boolean =
-    validTimeout && validSmt2ValidOpts && validSmt2SatOpts &&
+    validTimeout && validRLimit && validSmt2ValidOpts && validSmt2SatOpts &&
       (backgroundCheckBox.isSelected != backgroundAnalysis ||
         timeoutTextField.getText != timeout.toString ||
         autoCheckBox.isSelected != autoEnabled ||
@@ -223,12 +234,20 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     //devPanel.setVisible(false)
     //unrollingSymExeRadioButton.setEnabled(false)
 
-    def updateTimeout() = {
+    def updateRLimit(): Unit = {
+      val text = rlimitTextField.getText
+      validRLimit = parseGe(text, 0).nonEmpty
+      rlimitLabel.setForeground(if (validRLimit) fgColor else JBColor.red)
+      rlimitTextField.setToolTipText(if (validRLimit) "OK" else "Must be at least 0.")
+    }
+
+    def updateTimeout(): Unit = {
       val text = timeoutTextField.getText
-      validTimeout = parseGe200(text).nonEmpty
+      validTimeout = parseGe(text, 200).nonEmpty
       timeoutLabel.setForeground(if (validTimeout) fgColor else JBColor.red)
       timeoutTextField.setToolTipText(if (validTimeout) "OK" else "Must be at least 200.")
     }
+
 //    def updateLoopBound() = {
 //      val text = loopBoundTextField.getText
 //      validLoopBound = parsePosInteger(text).nonEmpty
@@ -241,7 +260,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //      recursionBoundLabel.setForeground(if (validRecursionBound) fgColor else JBColor.red)
 //      recursionBoundTextField.setToolTipText(if (validRecursionBound) "OK" else "Must be at least 1.")
 //    }
-    def updateSymExe() = {
+    def updateSymExe(): Unit = {
 //      val isUnrolling = unrollingSymExeRadioButton.isSelected
       val isSymExe = true // symExeRadioButton.isSelected || isUnrolling
       bitsLabel.setEnabled(isSymExe)
@@ -258,11 +277,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //      recursionBoundTextField.setEnabled(isUnrolling)
       //methodContractCheckBox.setEnabled(isUnrolling)
     }
-    def updateHintUnicode() = {
+    def updateHintUnicode(): Unit = {
       hintUnicodeCheckBox.setEnabled(hintCheckBox.isSelected)
     }
 
-    def updateFPRoundingMode() = {
+    def updateFPRoundingMode(): Unit = {
       val enabled = !useRealCheckBox.isSelected
       fpRNERadioButton.setEnabled(enabled)
       fpRNARadioButton.setEnabled(enabled)
@@ -276,16 +295,16 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       org.sireum.String("cvc5") -> org.sireum.String("cvc5"),
       org.sireum.String("z3") -> org.sireum.String("z3")    )
 
-    def updateSmt2ValidOpts() = {
+    def updateSmt2ValidOpts(): Unit = {
       val text = smt2ValidConfigsTextArea.getText
-      validSmt2ValidOpts = Smt2.parseConfigs(nameExePathMap, false, text, timeout).isLeft
+      validSmt2ValidOpts = Smt2.parseConfigs(nameExePathMap, false, text, timeout, rlimit).isLeft
       smt2ValidConfigsLabel.setForeground(if (validSmt2ValidOpts) fgColor else JBColor.red)
       smt2ValidConfigsTextArea.setToolTipText(if (validSmt2ValidOpts) "OK" else "Invalid configurations")
     }
 
-    def updateSmt2SatOpts() = {
+    def updateSmt2SatOpts(): Unit = {
       val text = smt2SatConfigsTextArea.getText
-      validSmt2SatOpts = Smt2.parseConfigs(nameExePathMap, true, text, timeout).isLeft
+      validSmt2SatOpts = Smt2.parseConfigs(nameExePathMap, true, text, timeout, rlimit).isLeft
       smt2SatConfigsLabel.setForeground(if (validSmt2SatOpts) fgColor else JBColor.red)
       smt2SatConfigsTextArea.setToolTipText(if (validSmt2SatOpts) "OK" else "Invalid configurations")
     }
@@ -295,6 +314,14 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     reset()
 
     fgColor = logoLabel.getForeground
+
+    rlimitTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateRLimit()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateRLimit()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateRLimit()
+    })
 
     timeoutTextField.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = updateTimeout()
@@ -353,7 +380,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
   override def apply(): Unit = {
     backgroundAnalysis = backgroundCheckBox.isSelected
-    timeout = parseGe200(timeoutTextField.getText).getOrElse(timeout)
+    rlimit = parseGe(rlimitTextField.getText, 0).getOrElse(rlimit)
+    timeout = parseGe(timeoutTextField.getText, 200).getOrElse(timeout)
     autoEnabled = autoCheckBox.isSelected
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
@@ -376,6 +404,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
   override def reset(): Unit = {
     backgroundCheckBox.setSelected(backgroundAnalysis)
+    rlimitTextField.setText(rlimit.toString)
     timeoutTextField.setText(timeout.toString)
     autoCheckBox.setSelected(autoEnabled)
     checkSatCheckBox.setSelected(checkSat)
