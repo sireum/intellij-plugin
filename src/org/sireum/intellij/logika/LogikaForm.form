@@ -419,6 +419,7 @@
         </constraints>
         <properties>
           <text value="Resource Limit"/>
+          <toolTipText value="Resource limit for SMT2 solvers (&gt;=0)"/>
         </properties>
       </component>
       <component id="a1bde" class="javax.swing.JTextField" binding="rlimitTextField">
