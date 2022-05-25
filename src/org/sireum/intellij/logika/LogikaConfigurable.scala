@@ -78,6 +78,8 @@ object LogikaConfigurable {
   private[intellij] var smt2Cache: Boolean = true
   private[intellij] var smt2Seq: Boolean = false
 
+  val smt2Solvers: Set[String] = Set("cvc4", "cvc5", "z3", "alt-ergo")
+
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
     backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
@@ -149,7 +151,14 @@ object LogikaConfigurable {
     }
 
   def parseSmt2Opts(text: String): Option[String] = {
-    if ("" != text) for (e <- text.split(' ') if !e.startsWith("-")) return None
+    if ("" != text.trim) {
+      for (e <- text.split(';').map(_.trim)) {
+        e.split(',').map(_.trim) match {
+          case Array(solver, _*) if smt2Solvers.contains(solver) =>
+          case _ => return None
+        }
+      }
+    }
     return Some(text)
   }
 
