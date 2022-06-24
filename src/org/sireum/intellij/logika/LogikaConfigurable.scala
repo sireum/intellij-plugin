@@ -193,6 +193,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def isModified: Boolean =
     validTimeout && validRLimit && validSmt2ValidOpts && validSmt2SatOpts &&
       (backgroundCheckBox.isSelected != backgroundAnalysis ||
+        rlimitTextField.getText != rlimit.toString ||
         timeoutTextField.getText != timeout.toString ||
         autoCheckBox.isSelected != autoEnabled ||
         checkSatCheckBox.isSelected != checkSat ||
