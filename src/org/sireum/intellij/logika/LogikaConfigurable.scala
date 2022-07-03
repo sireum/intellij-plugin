@@ -429,7 +429,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     inscribeSummoningsCheckBox.setSelected(inscribeSummonings)
     smt2CacheCheckBox.setSelected(smt2Cache)
     smt2SeqCheckBox.setSelected(smt2Seq)
-    smt2SeqCheckBox.setSelected(smt2Simplify)
+    smt2SimplifyCheckBox.setSelected(smt2Simplify)
     /* TODO
     checkerKind match {
       case CheckerKind.Forward => forwardRadioButton.setSelected(true)
