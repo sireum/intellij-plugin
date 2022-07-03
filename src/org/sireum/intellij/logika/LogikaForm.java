@@ -69,4 +69,5 @@ public abstract class LogikaForm {
     protected JCheckBox smt2SeqCheckBox;
     protected JLabel rlimitLabel;
     protected JTextField rlimitTextField;
+    protected JCheckBox smt2SimplifyCheckBox;
 }

@@ -395,6 +395,7 @@ object SireumClient {
             useReal = LogikaConfigurable.useReal,
             fpRoundingMode = LogikaConfigurable.fpRoundingMode,
             caching = LogikaConfigurable.smt2Cache,
+            simplifiedQuery = LogikaConfigurable.smt2Simplify,
             smt2Configs = getSmt2Configs(project))),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(

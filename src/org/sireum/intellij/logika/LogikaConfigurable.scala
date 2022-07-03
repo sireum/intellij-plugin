@@ -56,6 +56,7 @@ object LogikaConfigurable {
   private val smt2SatOptsKey = logikaKey + "smt2.sopts"
   private val smt2CacheOptsKey = logikaKey + "smt2.caching"
   private val smt2SeqOptsKey = logikaKey + "smt2.seq"
+  private val smt2SimplifyKey = logikaKey + "smt2.simplify"
 
   private[intellij] var backgroundAnalysis: Boolean = true
   private[intellij] var timeout: Int = org.sireum.logika.Smt2.validTimeoutInMs.toInt
@@ -77,6 +78,7 @@ object LogikaConfigurable {
   private[intellij] var smt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
   private[intellij] var smt2Cache: Boolean = true
   private[intellij] var smt2Seq: Boolean = false
+  private[intellij] var smt2Simplify: Boolean = false
 
   val smt2Solvers: Set[String] = Set("cvc4", "cvc5", "z3", "alt-ergo")
 
@@ -92,6 +94,7 @@ object LogikaConfigurable {
     inscribeSummonings = pc.getBoolean(inscribeSummoningsKey, inscribeSummonings)
     smt2Cache = pc.getBoolean(smt2CacheOptsKey, smt2Cache)
     smt2Seq = pc.getBoolean(smt2SeqOptsKey, smt2Seq)
+    smt2Simplify = pc.getBoolean(smt2SimplifyKey, smt2Simplify)
     // TODO
     //checkerKind = pc.getValue(checkerKindKey, checkerKind)
     bitWidth = pc.getInt(bitWidthKey, bitWidth)
@@ -122,6 +125,7 @@ object LogikaConfigurable {
     pc.setValue(inscribeSummoningsKey, inscribeSummonings.toString)
     pc.setValue(smt2CacheOptsKey, smt2Cache.toString)
     pc.setValue(smt2SeqOptsKey, smt2Seq.toString)
+    pc.setValue(smt2SimplifyKey, smt2Simplify.toString)
     // TODO
     //pc.setValue(checkerKindKey, checkerKind)
     pc.setValue(bitWidthKey, bitWidth.toString)
@@ -202,6 +206,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
         smt2CacheCheckBox.isSelected != smt2Cache ||
         smt2SeqCheckBox.isSelected != smt2Seq ||
+        smt2SimplifyCheckBox.isSelected != smt2Simplify ||
         // TODO
         //selectedKind != checkerKind ||
         selectedBitWidth != bitWidth ||
@@ -399,6 +404,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     inscribeSummonings = inscribeSummoningsCheckBox.isSelected
     smt2Cache = smt2CacheCheckBox.isSelected
     smt2Seq = smt2SeqCheckBox.isSelected
+    smt2Simplify = smt2SimplifyCheckBox.isSelected
     // TODO
     //checkerKind = selectedKind
     bitWidth = selectedBitWidth
@@ -423,6 +429,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     inscribeSummoningsCheckBox.setSelected(inscribeSummonings)
     smt2CacheCheckBox.setSelected(smt2Cache)
     smt2SeqCheckBox.setSelected(smt2Seq)
+    smt2SeqCheckBox.setSelected(smt2Simplify)
     /* TODO
     checkerKind match {
       case CheckerKind.Forward => forwardRadioButton.setSelected(true)
