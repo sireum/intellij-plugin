@@ -806,6 +806,12 @@ object SireumClient {
     else text
   }
 
+  def addLineHighlighter(mm: MarkupModel, line: Int, layer: Int): RangeHighlighter = {
+    val max = mm.getDocument.getLineCount
+    val l = if (line < 0) 0 else if (line >= max) max - 1 else line
+    mm.addLineHighlighter(l, layer, null)
+  }
+
   def processResult(r: org.sireum.server.protocol.Response): Unit = {
     def getProjectFileEditorInput(pe: (Project, VirtualFile, Editor, String)): Option[(Project, VirtualFile, Editor, String)] = {
       r.posOpt match {
@@ -881,7 +887,7 @@ object SireumClient {
       }
       val attr = new TextAttributes(null, null, color, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
       val end = scala.math.min(ci.offset + ci.length, editor.getDocument.getTextLength)
-      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+      val rhLine = addLineHighlighter(mm,line - 1, layer)
       rhLine.putUserData(reportItemKey, ci)
       rhLine.setThinErrorStripeMark(false)
       rhLine.setErrorStripeMarkColor(color)
@@ -936,7 +942,7 @@ object SireumClient {
           l
       }
       hintListModel.addElement(ri)
-      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+      val rhLine = addLineHighlighter(mm,line - 1, layer)
       rhLine.putUserData(reportItemKey, ri)
       rhLine.setThinErrorStripeMark(false)
       val (title, icon) = ri.kindOpt match {
@@ -987,7 +993,7 @@ object SireumClient {
           l
       }
       summoningListModel.addElement(ri)
-      val rhLine = mm.addLineHighlighter(line - 1, layer, null)
+      val rhLine = addLineHighlighter(mm, line - 1, layer)
       rhLine.putUserData(reportItemKey, ri)
       rhLine.setThinErrorStripeMark(false)
       rhLine.setGutterIconRenderer(gutterIconRenderer("Click to show scribed incantations",
