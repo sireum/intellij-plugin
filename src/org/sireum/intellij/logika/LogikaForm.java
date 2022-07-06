@@ -70,4 +70,6 @@ public abstract class LogikaForm {
     protected JLabel rlimitLabel;
     protected JTextField rlimitTextField;
     protected JCheckBox smt2SimplifyCheckBox;
+    protected JLabel defaultSmt2ValidConfigsLabel;
+    protected JLabel defaultSmt2SatConfigsLabel;
 }

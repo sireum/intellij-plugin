@@ -25,14 +25,18 @@
 
 package org.sireum.intellij.logika
 
-import java.awt.Color
+import java.awt.{Color, Cursor}
 import javax.swing.JComponent
-import javax.swing.event.{DocumentEvent, DocumentListener}
+import javax.swing.event.{DocumentEvent, DocumentListener, HyperlinkEvent}
 import com.intellij.ide.util.PropertiesComponent
+import com.intellij.notification.{Notification, NotificationListener, NotificationType}
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.util.{IconLoader, SystemInfo}
 import com.intellij.ui.JBColor
+import org.sireum.intellij.{SireumClient, Util}
 import org.sireum.logika.Smt2
+
+import java.awt.event.{MouseEvent, MouseListener}
 
 object LogikaConfigurable {
   private val logo = IconLoader.getIcon("/icon/logika-logo.png")
@@ -57,6 +61,10 @@ object LogikaConfigurable {
   private val smt2CacheOptsKey = logikaKey + "smt2.caching"
   private val smt2SeqOptsKey = logikaKey + "smt2.seq"
   private val smt2SimplifyKey = logikaKey + "smt2.simplify"
+  private val smt2DefaultConfigsKey = logikaKey + "smt2.default"
+
+  private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
+  private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
 
   private[intellij] var backgroundAnalysis: Boolean = true
   private[intellij] var timeout: Int = org.sireum.logika.Smt2.validTimeoutInMs.toInt
@@ -74,13 +82,11 @@ object LogikaConfigurable {
   private[intellij] var methodContract: Boolean = true
   private[intellij] var useReal: Boolean = false
   private[intellij] var fpRoundingMode: String = "RNE"
-  private[intellij] var smt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
-  private[intellij] var smt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
+  private[intellij] var smt2ValidOpts: String = defaultSmt2ValidOpts
+  private[intellij] var smt2SatOpts: String = defaultSmt2SatOpts
   private[intellij] var smt2Cache: Boolean = true
   private[intellij] var smt2Seq: Boolean = false
   private[intellij] var smt2Simplify: Boolean = false
-
-  val smt2Solvers: Set[String] = Set("cvc4", "cvc5", "z3", "alt-ergo")
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -95,6 +101,22 @@ object LogikaConfigurable {
     smt2Cache = pc.getBoolean(smt2CacheOptsKey, smt2Cache)
     smt2Seq = pc.getBoolean(smt2SeqOptsKey, smt2Seq)
     smt2Simplify = pc.getBoolean(smt2SimplifyKey, smt2Simplify)
+    val defaultOpts = defaultSmt2ValidOpts + ";" + defaultSmt2SatOpts
+    if (defaultOpts != pc.getValue(smt2DefaultConfigsKey)) {
+      Util.notify(new Notification(SireumClient.groupId, "Update Logika SMT2 default configurations?",
+        """<p>Logika SMT2 default configurations have changed. <a href="">Update</a>?</p>""",
+        NotificationType.INFORMATION, new NotificationListener.Adapter {
+          override def hyperlinkActivated(notification: Notification, hyperlinkEvent: HyperlinkEvent): Unit = {
+            LogikaConfigurable.smt2ValidOpts = defaultSmt2ValidOpts
+            LogikaConfigurable.smt2SatOpts = defaultSmt2SatOpts
+            notification.hideBalloon()
+            Util.notify(new Notification(SireumClient.groupId, "Logika SMT2 Configurations",
+              "The configurations have been successfully updated",
+              NotificationType.INFORMATION, null), null, shouldExpire = true)
+          }
+        }), null, scala.None)
+      pc.setValue(smt2DefaultConfigsKey, defaultOpts)
+    }
     // TODO
     //checkerKind = pc.getValue(checkerKindKey, checkerKind)
     bitWidth = pc.getInt(bitWidthKey, bitWidth)
@@ -103,13 +125,13 @@ object LogikaConfigurable {
     methodContract = pc.getBoolean(methodContractKey, methodContract)
     useReal = pc.getBoolean(useRealKey, useReal)
     fpRoundingMode = pc.getValue(fpRoundingModeKey, fpRoundingMode)
-    val smt2ValidOpts: String = pc.getValue(smt2ValidOptsKey, this.smt2ValidOpts)
-    val smt2SatOpts: String = pc.getValue(smt2SatOptsKey, this.smt2SatOpts)
+    val smt2ValidOpts: String = pc.getValue(smt2ValidOptsKey, LogikaConfigurable.smt2ValidOpts)
+    val smt2SatOpts: String = pc.getValue(smt2SatOptsKey, LogikaConfigurable.smt2SatOpts)
     if (!smt2ValidOpts.contains("--rlimit")) {
-      this.smt2ValidOpts = smt2ValidOpts
+      LogikaConfigurable.smt2ValidOpts = smt2ValidOpts
     }
     if (!smt2SatOpts.contains("--rlimit")) {
-      this.smt2SatOpts = smt2SatOpts
+      LogikaConfigurable.smt2SatOpts = smt2SatOpts
     }
   }
 
@@ -158,7 +180,7 @@ object LogikaConfigurable {
     if ("" != text.trim) {
       for (e <- text.split(';').map(_.trim)) {
         e.split(',').map(_.trim) match {
-          case Array(solver, _*) if smt2Solvers.contains(solver) =>
+          case Array(solver, _*) if Smt2.solverArgsMap.contains(solver) =>
           case _ => return None
         }
       }
@@ -383,6 +405,34 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     hintCheckBox.addChangeListener(_ => updateHintUnicode())
 
     useRealCheckBox.addChangeListener(_ => updateFPRoundingMode())
+
+    defaultSmt2ValidConfigsLabel.addMouseListener(new MouseListener {
+      override def mouseClicked(mouseEvent: MouseEvent): Unit = {
+        smt2ValidConfigsTextArea.setText(defaultSmt2ValidOpts)
+      }
+      override def mousePressed(mouseEvent: MouseEvent): Unit = {}
+      override def mouseReleased(mouseEvent: MouseEvent): Unit = {}
+      override def mouseEntered(mouseEvent: MouseEvent): Unit = {
+        defaultSmt2ValidConfigsLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+      }
+      override def mouseExited(mouseEvent: MouseEvent): Unit = {
+        defaultSmt2ValidConfigsLabel.setCursor(Cursor.getDefaultCursor)
+      }
+    })
+
+    defaultSmt2SatConfigsLabel.addMouseListener(new MouseListener {
+      override def mouseClicked(mouseEvent: MouseEvent): Unit = {
+        smt2SatConfigsTextArea.setText(defaultSmt2SatOpts)
+      }
+      override def mousePressed(mouseEvent: MouseEvent): Unit = {}
+      override def mouseReleased(mouseEvent: MouseEvent): Unit = {}
+      override def mouseEntered(mouseEvent: MouseEvent): Unit = {
+        defaultSmt2SatConfigsLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+      }
+      override def mouseExited(mouseEvent: MouseEvent): Unit = {
+        defaultSmt2SatConfigsLabel.setCursor(Cursor.getDefaultCursor)
+      }
+    })
 
     updateSymExe()
     updateHintUnicode()
