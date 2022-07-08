@@ -68,7 +68,7 @@ object LogikaConfigurable {
 
   private[intellij] var backgroundAnalysis: Boolean = true
   private[intellij] var timeout: Int = org.sireum.logika.Smt2.validTimeoutInMs.toInt
-  private[intellij] var rlimit: Int = org.sireum.logika.Smt2.rlimit.toInt
+  private[intellij] var rlimit: Long = org.sireum.logika.Smt2.rlimit.toInt
   private[intellij] var autoEnabled: Boolean = true
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
@@ -92,7 +92,7 @@ object LogikaConfigurable {
     val pc = PropertiesComponent.getInstance
     backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
     timeout = pc.getInt(timeoutKey, timeout)
-    rlimit = pc.getInt(rlimitKey, rlimit)
+    rlimit = pc.getLong(rlimitKey, rlimit)
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
@@ -101,7 +101,7 @@ object LogikaConfigurable {
     smt2Cache = pc.getBoolean(smt2CacheOptsKey, smt2Cache)
     smt2Seq = pc.getBoolean(smt2SeqOptsKey, smt2Seq)
     smt2Simplify = pc.getBoolean(smt2SimplifyKey, smt2Simplify)
-    val defaultOpts = defaultSmt2ValidOpts + ";" + defaultSmt2SatOpts
+    val defaultOpts = defaultSmt2ValidOpts + ";" + defaultSmt2SatOpts + ";" + Smt2.validTimeoutInMs + ";" + Smt2.rlimit
     if (defaultOpts != pc.getValue(smt2DefaultConfigsKey)) {
       Util.notify(new Notification(SireumClient.groupId, "Update Logika SMT2 default configurations?",
         """<p>Logika SMT2 default configurations have changed. <a href="">Update</a>?</p>""",
@@ -109,6 +109,8 @@ object LogikaConfigurable {
           override def hyperlinkActivated(notification: Notification, hyperlinkEvent: HyperlinkEvent): Unit = {
             LogikaConfigurable.smt2ValidOpts = defaultSmt2ValidOpts
             LogikaConfigurable.smt2SatOpts = defaultSmt2SatOpts
+            LogikaConfigurable.timeout = Smt2.validTimeoutInMs.toInt
+            LogikaConfigurable.rlimit = Smt2.rlimit.toLong
             notification.hideBalloon()
             Util.notify(new Notification(SireumClient.groupId, "Logika SMT2 Configurations",
               "The configurations have been successfully updated",
@@ -160,9 +162,9 @@ object LogikaConfigurable {
     pc.setValue(smt2SatOptsKey, smt2SatOpts)
   }
 
-  def parseGe(text: String, min: Int): Option[Int] =
+  def parseGe(text: String, min: Long): Option[Long] =
     try {
-      val n = text.toInt
+      val n = text.toLong
       if (n < min) None else Some(n)
     } catch {
       case _: Throwable => None
@@ -328,9 +330,12 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     }
 
     val nameExePathMap = org.sireum.HashMap.empty[org.sireum.String, org.sireum.String] ++ org.sireum.ISZ(
+      org.sireum.String("alt-ergo-open") -> org.sireum.String("alt-ergo"),
+      org.sireum.String("alt-ergo") -> org.sireum.String("alt-ergo"),
       org.sireum.String("cvc4") -> org.sireum.String("cvc4"),
       org.sireum.String("cvc5") -> org.sireum.String("cvc5"),
-      org.sireum.String("z3") -> org.sireum.String("z3")    )
+      org.sireum.String("z3") -> org.sireum.String("z3")
+    )
 
     def updateSmt2ValidOpts(): Unit = {
       val text = smt2ValidConfigsTextArea.getText
@@ -446,7 +451,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def apply(): Unit = {
     backgroundAnalysis = backgroundCheckBox.isSelected
     rlimit = parseGe(rlimitTextField.getText, 0).getOrElse(rlimit)
-    timeout = parseGe(timeoutTextField.getText, 200).getOrElse(timeout)
+    timeout = parseGe(timeoutTextField.getText, 200).getOrElse(timeout.toLong).toInt
     autoEnabled = autoCheckBox.isSelected
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
