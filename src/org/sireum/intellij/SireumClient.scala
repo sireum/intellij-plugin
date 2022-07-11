@@ -389,6 +389,7 @@ object SireumClient {
       Vector(
         Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
           org.sireum.server.service.AnalysisService.defaultConfig(
+            parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             sat = LogikaConfigurable.checkSat,
             defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout,
@@ -396,14 +397,16 @@ object SireumClient {
             fpRoundingMode = LogikaConfigurable.fpRoundingMode,
             caching = LogikaConfigurable.smt2Cache,
             simplifiedQuery = LogikaConfigurable.smt2Simplify,
-            smt2Configs = getSmt2Configs(project))),
+            smt2Configs = getSmt2Configs(project),
+            branchPar = LogikaConfigurable.branchPar,
+            branchParCores = LogikaConfigurable.branchParCores
+          )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
             logikaEnabled = !isBackground ||
               (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis),
             id = requestId,
-            par = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
             content = input,
             line = line
@@ -428,7 +431,6 @@ object SireumClient {
           Slang.Check.Project(
             isBackground = isBackground,
             id = requestId,
-            par = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             proyek = org.sireum.Os.path(project.getBasePath).string,
             files = files,
             vfiles = vfiles,
@@ -648,28 +650,15 @@ object SireumClient {
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
         val header = {
-          var labels = org.sireum.ISZ[String]()
-          val transformer = new org.sireum.logika.MStateTransformer {
-            private var _owner: Boolean = false
-
-            override def string: String = "MTransformer"
-
-            override def $owned: Boolean = _owner
-
-            override def $owned_=(b: Boolean): MutableMarker = {
-              _owner = b;
-              this
-            }
-
-            override def $clone: MutableMarker = halt("Infeasible")
-
-            override def postStateClaimLabel(o: Claim.Label): MOption[State.Claim] = {
-              labels = labels :+ o.label.value
-              return org.sireum.logika.MStateTransformer.PostResultStateClaimLabel
+          var labels = org.sireum.ISZ[String](if (r.state.status) s"Pre-state at line $line" else s"Post-state at line $line")
+          var found = F
+          for (claim <- r.state.claims if !found) {
+            claim match {
+              case claim: State.Claim.Label => labels = labels :+ claim.label; found = T
+              case _ =>
             }
           }
-          transformer.transformState(r.state)
-          labels.elements.mkString(" / ")
+          labels.elements.reverse.mkString(" / ")
         }
         return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text)))
       case r: Logika.Verify.Info =>

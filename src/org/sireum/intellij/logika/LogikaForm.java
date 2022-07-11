@@ -72,4 +72,11 @@ public abstract class LogikaForm {
     protected JCheckBox smt2SimplifyCheckBox;
     protected JLabel defaultSmt2ValidConfigsLabel;
     protected JLabel defaultSmt2SatConfigsLabel;
+    protected JPanel branchParPanel;
+    protected JRadioButton branchParDisabledRadioButton;
+    protected JLabel branchParLabel;
+    protected JRadioButton branchParReturnsRadioButton;
+    protected JRadioButton branchParAllRadioButton;
+    protected JLabel branchParCoresLabel;
+    protected JSpinner branchParCoresSpinner;
 }

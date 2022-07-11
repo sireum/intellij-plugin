@@ -26,14 +26,14 @@
 package org.sireum.intellij.logika
 
 import java.awt.{Color, Cursor}
-import javax.swing.JComponent
+import javax.swing.{JComponent, SpinnerNumberModel}
 import javax.swing.event.{DocumentEvent, DocumentListener, HyperlinkEvent}
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.notification.{Notification, NotificationListener, NotificationType}
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.util.{IconLoader, SystemInfo}
 import com.intellij.ui.JBColor
-import org.sireum.intellij.{SireumClient, Util}
+import org.sireum.intellij.{SireumApplicationComponent, SireumClient, Util}
 import org.sireum.logika.Smt2
 
 import java.awt.event.{MouseEvent, MouseListener}
@@ -62,6 +62,8 @@ object LogikaConfigurable {
   private val smt2SeqOptsKey = logikaKey + "smt2.seq"
   private val smt2SimplifyKey = logikaKey + "smt2.simplify"
   private val smt2DefaultConfigsKey = logikaKey + "smt2.default"
+  private val branchParKey = logikaKey + "branchPar"
+  private val branchParCoresKey = logikaKey + "branchParCores"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -74,8 +76,6 @@ object LogikaConfigurable {
   private[intellij] var hint: Boolean = true
   private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
   private[intellij] var inscribeSummonings: Boolean = true
-  // TODO
-  //private[intellij] var checkerKind = CheckerKind.Forward
   private[intellij] var bitWidth: Int = 0
   private[intellij] var loopBound: Int = 3
   private[intellij] var recursionBound: Int = 1
@@ -87,6 +87,8 @@ object LogikaConfigurable {
   private[intellij] var smt2Cache: Boolean = true
   private[intellij] var smt2Seq: Boolean = false
   private[intellij] var smt2Simplify: Boolean = false
+  private[intellij] var branchPar: org.sireum.logika.Config.BranchPar.Type = org.sireum.logika.Config.BranchPar.All
+  private[intellij] var branchParCores: Int = Runtime.getRuntime.availableProcessors
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -119,22 +121,16 @@ object LogikaConfigurable {
         }), null, scala.None)
       pc.setValue(smt2DefaultConfigsKey, defaultOpts)
     }
-    // TODO
-    //checkerKind = pc.getValue(checkerKindKey, checkerKind)
     bitWidth = pc.getInt(bitWidthKey, bitWidth)
     loopBound = pc.getInt(loopBoundKey, loopBound)
     recursionBound = pc.getInt(recursionBoundKey, recursionBound)
     methodContract = pc.getBoolean(methodContractKey, methodContract)
     useReal = pc.getBoolean(useRealKey, useReal)
     fpRoundingMode = pc.getValue(fpRoundingModeKey, fpRoundingMode)
-    val smt2ValidOpts: String = pc.getValue(smt2ValidOptsKey, LogikaConfigurable.smt2ValidOpts)
-    val smt2SatOpts: String = pc.getValue(smt2SatOptsKey, LogikaConfigurable.smt2SatOpts)
-    if (!smt2ValidOpts.contains("--rlimit")) {
-      LogikaConfigurable.smt2ValidOpts = smt2ValidOpts
-    }
-    if (!smt2SatOpts.contains("--rlimit")) {
-      LogikaConfigurable.smt2SatOpts = smt2SatOpts
-    }
+    smt2ValidOpts = pc.getValue(smt2ValidOptsKey, smt2ValidOpts)
+    smt2SatOpts = pc.getValue(smt2SatOptsKey, smt2SatOpts)
+    branchPar = org.sireum.logika.Config.BranchPar.byOrdinal(pc.getInt(branchParKey, branchPar.ordinal.toInt)).get
+    branchParCores = pc.getInt(branchParCoresKey, branchParCores)
   }
 
   def saveConfiguration(): Unit = {
@@ -150,8 +146,6 @@ object LogikaConfigurable {
     pc.setValue(smt2CacheOptsKey, smt2Cache.toString)
     pc.setValue(smt2SeqOptsKey, smt2Seq.toString)
     pc.setValue(smt2SimplifyKey, smt2Simplify.toString)
-    // TODO
-    //pc.setValue(checkerKindKey, checkerKind)
     pc.setValue(bitWidthKey, bitWidth.toString)
     pc.setValue(loopBoundKey, loopBound.toString)
     pc.setValue(recursionBoundKey, recursionBound.toString)
@@ -160,6 +154,8 @@ object LogikaConfigurable {
     pc.setValue(fpRoundingModeKey, fpRoundingMode)
     pc.setValue(smt2ValidOptsKey, smt2ValidOpts)
     pc.setValue(smt2SatOptsKey, smt2SatOpts)
+    pc.setValue(branchParKey, branchPar.ordinal.toString)
+    pc.setValue(branchParCoresKey, branchParCores.toString)
   }
 
   def parseGe(text: String, min: Long): Option[Long] =
@@ -231,8 +227,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         smt2CacheCheckBox.isSelected != smt2Cache ||
         smt2SeqCheckBox.isSelected != smt2Seq ||
         smt2SimplifyCheckBox.isSelected != smt2Simplify ||
-        // TODO
-        //selectedKind != checkerKind ||
         selectedBitWidth != bitWidth ||
         //loopBoundTextField.getText != loopBound.toString ||
         //recursionBoundTextField.getText != recursionBound.toString ||
@@ -240,17 +234,9 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         useRealCheckBox.isSelected != useReal ||
         selectedFPRoundingMode != fpRoundingMode ||
         smt2ValidConfigsTextArea.getText != smt2ValidOpts ||
-        smt2SatConfigsTextArea.getText != smt2SatOpts)
-
-  /* TODO
-  private def selectedKind: CheckerKind.Value =
-    if (forwardRadioButton.isSelected) CheckerKind.Forward
-    else if (backwardRadioButton.isSelected) CheckerKind.Backward
-    else if (symExeRadioButton.isSelected) CheckerKind.SummarizingSymExe
-    else if (unrollingSymExeRadioButton.isSelected) CheckerKind.UnrollingSymExe
-    else sys.error("Unexpected checker kind.")
-
-   */
+        smt2SatConfigsTextArea.getText != smt2SatOpts ||
+        selectedBranchPar != branchPar ||
+        branchParCoresSpinner.getValue.asInstanceOf[Int] != branchParCores)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -268,6 +254,13 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     else if (bits32RadioButton.isSelected) 32
     else if (bits64RadioButton.isSelected) 64
     else sys.error("Unexpected bit width.")
+
+  private def selectedBranchPar: org.sireum.logika.Config.BranchPar.Type = {
+    if (branchParDisabledRadioButton.isSelected) org.sireum.logika.Config.BranchPar.Disabled
+    else if (branchParReturnsRadioButton.isSelected) org.sireum.logika.Config.BranchPar.OnlyAllReturns
+    else if (branchParAllRadioButton.isSelected) org.sireum.logika.Config.BranchPar.All
+    else sys.error("Unexpected branch par")
+  }
 
   override def createComponent(): JComponent = {
     //devPanel.setVisible(false)
@@ -349,6 +342,12 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       validSmt2SatOpts = Smt2.parseConfigs(nameExePathMap, true, text, timeout, rlimit).isLeft
       smt2SatConfigsLabel.setForeground(if (validSmt2SatOpts) fgColor else JBColor.red)
       smt2SatConfigsTextArea.setToolTipText(if (validSmt2SatOpts) "OK" else "Invalid configurations")
+    }
+
+    def updateBranchPar(): Unit = {
+      val enabled = !branchParDisabledRadioButton.isSelected
+      branchParCoresLabel.setEnabled(enabled)
+      branchParCoresSpinner.setEnabled(enabled)
     }
 
     logoLabel.setIcon(logo)
@@ -439,9 +438,17 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       }
     })
 
+    branchParDisabledRadioButton.addChangeListener(_ => updateBranchPar())
+    branchParReturnsRadioButton.addChangeListener(_ => updateBranchPar())
+    branchParAllRadioButton.addChangeListener(_ => updateBranchPar())
+
+    branchParCoresLabel.setText(s"CPU cores (max: ${SireumApplicationComponent.maxCores})")
+    branchParCoresSpinner.setModel(new SpinnerNumberModel(branchParCores, 1, SireumApplicationComponent.maxCores, 1))
+
     updateSymExe()
     updateHintUnicode()
     updateFPRoundingMode()
+    updateBranchPar()
 
     logikaPanel
   }
@@ -460,8 +467,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     smt2Cache = smt2CacheCheckBox.isSelected
     smt2Seq = smt2SeqCheckBox.isSelected
     smt2Simplify = smt2SimplifyCheckBox.isSelected
-    // TODO
-    //checkerKind = selectedKind
     bitWidth = selectedBitWidth
 //    loopBound = parsePosInteger(loopBoundTextField.getText).getOrElse(loopBound)
 //    recursionBound = parsePosInteger(recursionBoundTextField.getText).getOrElse(recursionBound)
@@ -470,6 +475,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     fpRoundingMode = selectedFPRoundingMode
     smt2ValidOpts = parseSmt2Opts(smt2ValidConfigsTextArea.getText).getOrElse(smt2ValidOpts)
     smt2SatOpts = parseSmt2Opts(smt2SatConfigsTextArea.getText).getOrElse(smt2SatOpts)
+    branchPar = selectedBranchPar
+    branchParCores = branchParCoresSpinner.getValue.asInstanceOf[Int]
     saveConfiguration()
   }
 
@@ -485,14 +492,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     smt2CacheCheckBox.setSelected(smt2Cache)
     smt2SeqCheckBox.setSelected(smt2Seq)
     smt2SimplifyCheckBox.setSelected(smt2Simplify)
-    /* TODO
-    checkerKind match {
-      case CheckerKind.Forward => forwardRadioButton.setSelected(true)
-      case CheckerKind.Backward => backwardRadioButton.setSelected(true)
-      case CheckerKind.SummarizingSymExe => symExeRadioButton.setSelected(true)
-      case CheckerKind.UnrollingSymExe => unrollingSymExeRadioButton.setSelected(true)
-    }
-     */
     bitWidth match {
       case 0 => bitsUnboundedRadioButton.setSelected(true)
       case 8 => bits8RadioButton.setSelected(true)
@@ -513,5 +512,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     }
     smt2ValidConfigsTextArea.setText(smt2ValidOpts)
     smt2SatConfigsTextArea.setText(smt2SatOpts)
+    branchPar match {
+      case org.sireum.logika.Config.BranchPar.Disabled => branchParDisabledRadioButton.setSelected(true)
+      case org.sireum.logika.Config.BranchPar.OnlyAllReturns => branchParReturnsRadioButton.setSelected(true)
+      case org.sireum.logika.Config.BranchPar.All => branchParAllRadioButton.setSelected(true)
+    }
+    branchParCoresSpinner.setValue(branchParCores)
   }
 }
