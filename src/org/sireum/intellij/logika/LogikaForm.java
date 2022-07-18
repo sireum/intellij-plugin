@@ -31,7 +31,6 @@ public abstract class LogikaForm {
     protected JPanel logikaPanel;
     protected JLabel timeoutLabel;
     protected JCheckBox checkSatCheckBox;
-    protected JCheckBox autoCheckBox;
     protected JLabel logoLabel;
     protected JPanel headerPanel;
     protected JLabel titleLabel;
@@ -79,4 +78,7 @@ public abstract class LogikaForm {
     protected JRadioButton branchParAllRadioButton;
     protected JLabel branchParCoresLabel;
     protected JSpinner branchParCoresSpinner;
+    protected JCheckBox splitConditionalsCheckBox;
+    protected JCheckBox splitMatchCasesCheckBox;
+    protected JCheckBox splitContractCasesCheckBox;
 }

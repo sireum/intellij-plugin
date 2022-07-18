@@ -399,7 +399,10 @@ object SireumClient {
             simplifiedQuery = LogikaConfigurable.smt2Simplify,
             smt2Configs = getSmt2Configs(project),
             branchPar = LogikaConfigurable.branchPar,
-            branchParCores = LogikaConfigurable.branchParCores
+            branchParCores = LogikaConfigurable.branchParCores,
+            splitIf = LogikaConfigurable.splitConds,
+            splitMatch = LogikaConfigurable.splitMatchCases,
+            splitContract = LogikaConfigurable.splitContractCases
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(

@@ -64,6 +64,9 @@ object LogikaConfigurable {
   private val smt2DefaultConfigsKey = logikaKey + "smt2.default"
   private val branchParKey = logikaKey + "branchPar"
   private val branchParCoresKey = logikaKey + "branchParCores"
+  private val splitCondsKey = logikaKey + "split.conditionals"
+  private val splitMatchCasesKey = logikaKey + "split.matchCases"
+  private val splitContractCasesKey = logikaKey + "split.contractCases"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -89,6 +92,10 @@ object LogikaConfigurable {
   private[intellij] var smt2Simplify: Boolean = false
   private[intellij] var branchPar: org.sireum.logika.Config.BranchPar.Type = org.sireum.logika.Config.BranchPar.All
   private[intellij] var branchParCores: Int = Runtime.getRuntime.availableProcessors
+  private[intellij] var splitConds: Boolean = false
+  private[intellij] var splitMatchCases: Boolean = false
+  private[intellij] var splitContractCases: Boolean = false
+
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -131,6 +138,9 @@ object LogikaConfigurable {
     smt2SatOpts = pc.getValue(smt2SatOptsKey, smt2SatOpts)
     branchPar = org.sireum.logika.Config.BranchPar.byOrdinal(pc.getInt(branchParKey, branchPar.ordinal.toInt)).get
     branchParCores = pc.getInt(branchParCoresKey, branchParCores)
+    splitConds = pc.getBoolean(splitCondsKey, splitConds)
+    splitMatchCases = pc.getBoolean(splitMatchCasesKey, splitMatchCases)
+    splitContractCases = pc.getBoolean(splitContractCasesKey, splitContractCases)
   }
 
   def saveConfiguration(): Unit = {
@@ -156,6 +166,9 @@ object LogikaConfigurable {
     pc.setValue(smt2SatOptsKey, smt2SatOpts)
     pc.setValue(branchParKey, branchPar.ordinal.toString)
     pc.setValue(branchParCoresKey, branchParCores.toString)
+    pc.setValue(splitCondsKey, splitConds.toString)
+    pc.setValue(splitMatchCasesKey, splitMatchCases.toString)
+    pc.setValue(splitContractCasesKey, splitContractCases.toString)
   }
 
   def parseGe(text: String, min: Long): Option[Long] =
@@ -219,7 +232,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       (backgroundCheckBox.isSelected != backgroundAnalysis ||
         rlimitTextField.getText != rlimit.toString ||
         timeoutTextField.getText != timeout.toString ||
-        autoCheckBox.isSelected != autoEnabled ||
         checkSatCheckBox.isSelected != checkSat ||
         hintCheckBox.isSelected != hint ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
@@ -236,7 +248,10 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         smt2ValidConfigsTextArea.getText != smt2ValidOpts ||
         smt2SatConfigsTextArea.getText != smt2SatOpts ||
         selectedBranchPar != branchPar ||
-        branchParCoresSpinner.getValue.asInstanceOf[Int] != branchParCores)
+        branchParCoresSpinner.getValue.asInstanceOf[Int] != branchParCores ||
+        splitConditionalsCheckBox.isSelected != splitConds ||
+        splitMatchCasesCheckBox.isSelected != splitMatchCases ||
+        splitContractCasesCheckBox.isSelected != splitContractCases)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -302,7 +317,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       //bits16RadioButton.setEnabled(isSymExe)
       //bits32RadioButton.setEnabled(isSymExe)
       //bits64RadioButton.setEnabled(isSymExe)
-      autoCheckBox.setEnabled(!isSymExe)
 //      loopBoundLabel.setEnabled(isUnrolling)
 //      loopBoundTextField.setEnabled(isUnrolling)
 //      recursionBoundLabel.setEnabled(isUnrolling)
@@ -459,7 +473,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     backgroundAnalysis = backgroundCheckBox.isSelected
     rlimit = parseGe(rlimitTextField.getText, 0).getOrElse(rlimit)
     timeout = parseGe(timeoutTextField.getText, 200).getOrElse(timeout.toLong).toInt
-    autoEnabled = autoCheckBox.isSelected
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
     hintUnicode = hintUnicodeCheckBox.isSelected
@@ -477,6 +490,9 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     smt2SatOpts = parseSmt2Opts(smt2SatConfigsTextArea.getText).getOrElse(smt2SatOpts)
     branchPar = selectedBranchPar
     branchParCores = branchParCoresSpinner.getValue.asInstanceOf[Int]
+    splitConds = splitConditionalsCheckBox.isSelected
+    splitMatchCases = splitMatchCasesCheckBox.isSelected
+    splitContractCases = splitContractCasesCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -484,7 +500,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     backgroundCheckBox.setSelected(backgroundAnalysis)
     rlimitTextField.setText(rlimit.toString)
     timeoutTextField.setText(timeout.toString)
-    autoCheckBox.setSelected(autoEnabled)
     checkSatCheckBox.setSelected(checkSat)
     hintCheckBox.setSelected(hint)
     hintUnicodeCheckBox.setSelected(hintUnicode)
@@ -518,5 +533,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       case org.sireum.logika.Config.BranchPar.All => branchParAllRadioButton.setSelected(true)
     }
     branchParCoresSpinner.setValue(branchParCores)
+    splitConditionalsCheckBox.setSelected(splitConds)
+    splitMatchCasesCheckBox.setSelected(splitMatchCases)
+    splitContractCasesCheckBox.setSelected(splitContractCases)
   }
 }
