@@ -574,7 +574,7 @@ object SireumClient {
             Util.notify(new Notification(
               groupId, internalErrorTitle,
               r.message.text.value,
-              NotificationType.ERROR), project, shouldExpire = true)
+              NotificationType.ERROR), project, shouldExpire = false)
             editorOpt.foreach(_.putUserData(statusKey, false))
           case _ =>
         }
