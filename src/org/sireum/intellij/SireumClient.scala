@@ -644,23 +644,14 @@ object SireumClient {
         return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset, text)))
       case r: Logika.Verify.State =>
         import org.sireum._
-        val sts = org.sireum.logika.State.Claim.claimsSTs(r.state.claims, org.sireum.logika.Util.ClaimDefs.empty)
-        val text = normalizeChars(
-          st"""{
-              |  ${(sts, ",\n")}
-              |}""".render.value)
+        val text = normalizeChars(r.claims.value)
         val pos = r.posOpt.get
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
         val header = {
-          var labels = org.sireum.ISZ[String](if (r.state.status) s"Pre-state at line $line" else s"Post-state at line $line")
-          var found = F
-          for (claim <- r.state.claims if !found) {
-            claim match {
-              case claim: State.Claim.Label => labels = labels :+ claim.label; found = T
-              case _ =>
-            }
-          }
+          val labels = org.sireum.ISZ[String](
+            if (r.terminated) s"Post-state at line $line" else s"Pre-state at line $line"
+          ) ++ r.labels
           labels.elements.reverse.mkString(" / ")
         }
         return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text)))
