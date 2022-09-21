@@ -73,11 +73,13 @@ object SireumApplicationComponent {
   private[intellij] var logging: Boolean = false
   private[intellij] var verbose: Boolean = false
 
-  private[intellij] val platform: String =
-    if (scala.util.Properties.isMac) "mac"
-    else if (scala.util.Properties.isLinux) "linux"
-    else if (scala.util.Properties.isWin) "win"
-    else "unsupported"
+  private[intellij] val platform: String = org.sireum.Os.kind match {
+    case org.sireum.Os.Kind.Mac => "mac"
+    case org.sireum.Os.Kind.LinuxArm => "linux/arm"
+    case org.sireum.Os.Kind.Linux => "linux"
+    case org.sireum.Os.Kind.Win => "win"
+    case _ => "unsupported"
+  }
 
   private var terminated: Boolean = false
 
