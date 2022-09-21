@@ -49,6 +49,7 @@ object LogikaConfigurable {
   private val checkSatKey = logikaKey + "checkSat"
   private val hintKey = logikaKey + "hint"
   private val hintUnicodeKey = logikaKey + "hintUnicode"
+  private val hintLinesFreshKey = logikaKey + "hintLinesFresh"
   private val inscribeSummoningsKey = logikaKey + "inscribeSummonings"
   private val bitWidthKey = logikaKey + "bitWidth"
   private val loopBoundKey = logikaKey + "loopBound"
@@ -78,6 +79,7 @@ object LogikaConfigurable {
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
   private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
+  private[intellij] var hintLinesFresh: Boolean = false
   private[intellij] var inscribeSummonings: Boolean = true
   private[intellij] var bitWidth: Int = 0
   private[intellij] var loopBound: Int = 3
@@ -106,6 +108,7 @@ object LogikaConfigurable {
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
     hintUnicode = pc.getBoolean(hintUnicodeKey, hintUnicode)
+    hintLinesFresh = pc.getBoolean(hintLinesFreshKey, hintLinesFresh)
     inscribeSummonings = pc.getBoolean(inscribeSummoningsKey, inscribeSummonings)
     smt2Cache = pc.getBoolean(smt2CacheOptsKey, smt2Cache)
     smt2Seq = pc.getBoolean(smt2SeqOptsKey, smt2Seq)
@@ -152,6 +155,7 @@ object LogikaConfigurable {
     pc.setValue(checkSatKey, checkSat.toString)
     pc.setValue(hintKey, hint.toString)
     pc.setValue(hintUnicodeKey, hintUnicode.toString)
+    pc.setValue(hintLinesFreshKey, hintLinesFresh.toString)
     pc.setValue(inscribeSummoningsKey, inscribeSummonings.toString)
     pc.setValue(smt2CacheOptsKey, smt2Cache.toString)
     pc.setValue(smt2SeqOptsKey, smt2Seq.toString)
@@ -235,6 +239,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         checkSatCheckBox.isSelected != checkSat ||
         hintCheckBox.isSelected != hint ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
+        hintLinesFreshCheckBox.isSelected != hintLinesFresh ||
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
         smt2CacheCheckBox.isSelected != smt2Cache ||
         smt2SeqCheckBox.isSelected != smt2Seq ||
@@ -323,8 +328,9 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 //      recursionBoundTextField.setEnabled(isUnrolling)
       //methodContractCheckBox.setEnabled(isUnrolling)
     }
-    def updateHintUnicode(): Unit = {
+    def updateHints(): Unit = {
       hintUnicodeCheckBox.setEnabled(hintCheckBox.isSelected)
+      hintLinesFreshCheckBox.setEnabled(hintCheckBox.isSelected)
     }
 
     def updateFPRoundingMode(): Unit = {
@@ -420,7 +426,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
 //    symExeRadioButton.addChangeListener(_ => updateSymExe())
 //    unrollingSymExeRadioButton.addChangeListener(_ => updateSymExe())
-    hintCheckBox.addChangeListener(_ => updateHintUnicode())
+    hintCheckBox.addChangeListener(_ => updateHints())
 
     useRealCheckBox.addChangeListener(_ => updateFPRoundingMode())
 
@@ -460,7 +466,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     branchParCoresSpinner.setModel(new SpinnerNumberModel(branchParCores, 1, SireumApplicationComponent.maxCores, 1))
 
     updateSymExe()
-    updateHintUnicode()
+    updateHints()
     updateFPRoundingMode()
     updateBranchPar()
 
@@ -476,6 +482,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
     hintUnicode = hintUnicodeCheckBox.isSelected
+    hintLinesFresh = hintLinesFreshCheckBox.isSelected
     inscribeSummonings = inscribeSummoningsCheckBox.isSelected
     smt2Cache = smt2CacheCheckBox.isSelected
     smt2Seq = smt2SeqCheckBox.isSelected
@@ -503,6 +510,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     checkSatCheckBox.setSelected(checkSat)
     hintCheckBox.setSelected(hint)
     hintUnicodeCheckBox.setSelected(hintUnicode)
+    hintLinesFreshCheckBox.setSelected(hintLinesFresh)
     inscribeSummoningsCheckBox.setSelected(inscribeSummonings)
     smt2CacheCheckBox.setSelected(smt2Cache)
     smt2SeqCheckBox.setSelected(smt2Seq)

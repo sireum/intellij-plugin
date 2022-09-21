@@ -377,7 +377,7 @@ object SireumClient {
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
               isBackground: Boolean, hasLogika: Boolean): Unit = {
-    if (editor.isDisposed || !isEnabled(editor)) return
+    if (editor.isDisposed || !isEnabled(editor) || (hasLogika && org.sireum.Os.kind == org.sireum.Os.Kind.LinuxArm)) return
     val input = editor.getDocument.getText
 
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
@@ -402,7 +402,8 @@ object SireumClient {
             branchParCores = LogikaConfigurable.branchParCores,
             splitIf = LogikaConfigurable.splitConds,
             splitMatch = LogikaConfigurable.splitMatchCases,
-            splitContract = LogikaConfigurable.splitContractCases
+            splitContract = LogikaConfigurable.splitContractCases,
+            atLinesFresh = LogikaConfigurable.hintLinesFresh
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(

@@ -81,4 +81,5 @@ public abstract class LogikaForm {
     protected JCheckBox splitConditionalsCheckBox;
     protected JCheckBox splitMatchCasesCheckBox;
     protected JCheckBox splitContractCasesCheckBox;
+    protected JCheckBox hintLinesFreshCheckBox;
 }
