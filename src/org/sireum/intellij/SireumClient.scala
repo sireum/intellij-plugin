@@ -423,7 +423,9 @@ object SireumClient {
             val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
             if (hasSireum) {
               files = files + p.string ~> content
-              if (Util.isNotLinuxArm && compactFirstLine.contains("#Logika")) {
+              if (Util.isNotLinuxArm && (!isBackground ||
+                (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)) &&
+                compactFirstLine.contains("#Logika")) {
                 vfiles = vfiles :+ p.string
               }
             }
