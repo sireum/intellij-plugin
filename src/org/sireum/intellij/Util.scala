@@ -171,4 +171,10 @@ object Util {
   def finalise(): Unit = {
     queue.add(None)
   }
+
+  def isNotLinuxArm: Boolean = org.sireum.Os.kind match {
+    case org.sireum.Os.Kind.LinuxArm => false
+    case org.sireum.Os.Kind.Unsupported => false
+    case _ => true
+  }
 }

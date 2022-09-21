@@ -376,8 +376,8 @@ object SireumClient {
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
-              isBackground: Boolean, hasLogika: Boolean): Unit = {
-    if (editor.isDisposed || !isEnabled(editor) || (hasLogika && org.sireum.Os.kind == org.sireum.Os.Kind.LinuxArm)) return
+              isBackground: Boolean): Unit = {
+    if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
 
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
@@ -408,8 +408,8 @@ object SireumClient {
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
-            logikaEnabled = !isBackground ||
-              (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis),
+            logikaEnabled = Util.isNotLinuxArm && (!isBackground ||
+              (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)),
             id = requestId,
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
             content = input,
@@ -423,7 +423,7 @@ object SireumClient {
             val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
             if (hasSireum) {
               files = files + p.string ~> content
-              if (compactFirstLine.contains("#Logika")) {
+              if (Util.isNotLinuxArm && compactFirstLine.contains("#Logika")) {
                 vfiles = vfiles :+ p.string
               }
             }
@@ -457,12 +457,11 @@ object SireumClient {
     if (isLogika) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        analyze(project, file, editor, line, ofiles, isBackground = isBackground,
-          hasLogika = LogikaConfigurable.backgroundAnalysis)
+        analyze(project, file, editor, line, ofiles, isBackground = isBackground)
     } else if (isSireum) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        analyze(project, file, editor, line, ofiles, isBackground = isBackground, hasLogika = false)
+        analyze(project, file, editor, line, ofiles, isBackground = isBackground)
     }
   }
 
