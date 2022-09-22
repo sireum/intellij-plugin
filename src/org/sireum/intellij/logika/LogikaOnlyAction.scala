@@ -35,7 +35,7 @@ trait LogikaOnlyAction extends SireumAction {
   override def update(e: AnActionEvent): Unit = {
     val project = e.getProject
     val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
-    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isNotLinuxArm &&
+    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isLogikaSupportedPlatform &&
       Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText)) == (true, true))
   }
 }

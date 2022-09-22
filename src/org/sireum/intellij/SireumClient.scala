@@ -367,7 +367,7 @@ object SireumClient {
   }
 
   def getSmt2Configs(project: Project): org.sireum.ISZ[Smt2Config] = SireumApplicationComponent.getSireumHome(project) match {
-    case Some(sireumHome) =>
+    case Some(sireumHome) if Util.isLogikaSupportedPlatform =>
       val nameExePathMap = Smt2Invoke.nameExePathMap(sireumHome)
       Smt2.parseConfigs(nameExePathMap, false, LogikaConfigurable.smt2ValidOpts, LogikaConfigurable.timeout, LogikaConfigurable.rlimit).left ++
         Smt2.parseConfigs(nameExePathMap, true, LogikaConfigurable.smt2SatOpts, LogikaConfigurable.timeout, LogikaConfigurable.rlimit).left
@@ -408,7 +408,7 @@ object SireumClient {
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
-            logikaEnabled = Util.isNotLinuxArm && (!isBackground ||
+            logikaEnabled = Util.isLogikaSupportedPlatform && (!isBackground ||
               (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)),
             id = requestId,
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
@@ -423,7 +423,7 @@ object SireumClient {
             val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
             if (hasSireum) {
               files = files + p.string ~> content
-              if (Util.isNotLinuxArm && (!isBackground ||
+              if (Util.isLogikaSupportedPlatform && (!isBackground ||
                 (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)) &&
                 compactFirstLine.contains("#Logika")) {
                 vfiles = vfiles :+ p.string
