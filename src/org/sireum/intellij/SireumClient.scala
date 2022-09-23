@@ -513,7 +513,7 @@ object SireumClient {
   }
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit = {
-    analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground = false)
+    analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground = true)
   }
 
   val slangErrorTitle = "Slang Error"
