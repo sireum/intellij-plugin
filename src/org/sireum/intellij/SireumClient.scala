@@ -772,7 +772,17 @@ object SireumClient {
                       new OpenFileDescriptor(cri.project, cri.file, cri.offset), true)): Runnable)
               case hri: HintReportItem =>
                 f.logika.logikaToolSplitPane.setDividerLocation(if (list.getModel.getSize <= 1) 0 else dividerWeight)
-                f.logika.logikaTextArea.setText(normalizeChars(hri.message))
+                var content = normalizeChars(hri.message)
+                if (LogikaConfigurable.hintMaxColumn > 0) {
+                  org.sireum.Scalafmt.format(
+                    s"${org.sireum.Scalafmt.minimalConfig}\nmaxColumn = ${LogikaConfigurable.hintMaxColumn}", true,
+                    content
+                  ) match {
+                    case org.sireum.Some(r) => content = r.value
+                    case _ =>
+                  }
+                }
+                f.logika.logikaTextArea.setText(content)
                 f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
                 for (editor <- editorOpt if !editor.isDisposed)
                   TransactionGuard.submitTransaction(project, (() =>

@@ -48,6 +48,7 @@ object LogikaConfigurable {
   private val autoEnabledKey = logikaKey + "auto"
   private val checkSatKey = logikaKey + "checkSat"
   private val hintKey = logikaKey + "hint"
+  private val hintMaxColumnKey = logikaKey + "hintMaxColumn"
   private val hintUnicodeKey = logikaKey + "hintUnicode"
   private val hintLinesFreshKey = logikaKey + "hintLinesFresh"
   private val inscribeSummoningsKey = logikaKey + "inscribeSummonings"
@@ -78,6 +79,7 @@ object LogikaConfigurable {
   private[intellij] var autoEnabled: Boolean = true
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
+  private[intellij] var hintMaxColumn: Int = 60
   private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
   private[intellij] var hintLinesFresh: Boolean = false
   private[intellij] var inscribeSummonings: Boolean = true
@@ -107,6 +109,7 @@ object LogikaConfigurable {
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
+    hintMaxColumn = pc.getInt(hintMaxColumnKey, hintMaxColumn)
     hintUnicode = pc.getBoolean(hintUnicodeKey, hintUnicode)
     hintLinesFresh = pc.getBoolean(hintLinesFreshKey, hintLinesFresh)
     inscribeSummonings = pc.getBoolean(inscribeSummoningsKey, inscribeSummonings)
@@ -154,6 +157,7 @@ object LogikaConfigurable {
     pc.setValue(autoEnabledKey, autoEnabled.toString)
     pc.setValue(checkSatKey, checkSat.toString)
     pc.setValue(hintKey, hint.toString)
+    pc.setValue(hintMaxColumnKey, hintMaxColumn.toString)
     pc.setValue(hintUnicodeKey, hintUnicode.toString)
     pc.setValue(hintLinesFreshKey, hintLinesFresh.toString)
     pc.setValue(inscribeSummoningsKey, inscribeSummonings.toString)
@@ -221,6 +225,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
   private var validRLimit: Boolean = true
   private var validTimeout: Boolean = true
+  private var validHintMaxColumn: Boolean = true
   //private var validLoopBound: Boolean = true
   //private var validRecursionBound: Boolean = true
   private var validSmt2ValidOpts: Boolean = true
@@ -232,12 +237,13 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   override def getHelpTopic: String = null
 
   override def isModified: Boolean =
-    validTimeout && validRLimit && validSmt2ValidOpts && validSmt2SatOpts &&
+    validTimeout && validRLimit && validHintMaxColumn && validSmt2ValidOpts && validSmt2SatOpts &&
       (backgroundCheckBox.isSelected != backgroundAnalysis ||
         rlimitTextField.getText != rlimit.toString ||
         timeoutTextField.getText != timeout.toString ||
         checkSatCheckBox.isSelected != checkSat ||
         hintCheckBox.isSelected != hint ||
+        hintMaxColumnTextField.getText != hintMaxColumn.toString ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
         hintLinesFreshCheckBox.isSelected != hintLinesFresh ||
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
@@ -300,6 +306,13 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       timeoutTextField.setToolTipText(if (validTimeout) "OK" else "Must be at least 200.")
     }
 
+    def updateHintMaxColumn(): Unit = {
+      val text = hintMaxColumnTextField.getText
+      validHintMaxColumn = parseGe(text, 0).nonEmpty
+      hintMaxColumnLabel.setForeground(if (validHintMaxColumn) fgColor else JBColor.red)
+      hintMaxColumnTextField.setToolTipText(if (validHintMaxColumn) "OK" else "Must be at least 0.")
+    }
+
 //    def updateLoopBound() = {
 //      val text = loopBoundTextField.getText
 //      validLoopBound = parsePosInteger(text).nonEmpty
@@ -329,6 +342,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       //methodContractCheckBox.setEnabled(isUnrolling)
     }
     def updateHints(): Unit = {
+      hintMaxColumnTextField.setEnabled(hintCheckBox.isSelected)
       hintUnicodeCheckBox.setEnabled(hintCheckBox.isSelected)
       hintLinesFreshCheckBox.setEnabled(hintCheckBox.isSelected)
     }
@@ -390,6 +404,14 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       override def changedUpdate(e: DocumentEvent): Unit = updateTimeout()
 
       override def removeUpdate(e: DocumentEvent): Unit = updateTimeout()
+    })
+
+    hintMaxColumnTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateHintMaxColumn()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateHintMaxColumn()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateHintMaxColumn()
     })
 
     smt2ValidConfigsTextArea.getDocument.addDocumentListener(new DocumentListener {
@@ -467,6 +489,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
     updateSymExe()
     updateHints()
+    updateHintMaxColumn()
     updateFPRoundingMode()
     updateBranchPar()
 
@@ -481,7 +504,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     timeout = parseGe(timeoutTextField.getText, 200).getOrElse(timeout.toLong).toInt
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
-    hintUnicode = hintUnicodeCheckBox.isSelected
+    hintMaxColumn = parseGe(hintMaxColumnTextField.getText, 0).getOrElse(hintMaxColumn.toLong).intValue
     hintLinesFresh = hintLinesFreshCheckBox.isSelected
     inscribeSummonings = inscribeSummoningsCheckBox.isSelected
     smt2Cache = smt2CacheCheckBox.isSelected
@@ -509,6 +532,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     timeoutTextField.setText(timeout.toString)
     checkSatCheckBox.setSelected(checkSat)
     hintCheckBox.setSelected(hint)
+    hintMaxColumnTextField.setText(hintMaxColumn.toString)
     hintUnicodeCheckBox.setSelected(hintUnicode)
     hintLinesFreshCheckBox.setSelected(hintLinesFresh)
     inscribeSummoningsCheckBox.setSelected(inscribeSummonings)
