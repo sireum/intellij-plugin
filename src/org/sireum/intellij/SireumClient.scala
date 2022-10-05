@@ -732,6 +732,8 @@ object SireumClient {
         case '≤' => sb.append("<=")
         case '≥' => sb.append(">=")
         case '≠' => sb.append("!=")
+        case '≡' => sb.append("===")
+        case '≢' => sb.append("=!=")
         case _ => sb.append(c)
       }
       i += 1
