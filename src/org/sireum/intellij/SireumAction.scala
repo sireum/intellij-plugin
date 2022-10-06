@@ -127,10 +127,16 @@ trait SireumInsertSymbol extends SireumAction {
     val document = editor.getDocument
     WriteCommandAction.runWriteCommandAction(project,
       (() => {
-        val caret = editor.getCaretModel.getPrimaryCaret
-        val offset = caret.getOffset
-        document.insertString(offset, symbol)
-        caret.moveToOffset(offset + 1)
+        val caretModel = editor.getCaretModel
+        val caret = caretModel.getPrimaryCaret
+        if (caret.hasSelection) {
+          document.replaceString(caret.getSelectionStart, caret.getSelectionEnd, symbol)
+          caret.moveToOffset(caret.getSelectionStart + 1)
+        } else {
+          val offset = caret.getOffset
+          document.insertString(offset, symbol)
+          caret.moveToOffset(offset + 1)
+        }
       }): Runnable)
   }
 }
@@ -145,4 +151,12 @@ final class SireumInsertExists extends SireumInsertSymbol {
 
 final class SireumInsertSequent extends SireumInsertSymbol {
   val symbol: String = "⊢"
+}
+
+final class SireumInsertEquiv extends SireumInsertSymbol {
+  val symbol: String = "≡"
+}
+
+final class SireumInsertInequiv extends SireumInsertSymbol {
+  val symbol: String = "≢"
 }
