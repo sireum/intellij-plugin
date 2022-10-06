@@ -505,6 +505,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
     hintMaxColumn = parseGe(hintMaxColumnTextField.getText, 0).getOrElse(hintMaxColumn.toLong).intValue
+    hintUnicode = hintUnicodeCheckBox.isSelected
     hintLinesFresh = hintLinesFreshCheckBox.isSelected
     inscribeSummonings = inscribeSummoningsCheckBox.isSelected
     smt2Cache = smt2CacheCheckBox.isSelected
