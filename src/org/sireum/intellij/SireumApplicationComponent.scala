@@ -289,6 +289,9 @@ class SireumApplicationComponent extends ApplicationComponent {
     SireumApplicationComponent.loadConfiguration()
     LogikaConfigurable.loadConfiguration()
 
+    ApplicationManager.getApplication.invokeLater(() =>
+      org.sireum.Scalafmt.format(org.sireum.Scalafmt.minimalConfig, true, "{}"))
+
     ApplicationManager.getApplication.getMessageBus.connect.subscribe(AppTopics.FILE_DOCUMENT_SYNC,
         new FileDocumentManagerListener {
           override def beforeDocumentSaving(d: Document): Unit = if (SireumApplicationComponent.backgroundAnalysis == 1) {
