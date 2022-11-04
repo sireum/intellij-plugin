@@ -69,6 +69,7 @@ object LogikaConfigurable {
   private val splitCondsKey = logikaKey + "split.conditionals"
   private val splitMatchCasesKey = logikaKey + "split.matchCases"
   private val splitContractCasesKey = logikaKey + "split.contractCases"
+  private val infoFlowKey = logikaKey + "infoflow"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -99,6 +100,7 @@ object LogikaConfigurable {
   private[intellij] var splitConds: Boolean = false
   private[intellij] var splitMatchCases: Boolean = false
   private[intellij] var splitContractCases: Boolean = false
+  private[intellij] var infoFlow: Boolean = false
 
 
   def loadConfiguration(): Unit = {
@@ -147,6 +149,7 @@ object LogikaConfigurable {
     splitConds = pc.getBoolean(splitCondsKey, splitConds)
     splitMatchCases = pc.getBoolean(splitMatchCasesKey, splitMatchCases)
     splitContractCases = pc.getBoolean(splitContractCasesKey, splitContractCases)
+    infoFlow = pc.getBoolean(infoFlowKey, infoFlow)
   }
 
   def saveConfiguration(): Unit = {
@@ -177,6 +180,7 @@ object LogikaConfigurable {
     pc.setValue(splitCondsKey, splitConds.toString)
     pc.setValue(splitMatchCasesKey, splitMatchCases.toString)
     pc.setValue(splitContractCasesKey, splitContractCases.toString)
+    pc.setValue(infoFlowKey, infoFlow.toString)
   }
 
   def parseGe(text: String, min: Long): Option[Long] =
@@ -228,6 +232,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   private var validHintMaxColumn: Boolean = true
   //private var validLoopBound: Boolean = true
   //private var validRecursionBound: Boolean = true
+  private var validInfoFlow: Boolean = true
   private var validSmt2ValidOpts: Boolean = true
   private var validSmt2SatOpts: Boolean = true
   private var fgColor: Color = _
@@ -262,7 +267,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         branchParCoresSpinner.getValue.asInstanceOf[Int] != branchParCores ||
         splitConditionalsCheckBox.isSelected != splitConds ||
         splitMatchCasesCheckBox.isSelected != splitMatchCases ||
-        splitContractCasesCheckBox.isSelected != splitContractCases)
+        splitContractCasesCheckBox.isSelected != splitContractCases ||
+        infoFlowCheckBox.isSelected != infoFlow)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -384,6 +390,13 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       branchParCoresSpinner.setEnabled(enabled)
     }
 
+    def updateInfoFlow(): Unit = {
+      val enabled = !infoFlowCheckBox.isSelected
+      splitMatchCasesCheckBox.setEnabled(enabled)
+      splitConditionalsCheckBox.setEnabled(enabled)
+      splitContractCasesCheckBox.setEnabled(enabled)
+    }
+
     logoLabel.setIcon(logo)
 
     reset()
@@ -413,6 +426,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
       override def removeUpdate(e: DocumentEvent): Unit = updateHintMaxColumn()
     })
+
+    infoFlowCheckBox.addChangeListener(_ => updateInfoFlow())
 
     smt2ValidConfigsTextArea.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(e: DocumentEvent): Unit = updateSmt2ValidOpts()
@@ -524,6 +539,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitConds = splitConditionalsCheckBox.isSelected
     splitMatchCases = splitMatchCasesCheckBox.isSelected
     splitContractCases = splitContractCasesCheckBox.isSelected
+    infoFlow = infoFlowCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -569,5 +585,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitConditionalsCheckBox.setSelected(splitConds)
     splitMatchCasesCheckBox.setSelected(splitMatchCases)
     splitContractCasesCheckBox.setSelected(splitContractCases)
+    infoFlowCheckBox.setSelected(infoFlow)
   }
 }

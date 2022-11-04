@@ -387,7 +387,7 @@ object SireumClient {
         case _ => return Vector()
       }
       Vector(
-        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
+        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings, LogikaConfigurable.infoFlow,
           org.sireum.server.service.AnalysisService.defaultConfig(
             parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             sat = LogikaConfigurable.checkSat,
@@ -400,9 +400,9 @@ object SireumClient {
             smt2Configs = getSmt2Configs(project),
             branchPar = LogikaConfigurable.branchPar,
             branchParCores = LogikaConfigurable.branchParCores,
-            splitIf = LogikaConfigurable.splitConds,
-            splitMatch = LogikaConfigurable.splitMatchCases,
-            splitContract = LogikaConfigurable.splitContractCases,
+            splitIf = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitConds,
+            splitMatch = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitMatchCases,
+            splitContract = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitContractCases,
             atLinesFresh = LogikaConfigurable.hintLinesFresh
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
