@@ -403,7 +403,8 @@ object SireumClient {
             splitIf = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitConds,
             splitMatch = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitMatchCases,
             splitContract = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitContractCases,
-            atLinesFresh = LogikaConfigurable.hintLinesFresh
+            atLinesFresh = LogikaConfigurable.hintLinesFresh,
+            interp = LogikaConfigurable.interp
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(

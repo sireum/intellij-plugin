@@ -86,4 +86,5 @@ public abstract class LogikaForm {
     protected JTextField hintMaxColumnTextField;
     protected JPanel additionalVerificationsPanel;
     protected JCheckBox infoFlowCheckBox;
+    protected JCheckBox interpCheckBox;
 }
