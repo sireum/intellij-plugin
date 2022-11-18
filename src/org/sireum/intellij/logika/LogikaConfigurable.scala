@@ -54,7 +54,7 @@ object LogikaConfigurable {
   private val inscribeSummoningsKey = logikaKey + "inscribeSummonings"
   private val bitWidthKey = logikaKey + "bitWidth"
   private val loopBoundKey = logikaKey + "loopBound"
-  private val recursionBoundKey = logikaKey + "recursionBound"
+  private val callBoundKey = logikaKey + "callBound"
   private val methodContractKey = logikaKey + "methodContract"
   private val useRealKey = logikaKey + "useReal"
   private val fpRoundingModeKey = logikaKey + "fpRounding"
@@ -70,7 +70,6 @@ object LogikaConfigurable {
   private val splitMatchCasesKey = logikaKey + "split.matchCases"
   private val splitContractCasesKey = logikaKey + "split.contractCases"
   private val infoFlowKey = logikaKey + "infoflow"
-  private val interpKey = logikaKey + "interp"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -87,7 +86,7 @@ object LogikaConfigurable {
   private[intellij] var inscribeSummonings: Boolean = true
   private[intellij] var bitWidth: Int = 0
   private[intellij] var loopBound: Int = 3
-  private[intellij] var recursionBound: Int = 1
+  private[intellij] var callBound: Int = 3
   private[intellij] var methodContract: Boolean = true
   private[intellij] var useReal: Boolean = false
   private[intellij] var fpRoundingMode: String = "RNE"
@@ -102,7 +101,6 @@ object LogikaConfigurable {
   private[intellij] var splitMatchCases: Boolean = false
   private[intellij] var splitContractCases: Boolean = false
   private[intellij] var infoFlow: Boolean = false
-  private[intellij] var interp: Boolean = false
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -139,7 +137,7 @@ object LogikaConfigurable {
     }
     bitWidth = pc.getInt(bitWidthKey, bitWidth)
     loopBound = pc.getInt(loopBoundKey, loopBound)
-    recursionBound = pc.getInt(recursionBoundKey, recursionBound)
+    callBound = pc.getInt(callBoundKey, callBound)
     methodContract = pc.getBoolean(methodContractKey, methodContract)
     useReal = pc.getBoolean(useRealKey, useReal)
     fpRoundingMode = pc.getValue(fpRoundingModeKey, fpRoundingMode)
@@ -151,7 +149,6 @@ object LogikaConfigurable {
     splitMatchCases = pc.getBoolean(splitMatchCasesKey, splitMatchCases)
     splitContractCases = pc.getBoolean(splitContractCasesKey, splitContractCases)
     infoFlow = pc.getBoolean(infoFlowKey, infoFlow)
-    interp = pc.getBoolean(interpKey, interp)
   }
 
   def saveConfiguration(): Unit = {
@@ -171,7 +168,7 @@ object LogikaConfigurable {
     pc.setValue(smt2SimplifyKey, smt2Simplify.toString)
     pc.setValue(bitWidthKey, bitWidth.toString)
     pc.setValue(loopBoundKey, loopBound.toString)
-    pc.setValue(recursionBoundKey, recursionBound.toString)
+    pc.setValue(callBoundKey, callBound.toString)
     pc.setValue(methodContractKey, methodContract.toString)
     pc.setValue(useRealKey, useReal.toString)
     pc.setValue(fpRoundingModeKey, fpRoundingMode)
@@ -183,7 +180,6 @@ object LogikaConfigurable {
     pc.setValue(splitMatchCasesKey, splitMatchCases.toString)
     pc.setValue(splitContractCasesKey, splitContractCases.toString)
     pc.setValue(infoFlowKey, infoFlow.toString)
-    pc.setValue(interpKey, interp.toString)
   }
 
   def parseGe(text: String, min: Long): Option[Long] =
@@ -233,9 +229,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   private var validRLimit: Boolean = true
   private var validTimeout: Boolean = true
   private var validHintMaxColumn: Boolean = true
-  //private var validLoopBound: Boolean = true
-  //private var validRecursionBound: Boolean = true
-  private var validInfoFlow: Boolean = true
+  private var validLoopBound: Boolean = true
+  private var validRecursionBound: Boolean = true
   private var validSmt2ValidOpts: Boolean = true
   private var validSmt2SatOpts: Boolean = true
   private var fgColor: Color = _
@@ -246,6 +241,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
   override def isModified: Boolean =
     validTimeout && validRLimit && validHintMaxColumn && validSmt2ValidOpts && validSmt2SatOpts &&
+      validLoopBound && validRecursionBound &&
       (backgroundCheckBox.isSelected != backgroundAnalysis ||
         rlimitTextField.getText != rlimit.toString ||
         timeoutTextField.getText != timeout.toString ||
@@ -259,9 +255,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         smt2SeqCheckBox.isSelected != smt2Seq ||
         smt2SimplifyCheckBox.isSelected != smt2Simplify ||
         selectedBitWidth != bitWidth ||
-        //loopBoundTextField.getText != loopBound.toString ||
-        //recursionBoundTextField.getText != recursionBound.toString ||
-        //methodContractCheckBox.isSelected != methodContract
+        loopBoundTextField.getText != loopBound.toString ||
+        callBoundTextField.getText != callBound.toString ||
         useRealCheckBox.isSelected != useReal ||
         selectedFPRoundingMode != fpRoundingMode ||
         smt2ValidConfigsTextArea.getText != smt2ValidOpts ||
@@ -271,8 +266,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         splitConditionalsCheckBox.isSelected != splitConds ||
         splitMatchCasesCheckBox.isSelected != splitMatchCases ||
         splitContractCasesCheckBox.isSelected != splitContractCases ||
-        infoFlowCheckBox.isSelected != infoFlow ||
-        interpCheckBox.isSelected != interp)
+        infoFlowCheckBox.isSelected != infoFlow)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -299,9 +293,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   }
 
   override def createComponent(): JComponent = {
-    //devPanel.setVisible(false)
-    //unrollingSymExeRadioButton.setEnabled(false)
-
     def updateRLimit(): Unit = {
       val text = rlimitTextField.getText
       validRLimit = parseGe(text, 0).nonEmpty
@@ -323,18 +314,18 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       hintMaxColumnTextField.setToolTipText(if (validHintMaxColumn) "OK" else "Must be at least 0.")
     }
 
-//    def updateLoopBound() = {
-//      val text = loopBoundTextField.getText
-//      validLoopBound = parsePosInteger(text).nonEmpty
-//      loopBoundLabel.setForeground(if (validLoopBound) fgColor else JBColor.red)
-//      loopBoundTextField.setToolTipText(if (validLoopBound) "OK" else "Must be at least 1.")
-//    }
-//    def updateRecursionBound() = {
-//      val text = recursionBoundTextField.getText
-//      validRecursionBound = parsePosInteger(text).nonEmpty
-//      recursionBoundLabel.setForeground(if (validRecursionBound) fgColor else JBColor.red)
-//      recursionBoundTextField.setToolTipText(if (validRecursionBound) "OK" else "Must be at least 1.")
-//    }
+    def updateLoopBound(): Unit = {
+      val text = loopBoundTextField.getText
+      validLoopBound = parsePosInteger(text).nonEmpty
+      loopBoundLabel.setForeground(if (validLoopBound) fgColor else JBColor.red)
+      loopBoundTextField.setToolTipText(if (validLoopBound) "OK" else "Must be at least 1.")
+    }
+    def updateRecursionBound(): Unit = {
+      val text = callBoundTextField.getText
+      validRecursionBound = parsePosInteger(text).nonEmpty
+      callBoundLabel.setForeground(if (validRecursionBound) fgColor else JBColor.red)
+      callBoundTextField.setToolTipText(if (validRecursionBound) "OK" else "Must be at least 1.")
+    }
     def updateSymExe(): Unit = {
 //      val isUnrolling = unrollingSymExeRadioButton.isSelected
       val isSymExe = true // symExeRadioButton.isSelected || isUnrolling
@@ -345,11 +336,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       //bits16RadioButton.setEnabled(isSymExe)
       //bits32RadioButton.setEnabled(isSymExe)
       //bits64RadioButton.setEnabled(isSymExe)
-//      loopBoundLabel.setEnabled(isUnrolling)
-//      loopBoundTextField.setEnabled(isUnrolling)
-//      recursionBoundLabel.setEnabled(isUnrolling)
-//      recursionBoundTextField.setEnabled(isUnrolling)
-      //methodContractCheckBox.setEnabled(isUnrolling)
     }
     def updateHints(): Unit = {
       hintMaxColumnTextField.setEnabled(hintCheckBox.isSelected)
@@ -449,21 +435,21 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       override def removeUpdate(e: DocumentEvent): Unit = updateSmt2SatOpts()
     })
 
-    //    loopBoundTextField.getDocument.addDocumentListener(new DocumentListener {
-//      override def insertUpdate(e: DocumentEvent): Unit = updateLoopBound()
-//
-//      override def changedUpdate(e: DocumentEvent): Unit = updateLoopBound()
-//
-//      override def removeUpdate(e: DocumentEvent): Unit = updateLoopBound()
-//    })
+    loopBoundTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateLoopBound()
 
-//    recursionBoundTextField.getDocument.addDocumentListener(new DocumentListener {
-//      override def insertUpdate(e: DocumentEvent): Unit = updateRecursionBound()
-//
-//      override def changedUpdate(e: DocumentEvent): Unit = updateRecursionBound()
-//
-//      override def removeUpdate(e: DocumentEvent): Unit = updateRecursionBound()
-//    })
+      override def changedUpdate(e: DocumentEvent): Unit = updateLoopBound()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateLoopBound()
+    })
+
+    callBoundTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateRecursionBound()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateRecursionBound()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateRecursionBound()
+    })
 
 //    symExeRadioButton.addChangeListener(_ => updateSymExe())
 //    unrollingSymExeRadioButton.addChangeListener(_ => updateSymExe())
@@ -531,9 +517,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     smt2Seq = smt2SeqCheckBox.isSelected
     smt2Simplify = smt2SimplifyCheckBox.isSelected
     bitWidth = selectedBitWidth
-//    loopBound = parsePosInteger(loopBoundTextField.getText).getOrElse(loopBound)
-//    recursionBound = parsePosInteger(recursionBoundTextField.getText).getOrElse(recursionBound)
-//    methodContract = methodContractCheckBox.isSelected
+    loopBound = parsePosInteger(loopBoundTextField.getText).getOrElse(loopBound)
+    callBound = parsePosInteger(callBoundTextField.getText).getOrElse(callBound)
     useReal = useRealCheckBox.isSelected
     fpRoundingMode = selectedFPRoundingMode
     smt2ValidOpts = parseSmt2Opts(smt2ValidConfigsTextArea.getText).getOrElse(smt2ValidOpts)
@@ -544,7 +529,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitMatchCases = splitMatchCasesCheckBox.isSelected
     splitContractCases = splitContractCasesCheckBox.isSelected
     infoFlow = infoFlowCheckBox.isSelected
-    interp = interpCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -568,9 +552,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       case 32 => bits32RadioButton.setSelected(true)
       case 64 => bits64RadioButton.setSelected(true)
     }
-//    loopBoundTextField.setText(loopBound.toString)
-//    recursionBoundTextField.setText(recursionBound.toString)
-//    methodContractCheckBox.setSelected(methodContract)
+    loopBoundTextField.setText(loopBound.toString)
+    callBoundTextField.setText(callBound.toString)
     useRealCheckBox.setSelected(useReal)
     fpRoundingMode match {
       case "RNE" => fpRNERadioButton.setSelected(true)
@@ -591,6 +574,5 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitMatchCasesCheckBox.setSelected(splitMatchCases)
     splitContractCasesCheckBox.setSelected(splitContractCases)
     infoFlowCheckBox.setSelected(infoFlow)
-    interpCheckBox.setSelected(interp)
   }
 }

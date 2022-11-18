@@ -376,7 +376,7 @@ object SireumClient {
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
-              isBackground: Boolean): Unit = {
+              isBackground: Boolean, isInterprocedural: Boolean): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
 
@@ -391,7 +391,6 @@ object SireumClient {
           org.sireum.server.service.AnalysisService.defaultConfig(
             parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             sat = LogikaConfigurable.checkSat,
-            defaultLoopBound = LogikaConfigurable.loopBound,
             timeoutInMs = LogikaConfigurable.timeout,
             useReal = LogikaConfigurable.useReal,
             fpRoundingMode = LogikaConfigurable.fpRoundingMode,
@@ -404,7 +403,9 @@ object SireumClient {
             splitMatch = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitMatchCases,
             splitContract = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitContractCases,
             atLinesFresh = LogikaConfigurable.hintLinesFresh,
-            interp = LogikaConfigurable.interp
+            interp = isInterprocedural,
+            loopBound = LogikaConfigurable.loopBound,
+            callBound = LogikaConfigurable.callBound
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
@@ -426,7 +427,7 @@ object SireumClient {
               files = files + p.string ~> content
               if (Util.isLogikaSupportedPlatform && (!isBackground ||
                 (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)) &&
-                compactFirstLine.contains("#Logika")) {
+                (compactFirstLine.contains("#Logika") || isInterprocedural)) {
                 vfiles = vfiles :+ p.string
               }
             }
@@ -460,11 +461,11 @@ object SireumClient {
     if (isLogika) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        analyze(project, file, editor, line, ofiles, isBackground = isBackground)
+        analyze(project, file, editor, line, ofiles, isBackground = isBackground, isInterprocedural = false)
     } else if (isSireum) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        analyze(project, file, editor, line, ofiles, isBackground = isBackground)
+        analyze(project, file, editor, line, ofiles, isBackground = isBackground, isInterprocedural = false)
     }
   }
 

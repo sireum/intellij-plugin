@@ -38,10 +38,8 @@ public abstract class LogikaForm {
     protected JCheckBox backgroundCheckBox;
     protected JCheckBox hintCheckBox;
     protected JCheckBox inscribeSummoningsCheckBox;
-    protected JPanel devPanel;
     protected JLabel bitsLabel;
     protected JRadioButton bitsUnboundedRadioButton;
-    protected JPanel bitWidthPanel;
     protected JRadioButton bits8RadioButton;
     protected JRadioButton bits16RadioButton;
     protected JRadioButton bits32RadioButton;
@@ -51,15 +49,11 @@ public abstract class LogikaForm {
     protected JTextField timeoutTextField;
     protected JCheckBox useRealCheckBox;
     protected JLabel fpRoundingModeLabel;
-    protected JPanel fpPanel;
-    protected JPanel fpRoundingModePanel;
-    protected JPanel fpRoundingModeChoicePanel;
     protected JRadioButton fpRNERadioButton;
     protected JRadioButton fpRNARadioButton;
     protected JRadioButton fpRTPRadioButton;
     protected JRadioButton fpRTNRadioButton;
     protected JRadioButton fpRTZRadioButton;
-    protected JPanel smt2Panel;
     protected JCheckBox smt2CacheCheckBox;
     protected JTextArea smt2ValidConfigsTextArea;
     protected JLabel smt2SatConfigsLabel;
@@ -71,7 +65,6 @@ public abstract class LogikaForm {
     protected JCheckBox smt2SimplifyCheckBox;
     protected JLabel defaultSmt2ValidConfigsLabel;
     protected JLabel defaultSmt2SatConfigsLabel;
-    protected JPanel branchParPanel;
     protected JRadioButton branchParDisabledRadioButton;
     protected JLabel branchParLabel;
     protected JRadioButton branchParReturnsRadioButton;
@@ -86,5 +79,8 @@ public abstract class LogikaForm {
     protected JTextField hintMaxColumnTextField;
     protected JPanel additionalVerificationsPanel;
     protected JCheckBox infoFlowCheckBox;
-    protected JCheckBox interpCheckBox;
+    protected JLabel loopBoundLabel;
+    protected JLabel callBoundLabel;
+    protected JTextField loopBoundTextField;
+    protected JTextField callBoundTextField;
 }

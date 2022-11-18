@@ -56,17 +56,33 @@ trait LogikaCheckAction extends LogikaOnlyAction {
     if (editor == null) return
     SireumClient.enableEditor(project, file, editor)
     SireumClient.analyze(project, file, editor, getLine(editor), SireumClient.getModifiedFiles(project, file),
-      isBackground = false)
+      isBackground = false, isInterprocedural = isInterprocedural)
     e.getPresentation.setEnabled(true)
   }
 
   def getLine(editor: Editor): Int
+
+  def isInterprocedural: Boolean
 }
 
 final class LogikaCheckActionFile extends LogikaCheckAction {
   def getLine(editor: Editor): Int = 0
+  def isInterprocedural: Boolean = false
 }
 
 final class LogikaCheckActionLine extends LogikaCheckAction {
   def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
+  def isInterprocedural: Boolean = false
+}
+
+final class LogikaCheckActionInterprocedural extends LogikaCheckAction {
+  def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
+  def isInterprocedural: Boolean = true
+
+  override def update(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
+    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isLogikaSupportedPlatform &&
+      Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText))._1)
+  }
 }

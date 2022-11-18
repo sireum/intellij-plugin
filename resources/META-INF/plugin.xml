@@ -94,6 +94,14 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
 
+        <action id="LogikaCheckActionInterprocedural" class="org.sireum.intellij.logika.LogikaCheckActionInterprocedural"
+                text="Logika Check (Interprocedural Line)"
+                description="Check Logika proofs focused on the cursor line inter-procedurally">
+            <add-to-group group-id="LogikaGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl I"/>
+        </action>
+
         <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"
                 text="Insert val Modifiers"
                 description="Insert constructor parameter val modifiers">
