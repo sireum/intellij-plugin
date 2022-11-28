@@ -39,7 +39,7 @@ import com.intellij.openapi.project.{Project, ProjectManager}
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util._
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.{LocalFileSystem, VirtualFile}
 import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresentation}
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, WindowManager}
@@ -110,7 +110,7 @@ object SireumClient {
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
   val gutterVerifiedIcon: Icon = IconLoader.getIcon("/icon/gutter-verified.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
-  val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String)] = scala.collection.mutable.Map()
+  val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String, Boolean)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
   val analysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], DefaultListModel[Object], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])]("Analysis Data")
   val statusKey = new Key[Boolean]("Sireum Analysis Status")
@@ -145,7 +145,7 @@ object SireumClient {
 
   final case class Request(time: Long, requestId: org.sireum.ISZ[org.sireum.String],
                            project: Project, file: VirtualFile, editor: Editor,
-                           input: String, msgGen: () => Vector[String])
+                           input: String, msgGen: () => Vector[String], isInterprocedural: Boolean)
 
   def runLater[T](delayInMs: Int)(f: Runnable): Unit = singleExecutor.schedule(f, delayInMs, TimeUnit.MILLISECONDS)
 
@@ -304,7 +304,7 @@ object SireumClient {
                   if (System.currentTimeMillis - r.time > SireumApplicationComponent.idle) {
                     request = None
                     editorMap.synchronized {
-                      editorMap(r.requestId) = (r.project, r.file, r.editor, r.input)
+                      editorMap(r.requestId) = (r.project, r.file, r.editor, r.input, r.isInterprocedural)
                     }
                     queue.add(for (m <- r.msgGen()) yield (true, m))
                   }
@@ -323,7 +323,8 @@ object SireumClient {
   def isEnabled(editor: Editor): Boolean = EditorEnabled == editor.getUserData(sireumKey)
 
   def addRequest(reqsF: org.sireum.ISZ[org.sireum.String] => Vector[org.sireum.server.protocol.Request],
-                 project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, input: String): Unit = {
+                 project: Project, file: VirtualFile, editor: Editor, isBackground: Boolean, input: String,
+                 isInterprocedural: Boolean): Unit = {
     if (Util.getPath(file).isEmpty) {
       return
     }
@@ -347,7 +348,7 @@ object SireumClient {
 
       if (isBackground) {
         this.synchronized {
-          request = Some(Request(t, requestId, project, file, editor, input, f))
+          request = Some(Request(t, requestId, project, file, editor, input, f, isInterprocedural))
         }
       } else {
         editorMap.synchronized {
@@ -359,7 +360,7 @@ object SireumClient {
             }
             request = None
           }
-          editorMap(requestId) = (project, file, editor, input)
+          editorMap(requestId) = (project, file, editor, input, isInterprocedural)
         }
         queue.add(for (m <- f()) yield (true, m))
       }
@@ -448,7 +449,7 @@ object SireumClient {
       )
     }
 
-    addRequest(f, project, file, editor, isBackground, input)
+    addRequest(f, project, file, editor, isBackground, input, isInterprocedural)
   }
 
   def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int,
@@ -812,14 +813,14 @@ object SireumClient {
   }
 
   def processResult(r: org.sireum.server.protocol.Response): Unit = {
-    def getProjectFileEditorInput(pe: (Project, VirtualFile, Editor, String)): Option[(Project, VirtualFile, Editor, String)] = {
+    def getProjectFileEditorInput(pe: (Project, VirtualFile, Editor, String, Boolean)): Option[(Project, VirtualFile, Editor, String)] = {
       r.posOpt match {
         case org.sireum.Some(pos) if pos.uriOpt.nonEmpty && !pe._1.isDisposed =>
           val uri = pos.uriOpt.get
           val pOpt = Util.getPath(pe._2)
           pOpt match {
             case Some(p) =>
-              if (uri == p.toUri) return Some(pe)
+              if (uri == p.toUri) return Some((pe._1, pe._2, pe._3, pe._4))
               val project = pe._1
               for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
                 val pOpt2 = Util.getPath(fileEditor.getFile)
@@ -834,18 +835,21 @@ object SireumClient {
                   case _ =>
                 }
               }
-              //              val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
-              //              val offset = pos.offset.toInt
-              //              val editor = FileEditorManager.getInstance(project).openTextEditor(
-              //                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
-              //                else new OpenFileDescriptor(project, file),
-              //                true)
-              //              return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
-              return None
+              if (pe._5) {
+                val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
+                val offset = pos.offset.toInt
+                val editor = FileEditorManager.getInstance(project).openTextEditor(
+                  if (offset >= 1) new OpenFileDescriptor(project, file, offset)
+                  else new OpenFileDescriptor(project, file),
+                  true)
+                return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
+              } else {
+                return None
+              }
             case _ =>
               return None
           }
-        case _ => return Some(pe)
+        case _ => return Some((pe._1, pe._2, pe._3, pe._4))
       }
     }
 

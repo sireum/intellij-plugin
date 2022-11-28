@@ -95,7 +95,7 @@ trait SlangRewriteAction extends SireumOnlyAction {
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     SireumClient.addRequest(id =>
       Vector(org.sireum.server.protocol.Slang.Rewrite.Request(id, kind, isWorksheet, fileUriOpt, text)),
-      project, file, editor, isBackground = false, text
+      project, file, editor, isBackground = false, text, isInterprocedural = false
     )
   }
 }
