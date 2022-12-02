@@ -42,17 +42,6 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
 
   override def projectOpened(): Unit = {
 
-    if (SireumApplicationComponent.startup) {
-      SireumClient.init(iproject)
-    }
-
-    if (SireumClient.processInit.nonEmpty) {
-      val statusBar = WindowManager.getInstance.getStatusBar(iproject)
-      if (statusBar.getWidget(SireumClient.statusBarWidget.ID()) == null) {
-        statusBar.addWidget(SireumClient.statusBarWidget)
-      }
-    }
-
     ToolWindowManager.getInstance(iproject).invokeLater(() => {
       val tw = ToolWindowManager.getInstance(iproject).
         registerToolWindow("Sireum", false, ToolWindowAnchor.RIGHT)
@@ -88,6 +77,11 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
 
     new Thread(() => {
       Thread.sleep(5000)
+
+      if (SireumApplicationComponent.startup) {
+        SireumClient.init(iproject)
+      }
+
       if (Util.recommendReload(iproject)) {
         iproject.getBaseDir.refresh(false, true)
         Util.notify(new Notification(SireumClient.groupId, "Proyek reload?",
