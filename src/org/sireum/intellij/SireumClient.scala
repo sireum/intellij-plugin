@@ -406,7 +406,8 @@ object SireumClient {
             atLinesFresh = LogikaConfigurable.hintLinesFresh,
             interp = isInterprocedural,
             loopBound = LogikaConfigurable.loopBound,
-            callBound = LogikaConfigurable.callBound
+            callBound = LogikaConfigurable.callBound,
+            interpContracts = LogikaConfigurable.interpContracts
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(

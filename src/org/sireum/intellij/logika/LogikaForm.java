@@ -83,4 +83,5 @@ public abstract class LogikaForm {
     protected JLabel callBoundLabel;
     protected JTextField loopBoundTextField;
     protected JTextField callBoundTextField;
+    protected JCheckBox interpContractCheckBox;
 }

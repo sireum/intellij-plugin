@@ -69,6 +69,7 @@ object LogikaConfigurable {
   private val splitCondsKey = logikaKey + "split.conditionals"
   private val splitMatchCasesKey = logikaKey + "split.matchCases"
   private val splitContractCasesKey = logikaKey + "split.contractCases"
+  private val interpContractsKey = logikaKey + "interp.contracts"
   private val infoFlowKey = logikaKey + "infoflow"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -100,6 +101,7 @@ object LogikaConfigurable {
   private[intellij] var splitConds: Boolean = false
   private[intellij] var splitMatchCases: Boolean = false
   private[intellij] var splitContractCases: Boolean = false
+  private[intellij] var interpContracts: Boolean = false
   private[intellij] var infoFlow: Boolean = false
 
   def loadConfiguration(): Unit = {
@@ -148,6 +150,7 @@ object LogikaConfigurable {
     splitConds = pc.getBoolean(splitCondsKey, splitConds)
     splitMatchCases = pc.getBoolean(splitMatchCasesKey, splitMatchCases)
     splitContractCases = pc.getBoolean(splitContractCasesKey, splitContractCases)
+    interpContracts = pc.getBoolean(interpContractsKey, interpContracts)
     infoFlow = pc.getBoolean(infoFlowKey, infoFlow)
   }
 
@@ -179,6 +182,7 @@ object LogikaConfigurable {
     pc.setValue(splitCondsKey, splitConds.toString)
     pc.setValue(splitMatchCasesKey, splitMatchCases.toString)
     pc.setValue(splitContractCasesKey, splitContractCases.toString)
+    pc.setValue(interpContractsKey, interpContracts.toString)
     pc.setValue(infoFlowKey, infoFlow.toString)
   }
 
@@ -266,6 +270,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         splitConditionalsCheckBox.isSelected != splitConds ||
         splitMatchCasesCheckBox.isSelected != splitMatchCases ||
         splitContractCasesCheckBox.isSelected != splitContractCases ||
+        interpContractCheckBox.isSelected != interpContracts ||
         infoFlowCheckBox.isSelected != infoFlow)
 
   def selectedFPRoundingMode: String = {
@@ -528,6 +533,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitConds = splitConditionalsCheckBox.isSelected
     splitMatchCases = splitMatchCasesCheckBox.isSelected
     splitContractCases = splitContractCasesCheckBox.isSelected
+    interpContracts = interpContractCheckBox.isSelected
     infoFlow = infoFlowCheckBox.isSelected
     saveConfiguration()
   }
@@ -573,6 +579,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitConditionalsCheckBox.setSelected(splitConds)
     splitMatchCasesCheckBox.setSelected(splitMatchCases)
     splitContractCasesCheckBox.setSelected(splitContractCases)
+    interpContractCheckBox.setSelected(interpContracts)
     infoFlowCheckBox.setSelected(infoFlow)
   }
 }
