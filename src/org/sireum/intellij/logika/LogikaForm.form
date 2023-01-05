@@ -269,6 +269,22 @@
               <toolTipText value="Expose incantations used in summonings"/>
             </properties>
           </component>
+          <component id="84fb0" class="javax.swing.JCheckBox" binding="rawInscriptionCheckBox">
+            <constraints>
+              <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Raw summoning inscription"/>
+            </properties>
+          </component>
+          <component id="8f9e1" class="javax.swing.JCheckBox" binding="elideEncodingCheckBox">
+            <constraints>
+              <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Elide inscription details"/>
+            </properties>
+          </component>
         </children>
       </grid>
       <grid id="80a49" layout-manager="GridLayoutManager" row-count="2" column-count="5" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">

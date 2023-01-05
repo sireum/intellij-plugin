@@ -71,6 +71,8 @@ object LogikaConfigurable {
   private val splitContractCasesKey = logikaKey + "split.contractCases"
   private val interpContractsKey = logikaKey + "interp.contracts"
   private val infoFlowKey = logikaKey + "infoflow"
+  private val rawInscriptionKey = logikaKey + "smt2.raw"
+  private val elideEncodingKey = logikaKey + "smt2.elide"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -103,6 +105,8 @@ object LogikaConfigurable {
   private[intellij] var splitContractCases: Boolean = false
   private[intellij] var interpContracts: Boolean = false
   private[intellij] var infoFlow: Boolean = false
+  private[intellij] var rawInscription: Boolean = false
+  private[intellij] var elideEncoding: Boolean = false
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -152,6 +156,8 @@ object LogikaConfigurable {
     splitContractCases = pc.getBoolean(splitContractCasesKey, splitContractCases)
     interpContracts = pc.getBoolean(interpContractsKey, interpContracts)
     infoFlow = pc.getBoolean(infoFlowKey, infoFlow)
+    rawInscription = pc.getBoolean(rawInscriptionKey, rawInscription)
+    elideEncoding = pc.getBoolean(elideEncodingKey, elideEncoding)
   }
 
   def saveConfiguration(): Unit = {
@@ -184,6 +190,8 @@ object LogikaConfigurable {
     pc.setValue(splitContractCasesKey, splitContractCases.toString)
     pc.setValue(interpContractsKey, interpContracts.toString)
     pc.setValue(infoFlowKey, infoFlow.toString)
+    pc.setValue(rawInscriptionKey, elideEncoding.toString)
+    pc.setValue(elideEncodingKey, elideEncoding.toString)
   }
 
   def parseGe(text: String, min: Long): Option[Long] =
@@ -271,7 +279,9 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         splitMatchCasesCheckBox.isSelected != splitMatchCases ||
         splitContractCasesCheckBox.isSelected != splitContractCases ||
         interpContractCheckBox.isSelected != interpContracts ||
-        infoFlowCheckBox.isSelected != infoFlow)
+        infoFlowCheckBox.isSelected != infoFlow ||
+        rawInscriptionCheckBox.isSelected != rawInscription ||
+        elideEncodingCheckBox.isSelected != elideEncoding)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -392,6 +402,12 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       splitContractCasesCheckBox.setEnabled(enabled)
     }
 
+    def updateSummoning(): Unit = {
+      val enabled = !inscribeSummoningsCheckBox.isSelected
+      rawInscriptionCheckBox.setEnabled(enabled)
+      elideEncodingCheckBox.setEnabled(enabled)
+    }
+
     logoLabel.setIcon(logo)
 
     reset()
@@ -490,6 +506,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       }
     })
 
+    inscribeSummoningsCheckBox.addChangeListener(_ => updateSummoning())
+
     branchParDisabledRadioButton.addChangeListener(_ => updateBranchPar())
     branchParReturnsRadioButton.addChangeListener(_ => updateBranchPar())
     branchParAllRadioButton.addChangeListener(_ => updateBranchPar())
@@ -535,6 +553,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitContractCases = splitContractCasesCheckBox.isSelected
     interpContracts = interpContractCheckBox.isSelected
     infoFlow = infoFlowCheckBox.isSelected
+    rawInscription = rawInscriptionCheckBox.isSelected
+    elideEncoding = elideEncodingCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -581,5 +601,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitContractCasesCheckBox.setSelected(splitContractCases)
     interpContractCheckBox.setSelected(interpContracts)
     infoFlowCheckBox.setSelected(infoFlow)
+    rawInscriptionCheckBox.setSelected(rawInscription)
+    elideEncodingCheckBox.setSelected(elideEncoding)
   }
 }
