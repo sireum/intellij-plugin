@@ -403,7 +403,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     }
 
     def updateSummoning(): Unit = {
-      val enabled = !inscribeSummoningsCheckBox.isSelected
+      val enabled = inscribeSummoningsCheckBox.isSelected
       rawInscriptionCheckBox.setEnabled(enabled)
       elideEncodingCheckBox.setEnabled(enabled)
     }
@@ -520,6 +520,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     updateHintMaxColumn()
     updateFPRoundingMode()
     updateBranchPar()
+    updateSummoning()
 
     logikaPanel
   }
