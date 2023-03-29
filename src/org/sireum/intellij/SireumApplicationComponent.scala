@@ -88,6 +88,10 @@ object SireumApplicationComponent {
     if (sireumHomeOpt.isEmpty) {
       val env = System.getenv("SIREUM_HOME")
       sireumHomeOpt = if (env == null) scala.None else checkSireumDir(Os.path(env))
+      if (sireumHomeOpt.isEmpty) {
+        val home = System.getProperty("org.sireum.home")
+        sireumHomeOpt = if (home == null) scala.None else checkSireumDir(Os.path(home))
+      }
       if (sireumHomeOpt.isEmpty && SystemInfo.isWindows) {
         sireumHomeOpt = checkSireumDir(Os.path("C:\\Sireum" + dev))
         if (sireumHomeOpt.isEmpty)
