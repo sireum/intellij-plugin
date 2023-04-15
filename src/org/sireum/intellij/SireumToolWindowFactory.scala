@@ -28,19 +28,30 @@ package org.sireum.intellij
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.openapi.actionSystem.{ActionManager, AnAction}
+import com.intellij.openapi.application.TransactionGuard
+import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor}
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ex.ToolWindowEx
+import com.intellij.ui.JBColor
 import com.intellij.ui.content.ContentFactory
 import org.sireum.intellij.logika.LogikaToolWindowForm
+
+import java.awt.Color
+import java.awt.event.{ActionEvent, ActionListener}
+import javax.swing.event.{DocumentEvent, DocumentListener}
+import javax.swing.text.DefaultHighlighter
 
 object SireumToolWindowFactory {
 
   final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm, consoleView: ConsoleView)
 
   val windows = new ConcurrentHashMap[Project, Forms]()
+  val hpainter = new DefaultHighlighter.DefaultHighlightPainter(
+    new JBColor(new Color(129, 62, 200, 64), new Color(129, 62, 200, 256 - 64)))
 
   def createToolWindowContent(project: Project, toolWindow: ToolWindow): Unit = {
     toolWindow.setAutoHide(false)
@@ -59,6 +70,99 @@ object SireumToolWindowFactory {
     console.requestScrollingToEnd()
     toolWindow.getContentManager.addContent(
       contentFactory.createContent(console.getComponent, "Console", false))
+
+    logikaForm.logikaToolTextExportButton.addActionListener((_: ActionEvent) => {
+      val text = logikaForm.logikaTextArea.getText
+      val ext = text.headOption match {
+        case Some(';') => ".smt2"
+        case _ => ".txt"
+      }
+      import org.sireum.Os._
+      val f = tempFix("logika-", ext)
+      f.writeOver(text)
+      f.removeOnExit()
+      TransactionGuard.submitTransaction(project, {
+        () =>
+          val editor = FileEditorManager.getInstance(project).openTextEditor(
+            new OpenFileDescriptor(project, LocalFileSystem.getInstance().findFileByPath(f.canon.string.value)), true)
+          SireumClient.launchSMT2Solver(project, editor)
+      }: Runnable)
+    })
+
+    logikaForm.logikaToolTextField.setPlaceholderColor(new JBColor(Color.darkGray, Color.gray))
+    logikaForm.logikaToolTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(documentEvent: DocumentEvent): Unit = update(documentEvent)
+      override def removeUpdate(documentEvent: DocumentEvent): Unit = update(documentEvent)
+      override def changedUpdate(documentEvent: DocumentEvent): Unit = update(documentEvent)
+
+      def update(documentEvent: DocumentEvent): Unit = {
+        val document = documentEvent.getDocument
+        val text = document.getProperty("Logika").asInstanceOf[String]
+        if (text == null) {
+          return
+        }
+        val content = document.getText(0, documentEvent.getDocument.getLength)
+        SireumClient.singleExecutor.schedule({ () =>
+          if (content == document.getText(0, documentEvent.getDocument.getLength)) {
+            text(0) match {
+              case '{' =>
+                if (content.isEmpty) {
+                  logikaForm.logikaTextArea.setText(text)
+                  logikaForm.logikaTextArea.getHighlighter.removeAllHighlights()
+                } else {
+                  val lines = text.split('\n')
+                  val size = lines.length
+                  var newLines = List[String]()
+                  var i = 1
+                  while (i < size) {
+                    var j = i
+                    var found = false
+                    while (j < size && !found) {
+                      if (lines(j).last == ';') {
+                        found = true
+                        var hasContent = false
+                        for (k <- i to j if lines(k).contains(content)) hasContent = true
+                        if (hasContent) {
+                          for (k <- i to j) newLines = newLines :+ lines(k)
+                        }
+                      } else if (lines(j).head == '}') {
+                        found = true
+                        var hasContent = false
+                        for (k <- i until j if lines(k).contains(content)) hasContent = true
+                        if (hasContent) for (k <- i until j) newLines = newLines :+ lines(k)
+                      }
+                      j = j + 1
+                    }
+                    i = j
+                  }
+                  val newText = s"// Filtered by: $content\n{\n${newLines.mkString("\n")}\n}"
+                  logikaForm.logikaTextArea.setText(newText)
+                  val highlighter = logikaForm.logikaTextArea.getHighlighter
+                  highlighter.removeAllHighlights()
+                  i = newText.indexOf("{") + 1
+                  var offset = newText.indexOf(content, i)
+                  while (offset > 0) {
+                    i = offset + content.length
+                    highlighter.addHighlight(offset, i, hpainter)
+                    offset = newText.indexOf(content, i)
+                  }
+                }
+              case _ =>
+                val highlighter = logikaForm.logikaTextArea.getHighlighter
+                highlighter.removeAllHighlights()
+                var i = 0
+                var offset = text.indexOf(content, i)
+                while (offset > 0) {
+                  i = offset + content.length
+                  highlighter.addHighlight(offset, i, hpainter)
+                  offset = text.indexOf(content, i)
+                }
+            }
+          }
+        }: Runnable, 100, TimeUnit.MILLISECONDS)
+      }
+    })
+
     windows.put(project, Forms(toolWindow, logikaForm, console))
   }
 

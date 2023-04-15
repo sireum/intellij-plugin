@@ -41,9 +41,11 @@
     ]]>
     </change-notes>
 
-    <idea-version since-build="212.5080"/>
+    <idea-version since-build="231.8109"/>
 
     <depends>com.intellij.modules.lang</depends>
+
+    <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable id="SireumConfigurable" instance="org.sireum.intellij.SireumConfigurable"
@@ -100,6 +102,13 @@
             <add-to-group group-id="LogikaGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl I"/>
+        </action>
+
+        <action id="LogikaSmt2Action" class="org.sireum.intellij.logika.LogikaSmt2Action"
+                text="Launch SMT2 Solver"
+                description="Launch SMT2 solver using the arguments in the file">
+            <add-to-group group-id="LogikaGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
 
         <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"

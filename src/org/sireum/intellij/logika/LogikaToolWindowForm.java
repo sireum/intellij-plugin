@@ -25,13 +25,19 @@
 
 package org.sireum.intellij.logika;
 
+import org.sireum.intellij.PlaceholderTextField;
+
 import javax.swing.*;
 
 public class LogikaToolWindowForm {
     public JPanel logikaToolWindowPanel;
-    private JScrollPane logikaToolTextScrollPane;
-    public JTextArea logikaTextArea;
     private JScrollPane logikaToolListScrollPane;
     public JList<Object> logikaList;
     public JSplitPane logikaToolSplitPane;
+    private JPanel logikaToolTextPane;
+    private JScrollPane logikaToolTextScrollPane;
+    private JPanel logikaToolTextInnerPane;
+    public PlaceholderTextField logikaToolTextField;
+    public JButton logikaToolTextExportButton;
+    public JTextArea logikaTextArea;
 }

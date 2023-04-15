@@ -29,6 +29,8 @@ import com.intellij.openapi.actionSystem.{AnActionEvent, CommonDataKeys}
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.ToolWindowManager
+import org.jetbrains.plugins.terminal.{ShellTerminalWidget, TerminalToolWindowManager, TerminalView}
 import org.sireum.intellij.{SireumAction, SireumClient, Util}
 
 trait LogikaOnlyAction extends SireumAction {
@@ -85,4 +87,18 @@ final class LogikaCheckActionInterprocedural extends LogikaCheckAction {
     if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isLogikaSupportedPlatform &&
       Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText))._1)
   }
+}
+
+final class LogikaSmt2Action extends LogikaOnlyAction {
+  override def update(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
+    val text = editor.getDocument.getText
+    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null &&
+      editor.getVirtualFile.getExtension == "smt2" && text.contains(SireumClient.smt2SolverPrefix) &&
+      text.contains(SireumClient.smt2SolverArgsPrefix))
+  }
+
+  override def actionPerformed(e: AnActionEvent): Unit = SireumClient.launchSMT2Solver(e.getProject,
+    FileEditorManager.getInstance(e.getProject).getSelectedTextEditor)
 }

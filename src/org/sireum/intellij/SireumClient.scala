@@ -42,12 +42,11 @@ import com.intellij.openapi.util._
 import com.intellij.openapi.vfs.{LocalFileSystem, VirtualFile}
 import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresentation}
 import com.intellij.openapi.wm.impl.ToolWindowImpl
-import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, WindowManager}
+import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, ToolWindowManager, WindowManager}
 import com.intellij.util.Consumer
-import org.sireum.$internal.MutableMarker
+import org.jetbrains.plugins.terminal.{ShellTerminalWidget, TerminalToolWindowManager}
 import org.sireum.intellij.logika.LogikaConfigurable
-import org.sireum.logika.State.Claim
-import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke, State}
+import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke}
 import org.sireum.message.Level
 
 import java.awt.event.MouseEvent
@@ -120,6 +119,9 @@ object SireumClient {
   val statusWaiting = "Sireum is waiting to work"
   val statusWorking = "Sireum is working"
   val layer = 1000000
+  val smt2SolverPrefix = "; Solver: "
+  val smt2SolverArgsPrefix = "; Arguments: "
+  val smt2TabName = "Logika SMT2"
 
   var request: Option[Request] = None
   var processInit: Option[(scala.sys.process.Process, org.sireum.Os.Path)] = None
@@ -749,6 +751,7 @@ object SireumClient {
   }
 
   def resetSireumView(project: Project, editorOpt: Option[Editor]): Unit = {
+    import javax.swing.event.{DocumentEvent, DocumentListener}
     sireumToolWindowFactory(project, f => {
       val list = f.logika.logikaList
       list.synchronized {
@@ -770,6 +773,9 @@ object SireumClient {
                 f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
                 f.logika.logikaTextArea.setText(normalizeChars(content))
                 f.logika.logikaTextArea.setCaretPosition(0)
+                f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
+                f.logika.logikaToolTextField.setPlaceholder("Search ...")
+                f.logika.logikaToolTextField.setText("")
                 for (editor <- editorOpt if !editor.isDisposed)
                   TransactionGuard.submitTransaction(project, (() =>
                     FileEditorManager.getInstance(project).openTextEditor(
@@ -792,6 +798,9 @@ object SireumClient {
                   }
                 }
                 f.logika.logikaTextArea.setText(content)
+                f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
+                f.logika.logikaToolTextField.setPlaceholder("Filter claims ...")
+                f.logika.logikaToolTextField.setText("")
                 f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
                 for (editor <- editorOpt if !editor.isDisposed)
                   TransactionGuard.submitTransaction(project, (() =>
@@ -1169,6 +1178,33 @@ object SireumClient {
         }
 
         ApplicationManager.getApplication.invokeLater(() => processResultH())
+    }
+  }
+
+  def launchSMT2Solver(project: Project, editor: Editor): Unit = {
+    if (editor != null) Util.getPath(editor.getVirtualFile) match {
+      case Some(path) =>
+        val text = editor.getDocument.getText
+        val solverIndex = text.indexOf(smt2SolverPrefix)
+        if (solverIndex >= 0) {
+          val solverArgumentsIndex = text.indexOf(smt2SolverArgsPrefix, solverIndex)
+          if (solverArgumentsIndex >= 0) {
+            val solverPath = text.substring(solverIndex + smt2SolverPrefix.length, text.indexOf('\n', solverIndex))
+            val solverArguments = text.substring(solverArgumentsIndex + smt2SolverArgsPrefix.length,
+              text.indexOf('\n', solverArgumentsIndex))
+            val ttwm = TerminalToolWindowManager.getInstance(project)
+            var window = ttwm.getToolWindow
+            if (window == null) {
+              window = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
+            }
+            val content = window.getContentManager.findContent(smt2TabName)
+            val widget = if (content == null) ttwm.createLocalShellWidget(project.getBasePath, smt2TabName)
+            else TerminalToolWindowManager.getWidgetByContent(content).asInstanceOf[ShellTerminalWidget]
+            widget.requestFocus()
+            widget.executeCommand(s"$solverPath $solverArguments ${path.string.value}")
+          }
+        }
+      case _ =>
     }
   }
 }

@@ -194,7 +194,7 @@ object LogikaConfigurable {
     pc.setValue(interpContractsKey, interpContracts.toString)
     pc.setValue(interpStrictPureKey, interpStrictPure.toString)
     pc.setValue(infoFlowKey, infoFlow.toString)
-    pc.setValue(rawInscriptionKey, elideEncoding.toString)
+    pc.setValue(rawInscriptionKey, rawInscription.toString)
     pc.setValue(elideEncodingKey, elideEncoding.toString)
   }
 
