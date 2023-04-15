@@ -95,8 +95,9 @@ final class LogikaSmt2Action extends LogikaOnlyAction {
     val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
     val text = editor.getDocument.getText
     if (editor != null) e.getPresentation.setEnabledAndVisible(project != null &&
-      editor.getVirtualFile.getExtension == "smt2" && text.contains(SireumClient.smt2SolverPrefix) &&
-      text.contains(SireumClient.smt2SolverArgsPrefix))
+      editor.getVirtualFile.getExtension == "smt2" &&
+      (text.contains(SireumClient.smt2SolverPrefix) && text.contains(SireumClient.smt2SolverArgsPrefix) ||
+        text.contains(SireumClient.smt2SolverAndArgsPrefix)))
   }
 
   override def actionPerformed(e: AnActionEvent): Unit = SireumClient.launchSMT2Solver(e.getProject,

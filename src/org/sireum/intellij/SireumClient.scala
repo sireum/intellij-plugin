@@ -121,6 +121,7 @@ object SireumClient {
   val layer = 1000000
   val smt2SolverPrefix = "; Solver: "
   val smt2SolverArgsPrefix = "; Arguments: "
+  val smt2SolverAndArgsPrefix = "; Solver and arguments:"
   val smt2TabName = "Logika SMT2"
 
   var request: Option[Request] = None
@@ -1182,6 +1183,18 @@ object SireumClient {
   }
 
   def launchSMT2Solver(project: Project, editor: Editor): Unit = {
+    def execute(command: String): Unit = ApplicationManager.getApplication.invokeLater(() => {
+      val ttwm = TerminalToolWindowManager.getInstance(project)
+      var window = ttwm.getToolWindow
+      if (window == null) {
+        window = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
+      }
+      val content = window.getContentManager.findContent(smt2TabName)
+      val widget = if (content == null) ttwm.createLocalShellWidget(project.getBasePath, smt2TabName)
+      else TerminalToolWindowManager.getWidgetByContent(content).asInstanceOf[ShellTerminalWidget]
+      widget.requestFocus()
+      widget.executeCommand(command.replaceAll(" -in ", " "))
+    })
     if (editor != null) Util.getPath(editor.getVirtualFile) match {
       case Some(path) =>
         val text = editor.getDocument.getText
@@ -1189,19 +1202,18 @@ object SireumClient {
         if (solverIndex >= 0) {
           val solverArgumentsIndex = text.indexOf(smt2SolverArgsPrefix, solverIndex)
           if (solverArgumentsIndex >= 0) {
-            val solverPath = text.substring(solverIndex + smt2SolverPrefix.length, text.indexOf('\n', solverIndex))
+            val solverPath = text.substring(solverIndex + smt2SolverPrefix.length, text.indexOf('\n', solverIndex)).trim
             val solverArguments = text.substring(solverArgumentsIndex + smt2SolverArgsPrefix.length,
-              text.indexOf('\n', solverArgumentsIndex))
-            val ttwm = TerminalToolWindowManager.getInstance(project)
-            var window = ttwm.getToolWindow
-            if (window == null) {
-              window = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
-            }
-            val content = window.getContentManager.findContent(smt2TabName)
-            val widget = if (content == null) ttwm.createLocalShellWidget(project.getBasePath, smt2TabName)
-            else TerminalToolWindowManager.getWidgetByContent(content).asInstanceOf[ShellTerminalWidget]
-            widget.requestFocus()
-            widget.executeCommand(s"$solverPath $solverArguments ${path.string.value}")
+              text.indexOf('\n', solverArgumentsIndex)).trim
+            execute(s"$solverPath $solverArguments ${path.string.value}")
+          }
+        } else {
+          var solverArgumentsIndex = text.indexOf(smt2SolverAndArgsPrefix, solverIndex)
+          println(solverArgumentsIndex)
+          if (solverArgumentsIndex >= 0) {
+            solverArgumentsIndex = text.indexOf("; *", solverArgumentsIndex)
+            solverArgumentsIndex = text.indexOf(": ", solverArgumentsIndex)
+            execute(s"${text.substring(solverArgumentsIndex + 2, text.indexOf('\n', solverArgumentsIndex)).trim} ${path.string.value}")
           }
         }
       case _ =>

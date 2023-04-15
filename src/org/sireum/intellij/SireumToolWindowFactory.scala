@@ -80,11 +80,11 @@ object SireumToolWindowFactory {
       import org.sireum.Os._
       val f = tempFix("logika-", ext)
       f.writeOver(text)
-      f.removeOnExit()
       TransactionGuard.submitTransaction(project, {
         () =>
           val editor = FileEditorManager.getInstance(project).openTextEditor(
             new OpenFileDescriptor(project, LocalFileSystem.getInstance().findFileByPath(f.canon.string.value)), true)
+
           SireumClient.launchSMT2Solver(project, editor)
       }: Runnable)
     })
