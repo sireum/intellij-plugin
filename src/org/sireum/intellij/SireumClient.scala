@@ -121,7 +121,7 @@ object SireumClient {
   val layer = 1000000
   val smt2SolverPrefix = "; Solver: "
   val smt2SolverArgsPrefix = "; Arguments: "
-  val smt2SolverAndArgsPrefix = "; Solver and arguments:"
+  val smt2SolverAndArgsPrefix = "; Solvers and arguments:"
   val smt2TabName = "Local"
 
   var request: Option[Request] = None
@@ -1206,15 +1206,15 @@ object SireumClient {
             val solverPath = text.substring(solverIndex + smt2SolverPrefix.length, text.indexOf('\n', solverIndex)).trim
             val solverArguments = text.substring(solverArgumentsIndex + smt2SolverArgsPrefix.length,
               text.indexOf('\n', solverArgumentsIndex)).trim
-            execute(s"$solverPath $solverArguments ${path.string.value}")
+            execute(s""""$solverPath" $solverArguments "${path.string.value}"""")
           }
         } else {
           var solverArgumentsIndex = text.indexOf(smt2SolverAndArgsPrefix, solverIndex)
-          println(solverArgumentsIndex)
           if (solverArgumentsIndex >= 0) {
             solverArgumentsIndex = text.indexOf("; *", solverArgumentsIndex)
             solverArgumentsIndex = text.indexOf(": ", solverArgumentsIndex)
-            execute(s"${text.substring(solverArgumentsIndex + 2, text.indexOf('\n', solverArgumentsIndex)).trim} ${path.string.value}")
+            val Array(solverPath, solverArguments) = text.substring(solverArgumentsIndex + 2, text.indexOf('\n', solverArgumentsIndex)).split(',')
+            execute(s""""${solverPath.trim}" ${solverArguments.trim} "${path.string.value}"""")
           }
         }
       case _ =>
