@@ -70,6 +70,7 @@ object SireumToolWindowFactory {
     console.requestScrollingToEnd()
     toolWindow.getContentManager.addContent(
       contentFactory.createContent(console.getComponent, "Console", false))
+    logikaForm.logikaTextArea.setEditable(false)
 
     logikaForm.logikaToolTextExportButton.addActionListener((_: ActionEvent) => {
       val text = logikaForm.logikaTextArea.getText

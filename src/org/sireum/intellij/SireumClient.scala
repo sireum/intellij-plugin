@@ -122,7 +122,7 @@ object SireumClient {
   val smt2SolverPrefix = "; Solver: "
   val smt2SolverArgsPrefix = "; Arguments: "
   val smt2SolverAndArgsPrefix = "; Solver and arguments:"
-  val smt2TabName = "Logika SMT2"
+  val smt2TabName = "Local"
 
   var request: Option[Request] = None
   var processInit: Option[(scala.sys.process.Process, org.sireum.Os.Path)] = None
@@ -1189,6 +1189,7 @@ object SireumClient {
       if (window == null) {
         window = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
       }
+      window.activate(null)
       val content = window.getContentManager.findContent(smt2TabName)
       val widget = if (content == null) ttwm.createLocalShellWidget(project.getBasePath, smt2TabName)
       else TerminalToolWindowManager.getWidgetByContent(content).asInstanceOf[ShellTerminalWidget]
