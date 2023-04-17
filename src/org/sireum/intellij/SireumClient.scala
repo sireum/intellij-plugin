@@ -1210,11 +1210,13 @@ object SireumClient {
           }
         } else {
           var solverArgumentsIndex = text.indexOf(smt2SolverAndArgsPrefix, solverIndex)
-          if (solverArgumentsIndex >= 0) {
+          while (solverArgumentsIndex >= 0) {
             solverArgumentsIndex = text.indexOf("; *", solverArgumentsIndex)
             solverArgumentsIndex = text.indexOf(": ", solverArgumentsIndex)
-            val Array(solverPath, solverArguments) = text.substring(solverArgumentsIndex + 2, text.indexOf('\n', solverArgumentsIndex)).split(',')
+            val n = text.indexOf('\n', solverArgumentsIndex)
+            val Array(solverPath, solverArguments) = text.substring(solverArgumentsIndex + 2, n).split(',')
             execute(s""""${solverPath.trim}" ${solverArguments.trim} "${path.string.value}"""")
+            solverArgumentsIndex = text.indexOf("; *", n)
           }
         }
       case _ =>

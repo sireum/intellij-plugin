@@ -109,6 +109,7 @@
                 description="Launch SMT2 solver using the arguments in the file">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
 
         <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"
