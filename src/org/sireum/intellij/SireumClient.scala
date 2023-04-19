@@ -1193,6 +1193,7 @@ object SireumClient {
       val content = window.getContentManager.findContent(smt2TabName)
       val widget = if (content == null) ttwm.createLocalShellWidget(project.getBasePath, smt2TabName)
       else TerminalToolWindowManager.getWidgetByContent(content).asInstanceOf[ShellTerminalWidget]
+      widget.setAutoscrolls(true)
       widget.requestFocus()
       widget.executeCommand(command.replaceAll(" -in ", " "))
     })
