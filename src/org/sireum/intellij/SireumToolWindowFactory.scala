@@ -73,9 +73,24 @@ object SireumToolWindowFactory {
     logikaForm.logikaTextArea.setEditable(false)
 
     logikaForm.logikaToolTextExportButton.addActionListener((_: ActionEvent) => {
-      val text = logikaForm.logikaTextArea.getText
+      var text = logikaForm.logikaTextArea.getText
+
       val ext = text.headOption match {
-        case Some(';') => ".smt2"
+        case Some(';') =>
+          val resultPrefix = "; Result"
+          var i = text.indexOf(resultPrefix)
+          if (i < 0) return
+          i = text.indexOf(':', i + resultPrefix.length)
+          if (i < 0) return
+          val j = text.indexOf('\n', i + 1)
+          if (j < 0) return
+          if ("Invalid" != text.substring(i + 1, j).trim) return
+          val checkSat = "(check-sat)"
+          i = text.lastIndexOf(checkSat)
+          if (i < 0) return
+          val k = i + checkSat.length
+          text = s"${text.substring(0, k)}\n(get-model)${text.substring(k, text.length)}"
+          ".smt2"
         case _ => ".txt"
       }
       import org.sireum.Os._
