@@ -77,19 +77,22 @@ object SireumToolWindowFactory {
 
       val ext = text.headOption match {
         case Some(';') =>
-          val resultPrefix = "; Result"
-          var i = text.indexOf(resultPrefix)
-          if (i < 0) return
-          i = text.indexOf(':', i + resultPrefix.length)
-          if (i < 0) return
-          val j = text.indexOf('\n', i + 1)
-          if (j < 0) return
-          if ("Invalid" != text.substring(i + 1, j).trim) return
-          val checkSat = "(check-sat)"
-          i = text.lastIndexOf(checkSat)
-          if (i < 0) return
-          val k = i + checkSat.length
-          text = s"${text.substring(0, k)}\n(get-model)${text.substring(k, text.length)}"
+          def updateIfInvalid(): Unit = {
+            val resultPrefix = "; Result"
+            var i = text.indexOf(resultPrefix)
+            if (i < 0) return
+            i = text.indexOf(':', i + resultPrefix.length)
+            if (i < 0) return
+            val j = text.indexOf('\n', i + 1)
+            if (j < 0) return
+            if ("Invalid" != text.substring(i + 1, j).trim) return
+            val checkSat = "(check-sat)"
+            i = text.lastIndexOf(checkSat)
+            if (i < 0) return
+            val k = i + checkSat.length
+            text = s"${text.substring(0, k)}\n(get-model)${text.substring(k, text.length)}"
+          }
+          updateIfInvalid()
           ".smt2"
         case _ => ".txt"
       }
