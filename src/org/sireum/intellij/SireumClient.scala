@@ -523,6 +523,16 @@ object SireumClient {
   }
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit = {
+    if (processInit.nonEmpty) {
+      ApplicationManager.getApplication.invokeLater { () =>
+        val statusBar = WindowManager.getInstance.getStatusBar(project)
+        val id = statusBarWidget.ID()
+        if (statusBar.getWidget(id) == null) {
+          statusBar.addWidget(statusBarWidget)
+        }
+        statusBar.updateWidget(id)
+      }
+    }
     analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground =
       !(SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis))
   }
