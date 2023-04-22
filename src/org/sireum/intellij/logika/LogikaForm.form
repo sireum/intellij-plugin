@@ -3,7 +3,7 @@
   <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="10" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="722" height="723"/>
+      <xy x="20" y="20" width="740" height="733"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -621,12 +621,13 @@
               <text value="Use method contracts in interprocedural verification"/>
             </properties>
           </component>
-          <component id="3b8c2" class="javax.swing.JCheckBox" binding="interpStrictPureCheckBox">
+          <component id="3b8c2" class="javax.swing.JCheckBox" binding="flipStrictPureModeCheckBox">
             <constraints>
               <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
-              <text value="Use interprocedural verification on @strictpure"/>
+              <text value="Flip @strictpure method verification mode"/>
+              <toolTipText value="Enable inter-procedural verification of strict-pure methods if on compositional verification, and&lt;br&gt; enable compositional verification of strict-pure methods if on inter-procededural verification"/>
             </properties>
           </component>
         </children>

@@ -413,7 +413,7 @@ object SireumClient {
             interpContracts = LogikaConfigurable.interpContracts,
             rawInscription = LogikaConfigurable.rawInscription,
             elideEncoding = LogikaConfigurable.elideEncoding,
-            interpStrictPure = LogikaConfigurable.interpStrictPure
+            flipStrictPure = LogikaConfigurable.flipStrictPure
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
@@ -523,7 +523,8 @@ object SireumClient {
   }
 
   def editorOpened(project: Project, file: VirtualFile, editor: Editor): Unit = {
-    analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground = true)
+    analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground =
+      !(SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis))
   }
 
   val slangErrorTitle = "Slang Error"

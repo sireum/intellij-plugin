@@ -70,7 +70,7 @@ object LogikaConfigurable {
   private val splitMatchCasesKey = logikaKey + "split.matchCases"
   private val splitContractCasesKey = logikaKey + "split.contractCases"
   private val interpContractsKey = logikaKey + "interp.contracts"
-  private val interpStrictPureKey = logikaKey + "interp.strictpure"
+  private val flipStrictPureKey = logikaKey + "strictpure.flip"
   private val infoFlowKey = logikaKey + "infoflow"
   private val rawInscriptionKey = logikaKey + "smt2.raw"
   private val elideEncodingKey = logikaKey + "smt2.elide"
@@ -105,7 +105,7 @@ object LogikaConfigurable {
   private[intellij] var splitMatchCases: Boolean = false
   private[intellij] var splitContractCases: Boolean = false
   private[intellij] var interpContracts: Boolean = false
-  private[intellij] var interpStrictPure: Boolean = false
+  private[intellij] var flipStrictPure: Boolean = false
   private[intellij] var infoFlow: Boolean = false
   private[intellij] var rawInscription: Boolean = false
   private[intellij] var elideEncoding: Boolean = false
@@ -157,7 +157,7 @@ object LogikaConfigurable {
     splitMatchCases = pc.getBoolean(splitMatchCasesKey, splitMatchCases)
     splitContractCases = pc.getBoolean(splitContractCasesKey, splitContractCases)
     interpContracts = pc.getBoolean(interpContractsKey, interpContracts)
-    interpStrictPure = pc.getBoolean(interpStrictPureKey, interpStrictPure)
+    flipStrictPure = pc.getBoolean(flipStrictPureKey, flipStrictPure)
     infoFlow = pc.getBoolean(infoFlowKey, infoFlow)
     rawInscription = pc.getBoolean(rawInscriptionKey, rawInscription)
     elideEncoding = pc.getBoolean(elideEncodingKey, elideEncoding)
@@ -192,7 +192,7 @@ object LogikaConfigurable {
     pc.setValue(splitMatchCasesKey, splitMatchCases.toString)
     pc.setValue(splitContractCasesKey, splitContractCases.toString)
     pc.setValue(interpContractsKey, interpContracts.toString)
-    pc.setValue(interpStrictPureKey, interpStrictPure.toString)
+    pc.setValue(flipStrictPureKey, flipStrictPure.toString)
     pc.setValue(infoFlowKey, infoFlow.toString)
     pc.setValue(rawInscriptionKey, rawInscription.toString)
     pc.setValue(elideEncodingKey, elideEncoding.toString)
@@ -283,7 +283,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         splitMatchCasesCheckBox.isSelected != splitMatchCases ||
         splitContractCasesCheckBox.isSelected != splitContractCases ||
         interpContractCheckBox.isSelected != interpContracts ||
-        interpStrictPureCheckBox.isSelected != interpStrictPure ||
+        flipStrictPureModeCheckBox.isSelected != flipStrictPure ||
         infoFlowCheckBox.isSelected != infoFlow ||
         rawInscriptionCheckBox.isSelected != rawInscription ||
         elideEncodingCheckBox.isSelected != elideEncoding)
@@ -558,7 +558,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitMatchCases = splitMatchCasesCheckBox.isSelected
     splitContractCases = splitContractCasesCheckBox.isSelected
     interpContracts = interpContractCheckBox.isSelected
-    interpStrictPure = interpStrictPureCheckBox.isSelected
+    flipStrictPure = flipStrictPureModeCheckBox.isSelected
     infoFlow = infoFlowCheckBox.isSelected
     rawInscription = rawInscriptionCheckBox.isSelected
     elideEncoding = elideEncodingCheckBox.isSelected
@@ -607,7 +607,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitMatchCasesCheckBox.setSelected(splitMatchCases)
     splitContractCasesCheckBox.setSelected(splitContractCases)
     interpContractCheckBox.setSelected(interpContracts)
-    interpStrictPureCheckBox.setSelected(interpStrictPure)
+    flipStrictPureModeCheckBox.setSelected(flipStrictPure)
     infoFlowCheckBox.setSelected(infoFlow)
     rawInscriptionCheckBox.setSelected(rawInscription)
     elideEncodingCheckBox.setSelected(elideEncoding)

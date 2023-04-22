@@ -86,5 +86,5 @@ public abstract class LogikaForm {
     protected JCheckBox interpContractCheckBox;
     protected JCheckBox rawInscriptionCheckBox;
     protected JCheckBox elideEncodingCheckBox;
-    protected JCheckBox interpStrictPureCheckBox;
+    protected JCheckBox flipStrictPureModeCheckBox;
 }
