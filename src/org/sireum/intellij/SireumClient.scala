@@ -380,7 +380,7 @@ object SireumClient {
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
-              isBackground: Boolean, isInterprocedural: Boolean): Unit = {
+              isBackground: Boolean, isInterprocedural: Boolean, typeCheckOnly: Boolean = false): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
 
@@ -413,12 +413,13 @@ object SireumClient {
             interpContracts = LogikaConfigurable.interpContracts,
             rawInscription = LogikaConfigurable.rawInscription,
             elideEncoding = LogikaConfigurable.elideEncoding,
-            flipStrictPure = LogikaConfigurable.flipStrictPure
+            flipStrictPure = LogikaConfigurable.flipStrictPure,
+            transitionCache = LogikaConfigurable.transitionCache
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
-            logikaEnabled = Util.isLogikaSupportedPlatform && (!isBackground ||
+            logikaEnabled = !typeCheckOnly && Util.isLogikaSupportedPlatform && (!isBackground ||
               (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)),
             id = requestId,
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
@@ -429,14 +430,16 @@ object SireumClient {
           var files = ofiles
           var vfiles = org.sireum.ISZ[org.sireum.String]()
           try {
-            val content = editor.getDocument.getText
-            val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
-            if (hasSireum) {
-              files = files + p.string ~> content
-              if (Util.isLogikaSupportedPlatform && (!isBackground ||
-                (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)) &&
-                (compactFirstLine.contains("#Logika") || isInterprocedural)) {
-                vfiles = vfiles :+ p.string
+            if (!typeCheckOnly) {
+              val content = editor.getDocument.getText
+              val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
+              if (hasSireum) {
+                files = files + p.string ~> content
+                if (Util.isLogikaSupportedPlatform && (!isBackground ||
+                  (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)) &&
+                  (compactFirstLine.contains("#Logika") || isInterprocedural)) {
+                  vfiles = vfiles :+ p.string
+                }
               }
             }
           } catch {

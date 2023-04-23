@@ -26,11 +26,10 @@
 package org.sireum.intellij.logika
 
 import com.intellij.openapi.actionSystem.{AnActionEvent, CommonDataKeys}
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.ToolWindowManager
-import org.jetbrains.plugins.terminal.{ShellTerminalWidget, TerminalToolWindowManager, TerminalView}
 import org.sireum.intellij.{SireumAction, SireumClient, Util}
 
 trait LogikaOnlyAction extends SireumAction {
@@ -93,13 +92,19 @@ final class LogikaSmt2Action extends LogikaOnlyAction {
   override def update(e: AnActionEvent): Unit = {
     val project = e.getProject
     val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
-    val text = editor.getDocument.getText
-    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null &&
-      editor.getVirtualFile.getExtension == "smt2" &&
-      (text.contains(SireumClient.smt2SolverPrefix) && text.contains(SireumClient.smt2SolverArgsPrefix) ||
-        text.contains(SireumClient.smt2SolverAndArgsPrefix)))
+    if (editor != null) {
+      val text = editor.getDocument.getText
+      e.getPresentation.setEnabledAndVisible(project != null &&
+        editor.getVirtualFile.getExtension == "smt2" &&
+        (text.contains(SireumClient.smt2SolverPrefix) && text.contains(SireumClient.smt2SolverArgsPrefix) ||
+          text.contains(SireumClient.smt2SolverAndArgsPrefix)))
+    }
   }
 
-  override def actionPerformed(e: AnActionEvent): Unit = SireumClient.launchSMT2Solver(e.getProject,
-    FileEditorManager.getInstance(e.getProject).getSelectedTextEditor)
+  override def actionPerformed(e: AnActionEvent): Unit = {
+    val editor = FileEditorManager.getInstance(e.getProject).getSelectedTextEditor
+    ApplicationManager.getApplication.invokeAndWait(() =>
+      if (editor != null) FileDocumentManager.getInstance().saveDocument(editor.getDocument))
+    SireumClient.launchSMT2Solver(e.getProject, editor)
+  }
 }

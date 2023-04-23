@@ -112,6 +112,13 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
 
+        <action id="SlangCheckActionFile" class="org.sireum.intellij.SlangCheckActionFile"
+                text="Type Check"
+                description="Type check">
+            <add-to-group group-id="SlangGroup" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl T"/>
+        </action>
+
         <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"
                 text="Insert val Modifiers"
                 description="Insert constructor parameter val modifiers">

@@ -74,6 +74,7 @@ object LogikaConfigurable {
   private val infoFlowKey = logikaKey + "infoflow"
   private val rawInscriptionKey = logikaKey + "smt2.raw"
   private val elideEncodingKey = logikaKey + "smt2.elide"
+  private val transitionCacheKey = logikaKey + "experimental.tcache"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -109,6 +110,7 @@ object LogikaConfigurable {
   private[intellij] var infoFlow: Boolean = false
   private[intellij] var rawInscription: Boolean = false
   private[intellij] var elideEncoding: Boolean = false
+  private[intellij] var transitionCache: Boolean = false
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -161,6 +163,7 @@ object LogikaConfigurable {
     infoFlow = pc.getBoolean(infoFlowKey, infoFlow)
     rawInscription = pc.getBoolean(rawInscriptionKey, rawInscription)
     elideEncoding = pc.getBoolean(elideEncodingKey, elideEncoding)
+    transitionCache = pc.getBoolean(transitionCacheKey, transitionCache)
   }
 
   def saveConfiguration(): Unit = {
@@ -196,6 +199,7 @@ object LogikaConfigurable {
     pc.setValue(infoFlowKey, infoFlow.toString)
     pc.setValue(rawInscriptionKey, rawInscription.toString)
     pc.setValue(elideEncodingKey, elideEncoding.toString)
+    pc.setValue(transitionCacheKey, transitionCache.toString)
   }
 
   def parseGe(text: String, min: Long): Option[Long] =
@@ -286,7 +290,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         flipStrictPureModeCheckBox.isSelected != flipStrictPure ||
         infoFlowCheckBox.isSelected != infoFlow ||
         rawInscriptionCheckBox.isSelected != rawInscription ||
-        elideEncodingCheckBox.isSelected != elideEncoding)
+        elideEncodingCheckBox.isSelected != elideEncoding ||
+        transitionCacheCheckBox.isSelected != transitionCache)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -562,6 +567,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     infoFlow = infoFlowCheckBox.isSelected
     rawInscription = rawInscriptionCheckBox.isSelected
     elideEncoding = elideEncodingCheckBox.isSelected
+    transitionCache = transitionCacheCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -611,5 +617,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     infoFlowCheckBox.setSelected(infoFlow)
     rawInscriptionCheckBox.setSelected(rawInscription)
     elideEncodingCheckBox.setSelected(elideEncoding)
+    transitionCacheCheckBox.setSelected(transitionCache)
   }
 }
