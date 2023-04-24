@@ -55,6 +55,7 @@ object SireumToolWindowFactory {
 
   def createToolWindowContent(project: Project, toolWindow: ToolWindow): Unit = {
     toolWindow.setAutoHide(false)
+    toolWindow.setIcon(SireumClient.sireumGrayIcon)
     toolWindow match {
       case toolWindow: ToolWindowEx =>
         val list = new java.util.ArrayList[AnAction]

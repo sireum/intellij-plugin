@@ -109,6 +109,7 @@ object SireumClient {
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
   val gutterVerifiedIcon: Icon = IconLoader.getIcon("/icon/gutter-verified.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
+  val sireumGrayIcon: Icon = IconLoader.getIcon("/icon/sireum-gray.png")
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String, Boolean)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
   val analysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], DefaultListModel[Object], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])]("Analysis Data")
@@ -414,7 +415,7 @@ object SireumClient {
             rawInscription = LogikaConfigurable.rawInscription,
             elideEncoding = LogikaConfigurable.elideEncoding,
             flipStrictPure = LogikaConfigurable.flipStrictPure,
-            transitionCache = LogikaConfigurable.transitionCache
+            transitionCache = !LogikaConfigurable.infoFlow && LogikaConfigurable.transitionCache
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
