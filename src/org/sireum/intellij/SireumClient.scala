@@ -541,6 +541,8 @@ object SireumClient {
       !(SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis))
   }
 
+  val sireumServerTitle = "Sireum Server"
+
   val slangErrorTitle = "Slang Error"
 
   val logikaErrorTitle = "Logika Error"
@@ -1077,6 +1079,9 @@ object SireumClient {
         lastStatusUpdate = System.currentTimeMillis
         usedMemory = r.totalMemory - r.freeMemory
       case _: org.sireum.server.protocol.Version.Response =>
+      case r: org.sireum.server.protocol.Analysis.Cache.Cleared =>
+        Util.notify(new Notification(groupId, sireumServerTitle,
+          r.msg.value,NotificationType.INFORMATION), null, shouldExpire = true)
       case _ =>
         def processResultH(): Unit = {
           def clearEditorH(editor: Editor): Unit = {

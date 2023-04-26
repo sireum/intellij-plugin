@@ -66,6 +66,41 @@
             <add-to-group group-id="SireumGroup" anchor="last"/>
         </action>
 
+        <group id="SireumCacheGroup" text="Clear Sireum Cache" popup="true">
+            <add-to-group group-id="SireumGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </group>
+
+        <action id="ClearAllCacheAction" class="org.sireum.intellij.ClearAllCachesAction"
+                text="All"
+                description="Clear all caches">
+            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
+        </action>
+
+        <action id="ClearFileCacheAction" class="org.sireum.intellij.ClearFileCacheAction"
+                text="Files"
+                description="Clear file cache">
+            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
+        </action>
+
+        <action id="ClearSmt2CacheAction" class="org.sireum.intellij.ClearSmt2CacheAction"
+                text="SMT2 Queries"
+                description="Clear file cache">
+            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
+        </action>
+
+        <action id="ClearTransitionCacheAction" class="org.sireum.intellij.ClearTransitionCacheAction"
+                text="Transition"
+                description="Clear file cache">
+            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
+        </action>
+
+        <action id="ClearPersistentCacheAction" class="org.sireum.intellij.ClearPersistentCacheAction"
+                text="Persistent"
+                description="Clear file cache">
+            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
+        </action>
+
         <group id="SireumInsertGroup" text="Insert ..." popup="true">
             <add-to-group group-id="SireumGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
