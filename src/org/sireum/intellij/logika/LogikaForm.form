@@ -638,7 +638,7 @@
             <properties>
               <foreground color="-1734595"/>
               <text value="Transition caching (experimental!)"/>
-              <toolTipText value="Cache statement transition"/>
+              <toolTipText value="Cache various state transitions"/>
             </properties>
           </component>
         </children>

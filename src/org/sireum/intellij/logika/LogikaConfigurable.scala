@@ -410,7 +410,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       splitMatchCasesCheckBox.setEnabled(enabled)
       splitConditionalsCheckBox.setEnabled(enabled)
       splitContractCasesCheckBox.setEnabled(enabled)
-      transitionCacheCheckBox.setEnabled(enabled)
     }
 
     def updateSummoning(): Unit = {
