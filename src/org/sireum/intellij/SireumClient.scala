@@ -43,13 +43,12 @@ import com.intellij.openapi.vfs.{LocalFileSystem, VirtualFile}
 import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresentation}
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, ToolWindowManager, WindowManager}
-import com.intellij.util.Consumer
+import com.intellij.ui.JBColor
 import org.jetbrains.plugins.terminal.{ShellTerminalWidget, TerminalToolWindowManager}
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke}
 import org.sireum.message.Level
 
-import java.awt.event.MouseEvent
 import java.awt.{Color, Font}
 import java.util.concurrent._
 import javax.swing.{DefaultListModel, Icon, JSplitPane}
@@ -69,7 +68,7 @@ object SireumClient {
 
     override def getPresentation: WidgetPresentation =
       new IconPresentation {
-        override def getClickConsumer: Consumer[MouseEvent] = _ => {
+        override def getClickConsumer = _ => {
           var found = false
           val wm = WindowManager.getInstance
           for (frame <- wm.getAllProjectFrames if !found) {
@@ -112,9 +111,11 @@ object SireumClient {
   val sireumGrayIcon: Icon = IconLoader.getIcon("/icon/sireum-gray.png")
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String, Boolean)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
-  val analysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], DefaultListModel[Object], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])]("Analysis Data")
+  val analysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], DefaultListModel[Object], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]], scala.collection.mutable.HashSet[Int])]("Analysis Data")
   val statusKey = new Key[Boolean]("Sireum Analysis Status")
   val reportItemKey = new Key[ReportItem]("Sireum Report Item")
+  val coverageColor = new JBColor(new Color(129, 62, 200, 8), new Color(129, 62, 200, 8))
+  val coverageTextAttributes = new TextAttributes(null, coverageColor, null, EffectType.BOXED, Font.PLAIN)
 
   val statusIdle = "Sireum is idle"
   val statusWaiting = "Sireum is waiting to work"
@@ -393,7 +394,8 @@ object SireumClient {
         case _ => return Vector()
       }
       Vector(
-        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings, LogikaConfigurable.infoFlow,
+        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
+          LogikaConfigurable.coverage, LogikaConfigurable.infoFlow,
           org.sireum.server.service.AnalysisService.defaultConfig(
             parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             sat = LogikaConfigurable.checkSat,
@@ -613,6 +615,8 @@ object SireumClient {
   }
 
   private[intellij] sealed trait ReportItem
+
+  private[intellij] object CoverageReportItem extends ReportItem
 
   private[intellij] final case class ConsoleReportItem(project: Project,
                                                        file: VirtualFile,
@@ -838,10 +842,10 @@ object SireumClient {
     else text
   }
 
-  def addLineHighlighter(mm: MarkupModel, line: Int, layer: Int): RangeHighlighter = {
+  def addLineHighlighter(mm: MarkupModel, line: Int, layer: Int, ta: TextAttributes = null): RangeHighlighter = {
     val max = mm.getDocument.getLineCount
     val l = if (line < 0) 0 else if (line >= max) max - 1 else line
-    mm.addLineHighlighter(l, layer, null)
+    mm.addLineHighlighter(l, layer, ta)
   }
 
   def processResult(r: org.sireum.server.protocol.Response): Unit = {
@@ -1162,7 +1166,7 @@ object SireumClient {
                 return
             }
           }
-          val (rhs, listModel, summoningListModelMap, hintListModelMap) = analysisDataKey.synchronized {
+          val (rhs, listModel, summoningListModelMap, hintListModelMap, coverageLines) = analysisDataKey.synchronized {
             r match {
               case r: org.sireum.server.protocol.Analysis.End =>
                 notifyHelper(Some(project), Some(editor), r)
@@ -1177,7 +1181,8 @@ object SireumClient {
                     scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
                     new DefaultListModel[Object](),
                     scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
-                    scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
+                    scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]](),
+                    scala.collection.mutable.HashSet[Int]()
                   )
                   editor.putUserData(analysisDataKey, q)
                 }
@@ -1188,14 +1193,27 @@ object SireumClient {
             writeLog(isRequest = false, s"Stale response: $r")
             return
           }
-          for ((line, ri) <- processReport(project, file, r)) try {
-            ri match {
-              case ri: ConsoleReportItem => consoleReportItems(listModel, rhs, editor, ri, line)
-              case ri: HintReportItem => hintReportItem(hintListModelMap, rhs, editor, ri, line)
-              case ri: SummoningReportItem => summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
+          r match {
+            case r: org.sireum.server.protocol.Analysis.Coverage => try {
+              val mm = editor.getMarkupModel
+              for (i <- r.pos.beginLine to r.pos.endLine if !coverageLines.contains(i.toInt)) {
+                val rh = addLineHighlighter(mm, i.toInt - 1, -1, coverageTextAttributes)
+                rh.putUserData(reportItemKey, CoverageReportItem)
+                coverageLines.add(i.toInt)
+              }
+            } catch {
+              case t: Throwable => logStackTrace(t)
             }
-          } catch {
-            case t: Throwable => logStackTrace(t)
+            case _ =>
+              for ((line, ri) <- processReport(project, file, r)) try {
+                ri match {
+                  case ri: ConsoleReportItem => consoleReportItems(listModel, rhs, editor, ri, line)
+                  case ri: HintReportItem => hintReportItem(hintListModelMap, rhs, editor, ri, line)
+                  case ri: SummoningReportItem => summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
+                }
+              } catch {
+                case t: Throwable => logStackTrace(t)
+              }
           }
         }
 

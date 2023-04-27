@@ -48,6 +48,7 @@ object LogikaConfigurable {
   private val autoEnabledKey = logikaKey + "auto"
   private val checkSatKey = logikaKey + "checkSat"
   private val hintKey = logikaKey + "hint"
+  private val coverageKey = logikaKey + "coverage"
   private val hintMaxColumnKey = logikaKey + "hintMaxColumn"
   private val hintUnicodeKey = logikaKey + "hintUnicode"
   private val hintLinesFreshKey = logikaKey + "hintLinesFresh"
@@ -85,6 +86,7 @@ object LogikaConfigurable {
   private[intellij] var autoEnabled: Boolean = true
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
+  private[intellij] var coverage: Boolean = true
   private[intellij] var hintMaxColumn: Int = 60
   private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
   private[intellij] var hintLinesFresh: Boolean = false
@@ -120,6 +122,7 @@ object LogikaConfigurable {
     autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
+    coverage = pc.getBoolean(coverageKey, coverage)
     hintMaxColumn = pc.getInt(hintMaxColumnKey, hintMaxColumn)
     hintUnicode = pc.getBoolean(hintUnicodeKey, hintUnicode)
     hintLinesFresh = pc.getBoolean(hintLinesFreshKey, hintLinesFresh)
@@ -174,6 +177,7 @@ object LogikaConfigurable {
     pc.setValue(autoEnabledKey, autoEnabled.toString)
     pc.setValue(checkSatKey, checkSat.toString)
     pc.setValue(hintKey, hint.toString)
+    pc.setValue(coverageKey, coverage.toString)
     pc.setValue(hintMaxColumnKey, hintMaxColumn.toString)
     pc.setValue(hintUnicodeKey, hintUnicode.toString)
     pc.setValue(hintLinesFreshKey, hintLinesFresh.toString)
@@ -267,6 +271,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         timeoutTextField.getText != timeout.toString ||
         checkSatCheckBox.isSelected != checkSat ||
         hintCheckBox.isSelected != hint ||
+        coverageCheckBox.isSelected != coverage ||
         hintMaxColumnTextField.getText != hintMaxColumn.toString ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
         hintLinesFreshCheckBox.isSelected != hintLinesFresh ||
@@ -544,6 +549,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     timeout = parseGe(timeoutTextField.getText, 200).getOrElse(timeout.toLong).toInt
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
+    coverage = coverageCheckBox.isSelected
     hintMaxColumn = parseGe(hintMaxColumnTextField.getText, 0).getOrElse(hintMaxColumn.toLong).intValue
     hintUnicode = hintUnicodeCheckBox.isSelected
     hintLinesFresh = hintLinesFreshCheckBox.isSelected
@@ -578,6 +584,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     timeoutTextField.setText(timeout.toString)
     checkSatCheckBox.setSelected(checkSat)
     hintCheckBox.setSelected(hint)
+    coverageCheckBox.setSelected(coverage)
     hintMaxColumnTextField.setText(hintMaxColumn.toString)
     hintUnicodeCheckBox.setSelected(hintUnicode)
     hintLinesFreshCheckBox.setSelected(hintLinesFresh)
