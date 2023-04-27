@@ -115,7 +115,7 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
 
-        <action id="LogikaCheckActionFile" class="org.sireum.intellij.logika.LogikaCheckActionFile"
+        <action id="LogikaCheckActionFileTC" class="org.sireum.intellij.logika.LogikaCheckActionFileTC"
                 text="Logika Check (All in File)"
                 description="Check all Logika proofs in the file">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
@@ -123,7 +123,7 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl W"/>
         </action>
 
-        <action id="LogikaCheckActionLine" class="org.sireum.intellij.logika.LogikaCheckActionLine"
+        <action id="LogikaCheckActionLineTC" class="org.sireum.intellij.logika.LogikaCheckActionLineTC"
                 text="Logika Check (Line)"
                 description="Check Logika proofs focused on the cursor line">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
@@ -131,12 +131,40 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
 
-        <action id="LogikaCheckActionInterprocedural" class="org.sireum.intellij.logika.LogikaCheckActionInterprocedural"
+        <action id="LogikaCheckActionInterproceduralTC" class="org.sireum.intellij.logika.LogikaCheckActionInterproceduralTC"
                 text="Logika Check (Interprocedural Line)"
                 description="Check Logika proofs focused on the cursor line inter-procedurally">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl I"/>
+        </action>
+
+        <group id="LogikaEditorGroup" text="More Logika ..." popup="true">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </group>
+
+        <action id="LogikaCheckActionFileNoTC" class="org.sireum.intellij.logika.LogikaCheckActionFileNoTC"
+                text="Logika Check (All in File, -TC)"
+                description="Check all Logika proofs in the file without transition caching">
+            <add-to-group group-id="LogikaGroup" anchor="last"/>
+            <add-to-group group-id="LogikaEditorGroup" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl E"/>
+        </action>
+
+        <action id="LogikaCheckActionLineNoTC" class="org.sireum.intellij.logika.LogikaCheckActionLineNoTC"
+                text="Logika Check (Line, -TC)"
+                description="Check Logika proofs focused on the cursor line without transition caching">
+            <add-to-group group-id="LogikaGroup" anchor="last"/>
+            <add-to-group group-id="LogikaEditorGroup" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl D"/>
+        </action>
+
+        <action id="LogikaCheckActionInterproceduralNoTC" class="org.sireum.intellij.logika.LogikaCheckActionInterproceduralNoTC"
+                text="Logika Check (Interprocedural Line, -TC)"
+                description="Check Logika proofs focused on the cursor line inter-procedurally without transition caching">
+            <add-to-group group-id="LogikaGroup" anchor="last"/>
+            <add-to-group group-id="LogikaEditorGroup" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl O"/>
         </action>
 
         <action id="LogikaSmt2Action" class="org.sireum.intellij.logika.LogikaSmt2Action"

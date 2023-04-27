@@ -381,7 +381,8 @@ object SireumClient {
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
-              isBackground: Boolean, isInterprocedural: Boolean, typeCheckOnly: Boolean = false): Unit = {
+              isBackground: Boolean, isInterprocedural: Boolean, disallowTransitionCaching: Boolean = false,
+              typeCheckOnly: Boolean = false): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
 
@@ -415,7 +416,7 @@ object SireumClient {
             rawInscription = LogikaConfigurable.rawInscription,
             elideEncoding = LogikaConfigurable.elideEncoding,
             flipStrictPure = LogikaConfigurable.flipStrictPure,
-            transitionCache = LogikaConfigurable.transitionCache
+            transitionCache = LogikaConfigurable.transitionCache && !disallowTransitionCaching
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
