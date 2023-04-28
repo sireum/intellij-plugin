@@ -88,7 +88,7 @@ object LogikaConfigurable {
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
   private[intellij] var coverage: Boolean = true
-  private[intellij] var coverageIntensity: Int = 12
+  private[intellij] var coverageIntensity: Int = 20
   private[intellij] var hintMaxColumn: Int = 60
   private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
   private[intellij] var hintLinesFresh: Boolean = false
