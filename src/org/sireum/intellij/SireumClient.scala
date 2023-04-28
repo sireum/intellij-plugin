@@ -112,10 +112,11 @@ object SireumClient {
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String, Boolean)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
   val analysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], DefaultListModel[Object], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]], scala.collection.mutable.HashSet[Int])]("Analysis Data")
+  val prevAnalysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])]("Prev Analysis Data")
   val statusKey = new Key[Boolean]("Sireum Analysis Status")
   val reportItemKey = new Key[ReportItem]("Sireum Report Item")
-  val coverageColor = new JBColor(new Color(129, 62, 200, 8), new Color(129, 62, 200, 8))
-  val coverageTextAttributes = new TextAttributes(null, coverageColor, null, EffectType.BOXED, Font.PLAIN)
+  val coverageTextAttributes = new TextAttributes(null,
+    createCoverageColor(LogikaConfigurable.coverageIntensity), null, EffectType.BOXED, Font.PLAIN)
 
   val statusIdle = "Sireum is idle"
   val statusWaiting = "Sireum is waiting to work"
@@ -147,6 +148,9 @@ object SireumClient {
   var shutdown: Boolean = false
   var queue: LinkedBlockingQueue[Vector[(Boolean, String)]] = new LinkedBlockingQueue
   var lastStatusUpdate: Long = System.currentTimeMillis
+
+  def createCoverageColor(intensity: Int): JBColor =
+    new JBColor(new Color(129, 62, 200, intensity), new Color(129, 62, 200, intensity))
 
   final case class Request(time: Long, requestId: org.sireum.ISZ[org.sireum.String],
                            project: Project, file: VirtualFile, editor: Editor,
@@ -394,8 +398,7 @@ object SireumClient {
         case _ => return Vector()
       }
       Vector(
-        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings,
-          LogikaConfigurable.coverage, LogikaConfigurable.infoFlow,
+        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings, LogikaConfigurable.infoFlow,
           org.sireum.server.service.AnalysisService.defaultConfig(
             parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
             sat = LogikaConfigurable.checkSat,
@@ -634,7 +637,7 @@ object SireumClient {
                                                     file: VirtualFile,
                                                     messageHeader: String,
                                                     offset: Int,
-                                                    message: String) extends ReportItem {
+                                                    val message: String) extends ReportItem {
     override def toString: String = messageHeader
   }
 
@@ -643,7 +646,7 @@ object SireumClient {
                                                          messageHeader: String,
                                                          info: String,
                                                          offset: Int,
-                                                         message: String) extends ReportItem {
+                                                         val message: String) extends ReportItem {
     override def toString: String = messageHeader
   }
 
@@ -1093,10 +1096,12 @@ object SireumClient {
             if (!editor.isDisposed) {
               val mm = editor.getMarkupModel
               analysisDataKey.synchronized {
-                if (editor.getUserData(analysisDataKey) != null) {
+                val q = editor.getUserData(analysisDataKey)
+                if (q != null) {
                   for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
                     mm.removeHighlighter(rh)
                   }
+                  editor.putUserData(prevAnalysisDataKey, (q._1, q._3, q._4))
                   editor.putUserData(analysisDataKey, null)
                 }
               }
@@ -1166,29 +1171,38 @@ object SireumClient {
                 return
             }
           }
-          val (rhs, listModel, summoningListModelMap, hintListModelMap, coverageLines) = analysisDataKey.synchronized {
-            r match {
-              case r: org.sireum.server.protocol.Analysis.End =>
-                notifyHelper(Some(project), Some(editor), r)
-                return
-              case r: org.sireum.server.protocol.Slang.Rewrite.Response =>
-                SireumOnlyAction.processSlangRewriteResponse(r, project, editor)
-                return
-              case _ =>
-                var q = editor.getUserData(analysisDataKey)
-                if (q == null) {
-                  q = (
-                    scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
-                    new DefaultListModel[Object](),
-                    scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
-                    scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]](),
-                    scala.collection.mutable.HashSet[Int]()
-                  )
-                  editor.putUserData(analysisDataKey, q)
-                }
-                q
+          val (rhs, listModel, summoningListModelMap, hintListModelMap, coverageLines, prevRhs, prevSm, prevHm) =
+            analysisDataKey.synchronized {
+              r match {
+                case r: org.sireum.server.protocol.Analysis.End =>
+                  notifyHelper(Some(project), Some(editor), r)
+                  return
+                case r: org.sireum.server.protocol.Slang.Rewrite.Response =>
+                  SireumOnlyAction.processSlangRewriteResponse(r, project, editor)
+                  return
+                case _ =>
+                  var q = editor.getUserData(analysisDataKey)
+                  if (q == null) {
+                    q = (
+                      scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
+                      new DefaultListModel[Object](),
+                      scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
+                      scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]](),
+                      scala.collection.mutable.HashSet[Int]()
+                    )
+                    editor.putUserData(analysisDataKey, q)
+                  }
+                  var t = editor.getUserData(prevAnalysisDataKey)
+                  if (t == null) {
+                    t = (
+                      scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
+                      scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
+                      scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
+                    )
+                  }
+                  (q._1, q._2, q._3, q._4, q._5, t._1, t._2, t._3)
+              }
             }
-          }
           if (input != editor.getDocument.getText) {
             writeLog(isRequest = false, s"Stale response: $r")
             return
@@ -1197,9 +1211,39 @@ object SireumClient {
             case r: org.sireum.server.protocol.Analysis.Coverage => try {
               val mm = editor.getMarkupModel
               for (i <- r.pos.beginLine to r.pos.endLine if !coverageLines.contains(i.toInt)) {
-                val rh = addLineHighlighter(mm, i.toInt - 1, -1, coverageTextAttributes)
-                rh.putUserData(reportItemKey, CoverageReportItem)
-                coverageLines.add(i.toInt)
+                val line = i.toInt
+                if (LogikaConfigurable.coverage) {
+                  val rh = addLineHighlighter(mm, line - 1, -1, coverageTextAttributes)
+                  rh.putUserData(reportItemKey, CoverageReportItem)
+                  coverageLines.add(line)
+                }
+                if (r.cached) {
+                  prevRhs.get(line) match {
+                    case Some(rhs) =>
+                      for (rh <- rhs) {
+                        val newRh = mm.addLineHighlighter(line -1, rh.getLayer, rh.getTextAttributes(null))
+                        newRh.putUserData(reportItemKey, rh.getUserData(reportItemKey))
+                      }
+                    case _ =>
+                  }
+                  prevSm.get(line) match {
+                    case Some(sm) =>
+                      for (i <- 0 until sm.size()) {
+                        val ri = sm.elementAt(i)
+                        summoningReportItem(summoningListModelMap, rhs, editor,
+                          ri.copy(message = ri.message.replace("Result:", "Result (Cached):")), line)
+                      }
+                    case _ =>
+                  }
+                  prevHm.get(line) match {
+                    case Some(hm) =>
+                      for (i <- 0 until hm.size) {
+                        val ri = hm.elementAt(i)
+                        hintReportItem(hintListModelMap, rhs, editor,
+                          if (!ri.message.endsWith("Cached")) ri.copy(message = ri.message + "\n// Cached") else ri, line)
+                      }
+                  }
+                }
               }
             } catch {
               case t: Throwable => logStackTrace(t)
