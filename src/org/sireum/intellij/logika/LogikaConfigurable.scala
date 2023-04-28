@@ -538,6 +538,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     branchParCoresSpinner.setModel(new SpinnerNumberModel(branchParCores, 1, SireumApplicationComponent.maxCores, 1))
     coverageIntensitySpinner.setModel(new SpinnerNumberModel(coverageIntensity, 0, 255, 1))
 
+    def updateCoverage(): Unit = {
+      coverageIntensitySpinner.setEnabled(coverageCheckBox.isSelected)
+    }
+    coverageCheckBox.addChangeListener(_ => updateCoverage())
+
     updateSymExe()
     updateHints()
     updateHintMaxColumn()
@@ -545,6 +550,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     updateBranchPar()
     updateSummoning()
     updateInfoFlow()
+    updateCoverage()
 
     logikaPanel
   }
