@@ -49,6 +49,7 @@ object LogikaConfigurable {
   private val checkSatKey = logikaKey + "checkSat"
   private val hintKey = logikaKey + "hint"
   private val coverageKey = logikaKey + "coverage"
+  private val coverageIntensityKey = logikaKey + "coverage.intensity"
   private val hintMaxColumnKey = logikaKey + "hintMaxColumn"
   private val hintUnicodeKey = logikaKey + "hintUnicode"
   private val hintLinesFreshKey = logikaKey + "hintLinesFresh"
@@ -87,6 +88,7 @@ object LogikaConfigurable {
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
   private[intellij] var coverage: Boolean = true
+  private[intellij] var coverageIntensity: Int = 12
   private[intellij] var hintMaxColumn: Int = 60
   private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
   private[intellij] var hintLinesFresh: Boolean = false
@@ -123,6 +125,7 @@ object LogikaConfigurable {
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
     coverage = pc.getBoolean(coverageKey, coverage)
+    coverageIntensity = pc.getInt(coverageIntensityKey, coverageIntensity)
     hintMaxColumn = pc.getInt(hintMaxColumnKey, hintMaxColumn)
     hintUnicode = pc.getBoolean(hintUnicodeKey, hintUnicode)
     hintLinesFresh = pc.getBoolean(hintLinesFreshKey, hintLinesFresh)
@@ -167,6 +170,7 @@ object LogikaConfigurable {
     rawInscription = pc.getBoolean(rawInscriptionKey, rawInscription)
     elideEncoding = pc.getBoolean(elideEncodingKey, elideEncoding)
     transitionCache = pc.getBoolean(transitionCacheKey, transitionCache)
+    SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
   def saveConfiguration(): Unit = {
@@ -178,6 +182,7 @@ object LogikaConfigurable {
     pc.setValue(checkSatKey, checkSat.toString)
     pc.setValue(hintKey, hint.toString)
     pc.setValue(coverageKey, coverage.toString)
+    pc.setValue(coverageIntensityKey, coverageIntensityKey.toString)
     pc.setValue(hintMaxColumnKey, hintMaxColumn.toString)
     pc.setValue(hintUnicodeKey, hintUnicode.toString)
     pc.setValue(hintLinesFreshKey, hintLinesFresh.toString)
@@ -204,6 +209,7 @@ object LogikaConfigurable {
     pc.setValue(rawInscriptionKey, rawInscription.toString)
     pc.setValue(elideEncodingKey, elideEncoding.toString)
     pc.setValue(transitionCacheKey, transitionCache.toString)
+    SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
   def parseGe(text: String, min: Long): Option[Long] =
@@ -272,6 +278,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         checkSatCheckBox.isSelected != checkSat ||
         hintCheckBox.isSelected != hint ||
         coverageCheckBox.isSelected != coverage ||
+        coverageIntensitySpinner.getValue.asInstanceOf[Int] != coverageIntensity ||
         hintMaxColumnTextField.getText != hintMaxColumn.toString ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
         hintLinesFreshCheckBox.isSelected != hintLinesFresh ||
@@ -529,6 +536,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
     branchParCoresLabel.setText(s"CPU cores (max: ${SireumApplicationComponent.maxCores})")
     branchParCoresSpinner.setModel(new SpinnerNumberModel(branchParCores, 1, SireumApplicationComponent.maxCores, 1))
+    coverageIntensitySpinner.setModel(new SpinnerNumberModel(coverageIntensity, 0, 255, 1))
 
     updateSymExe()
     updateHints()
@@ -550,6 +558,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     checkSat = checkSatCheckBox.isSelected
     hint = hintCheckBox.isSelected
     coverage = coverageCheckBox.isSelected
+    coverageIntensity = coverageIntensitySpinner.getValue.asInstanceOf[Int]
     hintMaxColumn = parseGe(hintMaxColumnTextField.getText, 0).getOrElse(hintMaxColumn.toLong).intValue
     hintUnicode = hintUnicodeCheckBox.isSelected
     hintLinesFresh = hintLinesFreshCheckBox.isSelected
@@ -585,6 +594,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     checkSatCheckBox.setSelected(checkSat)
     hintCheckBox.setSelected(hint)
     coverageCheckBox.setSelected(coverage)
+    coverageIntensitySpinner.setValue(coverageIntensity)
     hintMaxColumnTextField.setText(hintMaxColumn.toString)
     hintUnicodeCheckBox.setSelected(hintUnicode)
     hintLinesFreshCheckBox.setSelected(hintLinesFresh)

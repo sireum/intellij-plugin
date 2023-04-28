@@ -89,4 +89,11 @@ public abstract class LogikaForm {
     protected JCheckBox flipStrictPureModeCheckBox;
     protected JCheckBox transitionCacheCheckBox;
     protected JCheckBox coverageCheckBox;
+    protected JTabbedPane tabbedPane;
+    protected JPanel smt2BitWidthPanel;
+    protected JPanel smt2FPPanel;
+    protected JPanel smt2ConfigPanel;
+    protected JPanel parPanel;
+    protected JLabel parLabel;
+    protected JSpinner coverageIntensitySpinner;
 }
