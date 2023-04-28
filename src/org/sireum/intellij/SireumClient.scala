@@ -637,7 +637,8 @@ object SireumClient {
                                                     file: VirtualFile,
                                                     messageHeader: String,
                                                     offset: Int,
-                                                    val message: String) extends ReportItem {
+                                                    val message: String,
+                                                    terminated: Boolean) extends ReportItem {
     override def toString: String = messageHeader
   }
 
@@ -691,7 +692,7 @@ object SireumClient {
           ) ++ r.labels
           labels.elements.reverse.mkString(" / ")
         }
-        return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text)))
+        return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text, r.terminated)))
       case r: Logika.Verify.Info =>
         val pos = r.pos
         val line = pos.beginLine.toInt
@@ -705,7 +706,7 @@ object SireumClient {
           }
           s"Info: $firstLine"
         }
-        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, header, offset, text)))
+        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, header, offset, text, false)))
 
       case _ =>
     }
@@ -1101,7 +1102,10 @@ object SireumClient {
                   for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
                     mm.removeHighlighter(rh)
                   }
-                  editor.putUserData(prevAnalysisDataKey, (q._1, q._3, q._4))
+                  val t = editor.getUserData(prevAnalysisDataKey)
+                  t._1.addAll(q._1)
+                  t._2.addAll(q._3)
+                  t._3.addAll(q._4)
                   editor.putUserData(analysisDataKey, null)
                 }
               }
@@ -1199,6 +1203,7 @@ object SireumClient {
                       scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
                       scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
                     )
+                    editor.putUserData(prevAnalysisDataKey, t)
                   }
                   (q._1, q._2, q._3, q._4, q._5, t._1, t._2, t._3)
               }
@@ -1221,8 +1226,16 @@ object SireumClient {
                   prevRhs.get(line) match {
                     case Some(rhs) =>
                       for (rh <- rhs) {
-                        val newRh = mm.addLineHighlighter(line -1, rh.getLayer, rh.getTextAttributes(null))
-                        newRh.putUserData(reportItemKey, rh.getUserData(reportItemKey))
+                        val ri = rh.getUserData(reportItemKey)
+                        val skip: Boolean = ri match {
+                          case ri: ConsoleReportItem => ri.level == org.sireum.message.Level.InternalError ||
+                            ri.level == org.sireum.message.Level.Error
+                          case _ => false
+                        }
+                        if (!skip) {
+                          val newRh = mm.addLineHighlighter(line - 1, rh.getLayer, rh.getTextAttributes(null))
+                          newRh.putUserData(reportItemKey, ri)
+                        }
                       }
                     case _ =>
                   }
@@ -1239,9 +1252,12 @@ object SireumClient {
                     case Some(hm) =>
                       for (i <- 0 until hm.size) {
                         val ri = hm.elementAt(i)
-                        hintReportItem(hintListModelMap, rhs, editor,
-                          if (!ri.message.endsWith("Cached")) ri.copy(message = ri.message + "\n// Cached") else ri, line)
+                        if (!ri.terminated) {
+                          hintReportItem(hintListModelMap, rhs, editor,
+                            if (!ri.message.endsWith("Cached")) ri.copy(message = ri.message + "\n// Cached") else ri, line)
+                        }
                       }
+                    case _ =>
                   }
                 }
               }
