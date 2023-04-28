@@ -67,63 +67,28 @@ trait LogikaCheckAction extends LogikaOnlyAction {
   def disallowTransitionCaching: Boolean
 }
 
-final class LogikaCheckActionFileTC extends LogikaCheckAction {
+final class LogikaCheckActionFile extends LogikaCheckAction {
   def getLine(editor: Editor): Int = 0
   def isInterprocedural: Boolean = false
   def disallowTransitionCaching: Boolean = false
 }
 
-final class LogikaCheckActionLineTC extends LogikaCheckAction {
+final class LogikaCheckActionLine extends LogikaCheckAction {
   def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
   def isInterprocedural: Boolean = false
   def disallowTransitionCaching: Boolean = false
 }
 
-trait LogikaCheckActionInterprocedural extends LogikaCheckAction {
+final class LogikaCheckActionInterprocedural extends LogikaCheckAction {
+  def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
+  def isInterprocedural: Boolean = true
+  def disallowTransitionCaching: Boolean = false
+
   override def update(e: AnActionEvent): Unit = {
     val project = e.getProject
     val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
     if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isLogikaSupportedPlatform &&
       Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText))._1)
-  }
-}
-
-final class LogikaCheckActionInterproceduralTC extends LogikaCheckActionInterprocedural {
-  def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
-  def isInterprocedural: Boolean = true
-  def disallowTransitionCaching: Boolean = false
-}
-
-final class LogikaCheckActionFileNoTC extends LogikaCheckAction {
-  def getLine(editor: Editor): Int = 0
-  def isInterprocedural: Boolean = false
-  def disallowTransitionCaching: Boolean = true
-
-  override def update(e: AnActionEvent): Unit = {
-    super.update(e)
-    if (!LogikaConfigurable.transitionCache) e.getPresentation.setEnabledAndVisible(false)
-  }
-}
-
-final class LogikaCheckActionLineNoTC extends LogikaCheckAction {
-  def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
-  def isInterprocedural: Boolean = false
-  def disallowTransitionCaching: Boolean = true
-
-  override def update(e: AnActionEvent): Unit = {
-    super.update(e)
-    if (!LogikaConfigurable.transitionCache) e.getPresentation.setEnabledAndVisible(false)
-  }
-}
-
-final class LogikaCheckActionInterproceduralNoTC extends LogikaCheckActionInterprocedural {
-  def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
-  def isInterprocedural: Boolean = true
-  def disallowTransitionCaching: Boolean = true
-
-  override def update(e: AnActionEvent): Unit = {
-    super.update(e)
-    if (!LogikaConfigurable.transitionCache) e.getPresentation.setEnabledAndVisible(false)
   }
 }
 
