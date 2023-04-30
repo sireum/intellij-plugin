@@ -76,7 +76,8 @@ object LogikaConfigurable {
   private val infoFlowKey = logikaKey + "infoflow"
   private val rawInscriptionKey = logikaKey + "smt2.raw"
   private val elideEncodingKey = logikaKey + "smt2.elide"
-  private val transitionCacheKey = logikaKey + "experimental.tcache"
+  private val transitionCacheKey = logikaKey + "transitions.cache"
+  private val patternExhaustiveKey = logikaKey + "pattern.exhaustiveness"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -114,7 +115,8 @@ object LogikaConfigurable {
   private[intellij] var infoFlow: Boolean = false
   private[intellij] var rawInscription: Boolean = false
   private[intellij] var elideEncoding: Boolean = false
-  private[intellij] var transitionCache: Boolean = false
+  private[intellij] var transitionCache: Boolean = true
+  private[intellij] var patternExhaustive: Boolean = true
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -170,6 +172,7 @@ object LogikaConfigurable {
     rawInscription = pc.getBoolean(rawInscriptionKey, rawInscription)
     elideEncoding = pc.getBoolean(elideEncodingKey, elideEncoding)
     transitionCache = pc.getBoolean(transitionCacheKey, transitionCache)
+    patternExhaustive = pc.getBoolean(patternExhaustiveKey, patternExhaustive)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -209,6 +212,7 @@ object LogikaConfigurable {
     pc.setValue(rawInscriptionKey, rawInscription.toString)
     pc.setValue(elideEncodingKey, elideEncoding.toString)
     pc.setValue(transitionCacheKey, transitionCache.toString)
+    pc.setValue(patternExhaustiveKey, patternExhaustive.toString)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -303,7 +307,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         infoFlowCheckBox.isSelected != infoFlow ||
         rawInscriptionCheckBox.isSelected != rawInscription ||
         elideEncodingCheckBox.isSelected != elideEncoding ||
-        transitionCacheCheckBox.isSelected != transitionCache)
+        transitionCacheCheckBox.isSelected != transitionCache ||
+        patternExhaustiveCheckBox.isSelected != patternExhaustive)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -590,6 +595,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     rawInscription = rawInscriptionCheckBox.isSelected
     elideEncoding = elideEncodingCheckBox.isSelected
     transitionCache = transitionCacheCheckBox.isSelected
+    patternExhaustive = patternExhaustiveCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -642,5 +648,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     rawInscriptionCheckBox.setSelected(rawInscription)
     elideEncodingCheckBox.setSelected(elideEncoding)
     transitionCacheCheckBox.setSelected(transitionCache)
+    patternExhaustiveCheckBox.setSelected(patternExhaustive)
   }
 }

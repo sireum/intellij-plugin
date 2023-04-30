@@ -96,4 +96,5 @@ public abstract class LogikaForm {
     protected JPanel parPanel;
     protected JLabel parLabel;
     protected JSpinner coverageIntensitySpinner;
+    protected JCheckBox patternExhaustiveCheckBox;
 }

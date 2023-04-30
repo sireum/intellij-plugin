@@ -73,38 +73,6 @@ trait SireumOnlyAction extends SireumAction {
   }
 }
 
-trait SireumClearCacheAction extends SireumAction {
-  def kind: org.sireum.server.protocol.Analysis.Cache.Kind.Type
-
-  override def update(e: AnActionEvent): Unit = {
-    e.getPresentation.setEnabledAndVisible(SireumClient.processInit.nonEmpty)
-  }
-  final override def actionPerformed(e: AnActionEvent): Unit = {
-    SireumClient.queue.add(Vector((true, org.sireum.server.protocol.JSON.fromRequest(
-      org.sireum.server.protocol.Analysis.Cache.Clear(kind), true).value)))
-  }
-}
-
-class ClearAllCachesAction extends SireumClearCacheAction {
-  override def kind: org.sireum.server.protocol.Analysis.Cache.Kind.Type = org.sireum.server.protocol.Analysis.Cache.Kind.All
-}
-
-class ClearFileCacheAction extends SireumClearCacheAction {
-  override def kind: org.sireum.server.protocol.Analysis.Cache.Kind.Type = org.sireum.server.protocol.Analysis.Cache.Kind.Files
-}
-
-class ClearSmt2CacheAction extends SireumClearCacheAction {
-  override def kind: org.sireum.server.protocol.Analysis.Cache.Kind.Type = org.sireum.server.protocol.Analysis.Cache.Kind.SMT2
-}
-
-class ClearTransitionCacheAction extends SireumClearCacheAction {
-  override def kind: org.sireum.server.protocol.Analysis.Cache.Kind.Type = org.sireum.server.protocol.Analysis.Cache.Kind.Transitions
-}
-
-class ClearPersistentCacheAction extends SireumClearCacheAction {
-  override def kind: org.sireum.server.protocol.Analysis.Cache.Kind.Type = org.sireum.server.protocol.Analysis.Cache.Kind.Persistent
-}
-
 object SireumOnlyAction {
   def processSlangRewriteResponse(resp: org.sireum.server.protocol.Slang.Rewrite.Response,
                                   project: Project, editor: Editor): Unit = {

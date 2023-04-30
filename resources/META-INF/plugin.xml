@@ -66,41 +66,6 @@
             <add-to-group group-id="SireumGroup" anchor="last"/>
         </action>
 
-        <group id="SireumCacheGroup" text="Clear Sireum Cache" popup="true">
-            <add-to-group group-id="SireumGroup" anchor="last"/>
-            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-        </group>
-
-        <action id="ClearAllCacheAction" class="org.sireum.intellij.ClearAllCachesAction"
-                text="All"
-                description="Clear all caches">
-            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
-        </action>
-
-        <action id="ClearFileCacheAction" class="org.sireum.intellij.ClearFileCacheAction"
-                text="Files"
-                description="Clear file cache">
-            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
-        </action>
-
-        <action id="ClearSmt2CacheAction" class="org.sireum.intellij.ClearSmt2CacheAction"
-                text="SMT2 Queries"
-                description="Clear file cache">
-            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
-        </action>
-
-        <action id="ClearTransitionCacheAction" class="org.sireum.intellij.ClearTransitionCacheAction"
-                text="Transition"
-                description="Clear file cache">
-            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
-        </action>
-
-        <action id="ClearPersistentCacheAction" class="org.sireum.intellij.ClearPersistentCacheAction"
-                text="Persistent"
-                description="Clear file cache">
-            <add-to-group group-id="SireumCacheGroup" anchor="last"/>
-        </action>
-
         <group id="SireumInsertGroup" text="Insert ..." popup="true">
             <add-to-group group-id="SireumGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
@@ -115,7 +80,7 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
 
-        <action id="LogikaCheckActionFileTC" class="org.sireum.intellij.logika.LogikaCheckActionFile"
+        <action id="LogikaCheckActionFile" class="org.sireum.intellij.logika.LogikaCheckActionFile"
                 text="Logika Check (All in File)"
                 description="Check all Logika proofs in the file">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
@@ -123,7 +88,7 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl W"/>
         </action>
 
-        <action id="LogikaCheckActionLineTC" class="org.sireum.intellij.logika.LogikaCheckActionLine"
+        <action id="LogikaCheckActionLine" class="org.sireum.intellij.logika.LogikaCheckActionLine"
                 text="Logika Check (Line)"
                 description="Check Logika proofs focused on the cursor line">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
@@ -131,7 +96,7 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl S"/>
         </action>
 
-        <action id="LogikaCheckActionInterproceduralTC" class="org.sireum.intellij.logika.LogikaCheckActionInterprocedural"
+        <action id="LogikaCheckActionInterprocedural" class="org.sireum.intellij.logika.LogikaCheckActionInterprocedural"
                 text="Logika Check (Interprocedural Line)"
                 description="Check Logika proofs focused on the cursor line inter-procedurally">
             <add-to-group group-id="LogikaGroup" anchor="last"/>
@@ -151,7 +116,7 @@
                 text="Type Check"
                 description="Type check">
             <add-to-group group-id="SlangGroup" anchor="last"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl T"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl Y"/>
         </action>
 
         <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"

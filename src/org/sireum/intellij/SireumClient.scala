@@ -36,7 +36,6 @@ import com.intellij.openapi.editor.markup._
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor, TextEditor}
 import com.intellij.openapi.project.{Project, ProjectManager}
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util._
 import com.intellij.openapi.vfs.{LocalFileSystem, VirtualFile}
@@ -48,10 +47,12 @@ import org.jetbrains.plugins.terminal.{ShellTerminalWidget, TerminalToolWindowMa
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke}
 import org.sireum.message.Level
+import org.sireum.server.protocol.Analysis
 
+import java.awt.event.MouseEvent
 import java.awt.{Color, Font}
 import java.util.concurrent._
-import javax.swing.{DefaultListModel, Icon, JSplitPane}
+import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
 
 object SireumClient {
 
@@ -61,22 +62,52 @@ object SireumClient {
 
     var statusTooltip: String = statusIdle
     var frame: Int = defaultFrame
+    var component: JComponent = _
+    var menu: JPopupMenu = _
 
     override def ID(): String = "Sireum"
 
-    override def install(statusBar: StatusBar): Unit = {}
+    def clearCache(kind: Analysis.Cache.Kind.Type): Unit =
+      SireumClient.queue.add(Vector((true, org.sireum.server.protocol.JSON.fromRequest(
+        org.sireum.server.protocol.Analysis.Cache.Clear(kind), true).value)))
+
+    override def install(statusBar: StatusBar): Unit = {
+      component = statusBar.getComponent
+      val shutdownItem = new JMenuItem("Shutdown Sireum server")
+      shutdownItem.addActionListener { _ => shutdownServer()}
+      val cacheMenu = new JMenu("Clear Sireum Cache")
+      val allItem = new JMenuItem("All")
+      allItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.All) }
+      cacheMenu.add(allItem)
+      val fileItem = new JMenuItem("Files")
+      fileItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.Files) }
+      cacheMenu.add(fileItem)
+      val smt2Item = new JMenuItem("SMT2 Queries")
+      smt2Item.addActionListener { _ => clearCache(Analysis.Cache.Kind.SMT2) }
+      cacheMenu.add(smt2Item)
+      val transitionItem = new JMenuItem("Transitions")
+      transitionItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.Transitions) }
+      cacheMenu.add(transitionItem)
+      val persistentItem = new JMenuItem("Persistent")
+      persistentItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.Persistent) }
+      cacheMenu.add(persistentItem)
+      menu = new JPopupMenu("Sireum")
+      menu.add(cacheMenu)
+      menu.add(shutdownItem)
+      menu.pack()
+    }
 
     override def getPresentation: WidgetPresentation =
       new IconPresentation {
-        override def getClickConsumer = _ => {
+        override def getClickConsumer = e => {
           var found = false
           val wm = WindowManager.getInstance
           for (frame <- wm.getAllProjectFrames if !found) {
             val f = wm.getFrame(frame.getProject)
             if (f.isActive) {
               found = true
-              if (Messages.showYesNoDialog(f, "Shutdown Sireum background server?",
-                "Sireum", null) == Messages.YES) shutdownServer()
+              val fc = frame.getComponent
+              menu.show(e.getComponent, e.getX - menu.getPreferredSize.height, e.getY - menu.getPreferredSize.height)
             }
           }
         }
@@ -266,7 +297,7 @@ object SireumClient {
         else f"${usedMemory.toLong / 1024d / 1024d}%.2f MB"
 
       def statusText(status: String): String =
-        s"$status${if (usedMemory =!= 0) s" ($memory)" else ""} [click to shutdown]"
+        s"$status${if (usedMemory =!= 0) s" ($memory)" else ""}<br>[click to shutdown or<br>clear caches]"
 
       shutdown = false
       val id = statusBarWidget.ID()

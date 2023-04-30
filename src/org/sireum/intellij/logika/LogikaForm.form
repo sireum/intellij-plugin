@@ -3,7 +3,7 @@
   <grid id="27dc6" binding="logikaPanel" layout-manager="GridLayoutManager" row-count="5" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="20" width="744" height="558"/>
+      <xy x="20" y="20" width="752" height="527"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -22,7 +22,7 @@
             </constraints>
             <properties>
               <font size="12" style="1"/>
-              <text value="A Program Verifier for the Slang Programming Language"/>
+              <text value="The Sireum Verification Framework"/>
             </properties>
           </component>
           <component id="c158e" class="javax.swing.JLabel" binding="titleLabel">
@@ -31,7 +31,7 @@
             </constraints>
             <properties>
               <font name="Arial Black" size="18" style="1"/>
-              <text value="Sireum Logika"/>
+              <text value="Logika"/>
             </properties>
           </component>
           <grid id="be862" binding="logoPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
@@ -98,14 +98,6 @@
                       <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                   </hspacer>
-                  <component id="6d48e" class="javax.swing.JTextField" binding="loopBoundTextField">
-                    <constraints>
-                      <grid row="4" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                        <preferred-size width="150" height="-1"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                  </component>
                   <component id="a3d62" class="javax.swing.JCheckBox" binding="backgroundCheckBox">
                     <constraints>
                       <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
@@ -115,15 +107,6 @@
                     <properties>
                       <selected value="true"/>
                       <text value="Background analysis"/>
-                    </properties>
-                  </component>
-                  <component id="ca063" class="javax.swing.JLabel" binding="loopBoundLabel">
-                    <constraints>
-                      <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Loop Bound (Interprocedural)"/>
-                      <toolTipText value="Loop bound for interprocedural verification"/>
                     </properties>
                   </component>
                   <component id="368b1" class="javax.swing.JCheckBox" binding="hintCheckBox">
@@ -165,7 +148,7 @@
                   </component>
                   <component id="e65c8" class="javax.swing.JTextField" binding="hintMaxColumnTextField">
                     <constraints>
-                      <grid row="3" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                      <grid row="3" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="1" indent="0" use-parent-layout="false">
                         <preferred-size width="150" height="-1"/>
                       </grid>
                     </constraints>
@@ -176,41 +159,8 @@
                       <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
+                      <selected value="true"/>
                       <text value="Highlight verification coverage"/>
-                    </properties>
-                  </component>
-                  <component id="529ab" class="javax.swing.JLabel" binding="callBoundLabel">
-                    <constraints>
-                      <grid row="5" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Recursive Call Bound (Interprocedural)"/>
-                      <toolTipText value="Recursive call bound for interprocedural analysis"/>
-                    </properties>
-                  </component>
-                  <component id="2be85" class="javax.swing.JTextField" binding="callBoundTextField">
-                    <constraints>
-                      <grid row="5" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                        <preferred-size width="150" height="-1"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                  </component>
-                  <component id="ed4f3" class="javax.swing.JCheckBox" binding="interpContractCheckBox">
-                    <constraints>
-                      <grid row="6" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Use method contracts in interprocedural verification"/>
-                    </properties>
-                  </component>
-                  <component id="3b8c2" class="javax.swing.JCheckBox" binding="flipStrictPureModeCheckBox">
-                    <constraints>
-                      <grid row="7" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Flip @strictpure method verification mode"/>
-                      <toolTipText value="Enable inter-procedural verification of strict-pure methods if on compositional verification, and&lt;br&gt; enable compositional verification of strict-pure methods if on inter-procededural verification"/>
                     </properties>
                   </component>
                   <component id="4ae2d" class="javax.swing.JCheckBox" binding="transitionCacheCheckBox">
@@ -219,48 +169,14 @@
                     </constraints>
                     <properties>
                       <hideActionText value="false"/>
+                      <selected value="true"/>
                       <text value="Transition caching"/>
                       <toolTipText value="Cache various state transitions"/>
                     </properties>
                   </component>
-                  <component id="e6f9b" class="javax.swing.JCheckBox" binding="checkSatCheckBox">
-                    <constraints>
-                      <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
-                        <preferred-size width="154" height="21"/>
-                      </grid>
-                    </constraints>
-                    <properties>
-                      <text value="Check assumption satisfiability"/>
-                      <toolTipText value="Check satisfiability of facts and contracts in programming logic"/>
-                    </properties>
-                  </component>
-                  <component id="bed79" class="javax.swing.JCheckBox" binding="splitConditionalsCheckBox">
-                    <constraints>
-                      <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Split conditionals"/>
-                    </properties>
-                  </component>
-                  <component id="346c8" class="javax.swing.JCheckBox" binding="splitContractCasesCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Split contract cases"/>
-                    </properties>
-                  </component>
-                  <component id="6ea8" class="javax.swing.JCheckBox" binding="splitMatchCasesCheckBox" default-binding="true">
-                    <constraints>
-                      <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Split match cases"/>
-                    </properties>
-                  </component>
                   <component id="7d3bf" class="javax.swing.JSpinner" binding="coverageIntensitySpinner">
                     <constraints>
-                      <grid row="2" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+                      <grid row="2" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
                       <toolTipText value="Coverage background color transparency"/>
@@ -275,6 +191,101 @@
                       </grid>
                     </constraints>
                   </vspacer>
+                  <component id="529ab" class="javax.swing.JLabel" binding="callBoundLabel">
+                    <constraints>
+                      <grid row="7" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Recursive Call Bound (Interprocedural)"/>
+                      <toolTipText value="Recursive call bound for interprocedural analysis"/>
+                    </properties>
+                  </component>
+                  <component id="2be85" class="javax.swing.JTextField" binding="callBoundTextField">
+                    <constraints>
+                      <grid row="7" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                        <preferred-size width="150" height="-1"/>
+                      </grid>
+                    </constraints>
+                    <properties/>
+                  </component>
+                  <component id="ca063" class="javax.swing.JLabel" binding="loopBoundLabel">
+                    <constraints>
+                      <grid row="6" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Loop Bound (Interprocedural)"/>
+                      <toolTipText value="Loop bound for interprocedural verification"/>
+                    </properties>
+                  </component>
+                  <component id="6d48e" class="javax.swing.JTextField" binding="loopBoundTextField">
+                    <constraints>
+                      <grid row="6" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                        <preferred-size width="150" height="-1"/>
+                      </grid>
+                    </constraints>
+                    <properties/>
+                  </component>
+                  <component id="e6f9b" class="javax.swing.JCheckBox" binding="checkSatCheckBox">
+                    <constraints>
+                      <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                        <preferred-size width="154" height="21"/>
+                      </grid>
+                    </constraints>
+                    <properties>
+                      <text value="Check assumption satisfiability"/>
+                      <toolTipText value="Check satisfiability of facts and contracts in programming logic"/>
+                    </properties>
+                  </component>
+                  <component id="c3852" class="javax.swing.JCheckBox" binding="patternExhaustiveCheckBox">
+                    <constraints>
+                      <grid row="5" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <selected value="true"/>
+                      <text value="Check pattern exhaustiveness"/>
+                    </properties>
+                  </component>
+                  <component id="bed79" class="javax.swing.JCheckBox" binding="splitConditionalsCheckBox">
+                    <constraints>
+                      <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Split conditionals"/>
+                    </properties>
+                  </component>
+                  <component id="6ea8" class="javax.swing.JCheckBox" binding="splitMatchCasesCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Split match cases"/>
+                    </properties>
+                  </component>
+                  <component id="346c8" class="javax.swing.JCheckBox" binding="splitContractCasesCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Split contract cases"/>
+                    </properties>
+                  </component>
+                  <component id="ed4f3" class="javax.swing.JCheckBox" binding="interpContractCheckBox">
+                    <constraints>
+                      <grid row="8" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Use method contracts in interprocedural verification"/>
+                    </properties>
+                  </component>
+                  <component id="3b8c2" class="javax.swing.JCheckBox" binding="flipStrictPureModeCheckBox">
+                    <constraints>
+                      <grid row="8" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Flip @strictpure method verification mode"/>
+                      <toolTipText value="Enable inter-procedural verification of strict-pure methods if on compositional verification, and&lt;br&gt; enable compositional verification of strict-pure methods if on inter-procededural verification"/>
+                    </properties>
+                  </component>
                 </children>
               </grid>
               <grid id="80a49" binding="parPanel" layout-manager="GridLayoutManager" row-count="2" column-count="5" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
@@ -328,7 +339,7 @@
                   </component>
                   <component id="b9ca8" class="javax.swing.JSpinner" binding="branchParCoresSpinner">
                     <constraints>
-                      <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="9" fill="1" indent="0" use-parent-layout="false"/>
+                      <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="9" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties/>
                   </component>
@@ -340,7 +351,7 @@
                       <text value="CPU cores (max: XXX)"/>
                     </properties>
                   </component>
-                  <hspacer id="f6ba8">
+                  <hspacer id="74806">
                     <constraints>
                       <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
@@ -395,7 +406,7 @@
                     </constraints>
                     <properties>
                       <selected value="true"/>
-                      <text value="Smt2 caching"/>
+                      <text value="Query caching"/>
                       <toolTipText value="Cache SMT2 queries"/>
                     </properties>
                   </component>
@@ -404,7 +415,7 @@
                       <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
-                      <text value="Seq. smt2 calls"/>
+                      <text value="Sequentialize solver calls"/>
                       <toolTipText value="Disable SMT2 solver call parallelization"/>
                     </properties>
                   </component>
@@ -413,7 +424,7 @@
                       <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
-                      <text value="Simplify smt2 queries"/>
+                      <text value="Simplify queries"/>
                     </properties>
                   </component>
                   <component id="b3f59" class="javax.swing.JCheckBox" binding="inscribeSummoningsCheckBox">
@@ -528,7 +539,7 @@
                   </component>
                 </children>
               </grid>
-              <grid id="5817f" binding="smt2FPPanel" layout-manager="GridLayoutManager" row-count="3" column-count="6" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+              <grid id="5817f" binding="smt2FPPanel" layout-manager="GridLayoutManager" row-count="3" column-count="5" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                 <margin top="0" left="0" bottom="0" right="0"/>
                 <constraints>
                   <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -566,28 +577,12 @@
                       <text value="Nearest ties to even (RNE)"/>
                     </properties>
                   </component>
-                  <component id="50850" class="javax.swing.JRadioButton" binding="fpRNARadioButton">
-                    <constraints>
-                      <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Nearest ties to away (RNA)"/>
-                    </properties>
-                  </component>
                   <component id="bdffb" class="javax.swing.JRadioButton" binding="fpRTPRadioButton">
                     <constraints>
                       <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
                       <text value="Toward positive (RTP)"/>
-                    </properties>
-                  </component>
-                  <component id="ec9b4" class="javax.swing.JRadioButton" binding="fpRTNRadioButton">
-                    <constraints>
-                      <grid row="1" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Toward negative (RTN)"/>
                     </properties>
                   </component>
                   <component id="7bdb4" class="javax.swing.JRadioButton" binding="fpRTZRadioButton">
@@ -600,9 +595,25 @@
                   </component>
                   <hspacer id="5033f">
                     <constraints>
-                      <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                      <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
                   </hspacer>
+                  <component id="ec9b4" class="javax.swing.JRadioButton" binding="fpRTNRadioButton">
+                    <constraints>
+                      <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Toward negative (RTN)"/>
+                    </properties>
+                  </component>
+                  <component id="50850" class="javax.swing.JRadioButton" binding="fpRNARadioButton">
+                    <constraints>
+                      <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Nearest ties to away (RNA)"/>
+                    </properties>
+                  </component>
                 </children>
               </grid>
               <grid id="e0181" binding="smt2ConfigPanel" layout-manager="GridLayoutManager" row-count="4" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
@@ -618,7 +629,8 @@
                       <grid row="0" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="6" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
-                      <text value="Smt2 validity configs"/>
+                      <text value="Validity configs"/>
+                      <toolTipText value="Solvers: alt-ergo (if installed), alt-ergo-open, cvc4, cvc5, z5"/>
                     </properties>
                   </component>
                   <component id="7cbe2" class="javax.swing.JLabel" binding="smt2SatConfigsLabel">
@@ -626,7 +638,8 @@
                       <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="10" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
-                      <text value="Smt2 satisfiability configs"/>
+                      <text value="Satisfiability configs"/>
+                      <toolTipText value="Solvers: alt-ergo (if installed), alt-ergo-open, cvc4, cvc5, z5"/>
                     </properties>
                   </component>
                   <component id="25194" class="javax.swing.JLabel" binding="defaultSmt2SatConfigsLabel">
@@ -651,19 +664,23 @@
                   </component>
                   <component id="52384" class="javax.swing.JTextArea" binding="smt2SatConfigsTextArea">
                     <constraints>
-                      <grid row="2" column="2" row-span="2" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                      <grid row="2" column="2" row-span="2" col-span="1" vsize-policy="6" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
                         <preferred-size width="150" height="50"/>
                       </grid>
                     </constraints>
-                    <properties/>
+                    <properties>
+                      <tabSize value="2"/>
+                    </properties>
                   </component>
                   <component id="351b" class="javax.swing.JTextArea" binding="smt2ValidConfigsTextArea">
                     <constraints>
-                      <grid row="0" column="2" row-span="2" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                      <grid row="0" column="2" row-span="2" col-span="1" vsize-policy="6" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
                         <preferred-size width="150" height="50"/>
                       </grid>
                     </constraints>
-                    <properties/>
+                    <properties>
+                      <tabSize value="2"/>
+                    </properties>
                   </component>
                 </children>
               </grid>
@@ -686,7 +703,7 @@
                   </component>
                   <component id="98394" class="javax.swing.JTextField" binding="rlimitTextField">
                     <constraints>
-                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="8" fill="1" indent="0" use-parent-layout="false">
                         <preferred-size width="150" height="-1"/>
                       </grid>
                     </constraints>
@@ -705,7 +722,7 @@
                   </component>
                   <component id="b403c" class="javax.swing.JTextField" binding="timeoutTextField">
                     <constraints>
-                      <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                      <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="1" indent="0" use-parent-layout="false">
                         <preferred-size width="150" height="-1"/>
                       </grid>
                     </constraints>
