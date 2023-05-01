@@ -95,7 +95,7 @@ object SireumClient {
       cacheMenu.add(persistentItem)
       menu = new JPopupMenu("Sireum")
       menu.add(cacheMenu)
-      val allItem = new JMenuItem("Clear all server caches")
+      val allItem = new JMenuItem("Clear all Sireum caches")
       allItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.All) }
       menu.add(allItem)
       menu.add(shutdownItem)
