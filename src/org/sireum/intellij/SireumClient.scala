@@ -67,18 +67,20 @@ object SireumClient {
 
     override def ID(): String = "Sireum"
 
-    def clearCache(kind: Analysis.Cache.Kind.Type): Unit =
+    def clearCache(kind: Analysis.Cache.Kind.Type): Unit = {
+      kind match {
+        case Analysis.Cache.Kind.All => prevAnalysisData.clear()
+        case _ =>
+      }
       SireumClient.queue.add(Vector((true, org.sireum.server.protocol.JSON.fromRequest(
         org.sireum.server.protocol.Analysis.Cache.Clear(kind), true).value)))
+    }
 
     override def install(statusBar: StatusBar): Unit = {
       component = statusBar.getComponent
       val shutdownItem = new JMenuItem("Shutdown Sireum server")
       shutdownItem.addActionListener { _ => shutdownServer()}
-      val cacheMenu = new JMenu("Clear Sireum Cache")
-      val allItem = new JMenuItem("All")
-      allItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.All) }
-      cacheMenu.add(allItem)
+      val cacheMenu = new JMenu("Clear a specific cache")
       val fileItem = new JMenuItem("Files")
       fileItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.Files) }
       cacheMenu.add(fileItem)
@@ -93,6 +95,9 @@ object SireumClient {
       cacheMenu.add(persistentItem)
       menu = new JPopupMenu("Sireum")
       menu.add(cacheMenu)
+      val allItem = new JMenuItem("Clear all server caches")
+      allItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.All) }
+      menu.add(allItem)
       menu.add(shutdownItem)
       menu.pack()
     }
@@ -143,7 +148,6 @@ object SireumClient {
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String, Boolean)] = scala.collection.mutable.Map()
   val sireumKey = new Key[EditorEnabled.type]("Sireum")
   val analysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], DefaultListModel[Object], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]], scala.collection.mutable.HashSet[Int])]("Analysis Data")
-  val prevAnalysisDataKey = new Key[(scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])]("Prev Analysis Data")
   val statusKey = new Key[Boolean]("Sireum Analysis Status")
   val reportItemKey = new Key[ReportItem]("Sireum Report Item")
   val coverageTextAttributes = new TextAttributes(null,
@@ -175,6 +179,7 @@ object SireumClient {
   )
   lazy val defaultFrame: Int = icons.length / 2 + 1
   lazy val statusBarWidget: SireumStatusWidget = new SireumStatusWidget
+  val prevAnalysisData: ConcurrentHashMap[String, (scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])] = new ConcurrentHashMap
   var usedMemory: org.sireum.Z = 0
   var shutdown: Boolean = false
   var queue: LinkedBlockingQueue[Vector[(Boolean, String)]] = new LinkedBlockingQueue
@@ -1133,10 +1138,12 @@ object SireumClient {
                   for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
                     mm.removeHighlighter(rh)
                   }
-                  val t = editor.getUserData(prevAnalysisDataKey)
-                  t._1.addAll(q._1)
-                  t._2.addAll(q._3)
-                  t._3.addAll(q._4)
+                  val t = prevAnalysisData.get(editor.getVirtualFile.getCanonicalPath)
+                  if (t != null) {
+                    t._1.addAll(q._1)
+                    t._2.addAll(q._3)
+                    t._3.addAll(q._4)
+                  }
                   editor.putUserData(analysisDataKey, null)
                 }
               }
@@ -1227,14 +1234,14 @@ object SireumClient {
                     )
                     editor.putUserData(analysisDataKey, q)
                   }
-                  var t = editor.getUserData(prevAnalysisDataKey)
+                  var t = prevAnalysisData.get(editor.getVirtualFile.getCanonicalPath)
                   if (t == null) {
                     t = (
                       scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
                       scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
                       scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
                     )
-                    editor.putUserData(prevAnalysisDataKey, t)
+                    prevAnalysisData.put(editor.getVirtualFile.getCanonicalPath, t)
                   }
                   (q._1, q._2, q._3, q._4, q._5, t._1, t._2, t._3)
               }
