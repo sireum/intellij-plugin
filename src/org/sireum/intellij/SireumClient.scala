@@ -49,7 +49,6 @@ import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke}
 import org.sireum.message.Level
 import org.sireum.server.protocol.Analysis
 
-import java.awt.event.MouseEvent
 import java.awt.{Color, Font}
 import java.util.concurrent._
 import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
@@ -254,9 +253,10 @@ object SireumClient {
       }
       val logFile = sireumHome / ".client.log"
       logFile.removeAll()
+      val command = SireumApplicationComponent.getCommand(sireumHome, serverArgs)
       queue = new LinkedBlockingQueue
       processInit = Some((
-        SireumApplicationComponent.getSireumProcess(sireumHome,
+        SireumApplicationComponent.getSireumProcess(sireumHome, command,
           queue, { s =>
             val trimmed = s.trim
             var shouldLog = false
@@ -291,10 +291,11 @@ object SireumClient {
               if (trimmed.nonEmpty) shouldLog = true
             }
             if (shouldLog) writeLog(isRequest = false, if (hasError) s"Error occurred when processing response: $s" else s)
-          }, serverArgs),
+          }),
         logFile
       ))
-      writeLog(isRequest = false, s"Client v${PluginManager.getPlugin(PluginId.getId("org.sireum.intellij")).getVersion}: started sireum ${serverArgs.mkString(" ")}")
+      writeLog(isRequest = false, s"Client v${PluginManager.getPlugin(PluginId.getId("org.sireum.intellij")).getVersion}: Started Sireum server ...")
+      writeLog(isRequest = false, command.mkString(" ").replace(sireumHome.string.value, if (org.sireum.Os.isWin) "%SIREUM_HOME%" else "$SIREUM_HOME"))
       if (processInit.isEmpty) return
 
       def memory: String =

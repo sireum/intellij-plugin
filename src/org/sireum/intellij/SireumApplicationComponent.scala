@@ -26,6 +26,7 @@
 package org.sireum.intellij
 
 import com.intellij.AppTopics
+import com.intellij.ide.plugins.PluginManager
 
 import java.io._
 import java.util.concurrent.BlockingQueue
@@ -34,6 +35,7 @@ import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components._
 import com.intellij.openapi.editor.{Document, Editor, EditorFactory}
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileChooser._
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileDocumentManagerListener}
 import com.intellij.openapi.project.{Project => IProject}
@@ -152,17 +154,20 @@ object SireumApplicationComponent {
       case _ => None
     }
 
-  def getSireumProcess(sireumHome: org.sireum.Os.Path,
-                       queue: BlockingQueue[Vector[(Boolean, String)]],
-                       processOutput: String => Unit,
-                       args: Vector[String]): scala.sys.process.Process = {
+  def getCommand(sireumHome: org.sireum.Os.Path, args: Seq[String]): Seq[String] = {
     import org.sireum._
     val javaHome = sireumHome / "bin" / platform / "java"
     val javaPath = javaHome / "bin" / (if (Os.isWin) "java.exe" else "java")
     val sireumJarPath = sireumHome / "bin" / "sireum.jar"
-    new Exec().process((javaPath.string.value +: vmArgs) ++
-      Seq("-Dfile.encoding=UTF-8", "-Dorg.sireum.silenthalt=true", "-server", "-jar", sireumJarPath.string.value) ++
-      args, { os =>
+    (javaPath.string.value +: vmArgs) ++ Seq(
+      "-Dfile.encoding=UTF-8", "-Dorg.sireum.silenthalt=true", "-server", "-jar", sireumJarPath.string.value) ++ args
+  }
+
+  def getSireumProcess(sireumHome: org.sireum.Os.Path,
+                       command: Seq[String],
+                       queue: BlockingQueue[Vector[(Boolean, String)]],
+                       processOutput: String => Unit): scala.sys.process.Process = {
+    new Exec().process(command, { os =>
       try {
         val w = new OutputStreamWriter(os)
         val lineSep = scala.util.Properties.lineSeparator
