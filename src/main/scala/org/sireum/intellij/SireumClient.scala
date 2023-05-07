@@ -1309,6 +1309,7 @@ object SireumClient {
                   case ri: ConsoleReportItem => consoleReportItems(listModel, rhs, editor, ri, line)
                   case ri: HintReportItem => hintReportItem(hintListModelMap, rhs, editor, ri, line)
                   case ri: SummoningReportItem => summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
+                  case _ =>
                 }
               } catch {
                 case t: Throwable => logStackTrace(t)

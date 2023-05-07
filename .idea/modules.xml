@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/sireum-intellij-plugin.iml" filepath="$PROJECT_DIR$/sireum-intellij-plugin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/sireum-intellij-plugin.iml" filepath="$PROJECT_DIR$/.idea/modules/sireum-intellij-plugin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/sireum-intellij-plugin-build.iml" filepath="$PROJECT_DIR$/.idea/modules/sireum-intellij-plugin-build.iml" />
     </modules>
   </component>
 </project>

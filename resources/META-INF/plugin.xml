@@ -22,10 +22,9 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   -->
-
 <idea-plugin>
     <id>org.sireum.intellij</id>
-    <name>Sireum Kekinian</name>
+    <name>Sireum</name>
     <version>5.0.0-SNAPSHOT</version>
     <vendor email="robby@santoslab.org" url="http://santoslab.org">SAnToS Lab, Kansas State University
     </vendor>
@@ -33,19 +32,15 @@
     <description><![CDATA[
         <a href="http://sireum.org">Sireum</a> is a high assurance system engineering platform being
         developed at SAnToS Laboratory, Kansas State University.
-        This plugin integrates Sireum tools such as the Logika program verifier for Slang.
+        This plugin integrates Sireum tools such as the Logika verification framework.
     ]]></description>
 
-    <change-notes><![CDATA[
+    <idea-version since-build="231.8770.65"/>
 
-    ]]>
-    </change-notes>
-
-    <idea-version since-build="231.8109"/>
-
+    <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
-
     <depends>org.jetbrains.plugins.terminal</depends>
+    <depends>org.intellij.scala</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable id="SireumConfigurable" instance="org.sireum.intellij.SireumConfigurable"
@@ -53,6 +48,9 @@
 
         <applicationConfigurable id="SireumLogikaConfigurable" instance="org.sireum.intellij.logika.LogikaConfigurable"
                                  displayName="Logika" parentId="SireumConfigurable"/>
+        <postStartupActivity implementation="org.sireum.intellij.injector.SireumProjectActivity" />
+
+        <syntheticMemberInjector implementation="org.sireum.intellij.injector.Injector"/>
     </extensions>
 
     <actions>
@@ -182,6 +180,9 @@
     <project-components>
         <component>
             <implementation-class>org.sireum.intellij.SireumProjectComponent</implementation-class>
+        </component>
+        <component>
+            <implementation-class>org.sireum.intellij.injector.SireumProjectActivity</implementation-class>
         </component>
     </project-components>
 
