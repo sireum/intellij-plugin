@@ -48,9 +48,6 @@
 
         <applicationConfigurable id="SireumLogikaConfigurable" instance="org.sireum.intellij.logika.LogikaConfigurable"
                                  displayName="Logika" parentId="SireumConfigurable"/>
-        <postStartupActivity implementation="org.sireum.intellij.injector.SireumProjectActivity" />
-
-        <syntheticMemberInjector implementation="org.sireum.intellij.injector.Injector"/>
     </extensions>
 
     <actions>
@@ -180,9 +177,6 @@
     <project-components>
         <component>
             <implementation-class>org.sireum.intellij.SireumProjectComponent</implementation-class>
-        </component>
-        <component>
-            <implementation-class>org.sireum.intellij.injector.SireumProjectActivity</implementation-class>
         </component>
     </project-components>
 
