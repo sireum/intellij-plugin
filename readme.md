@@ -8,7 +8,10 @@ This IntelliJ plugin integrates [Sireum](https://github.com/sireum/kekinian) too
 ./setup.sh
 ```
 
-Set IntelliJ preference: `Editor` -> `GUI Designer` -> `Generate GUI into: Java source code`
+Set IntelliJ preference: `Editor` -> `GUI Designer`:
+
+* `Generate GUI into:` -> `Java source code`
+* `Default accessibility for UI-bound fields:` -> `protected`
 
 ## To Run/Deebug
 
