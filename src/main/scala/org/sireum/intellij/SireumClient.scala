@@ -68,7 +68,8 @@ object SireumClient {
 
     def clearCache(kind: Analysis.Cache.Kind.Type): Unit = {
       kind match {
-        case Analysis.Cache.Kind.All => prevAnalysisData.clear()
+        case Analysis.Cache.Kind.All => cachedAnalysisData.clear()
+        case Analysis.Cache.Kind.Transitions => cachedAnalysisData.clear()
         case _ =>
       }
       SireumClient.queue.add(Vector((true, org.sireum.server.protocol.JSON.fromRequest(
@@ -178,7 +179,7 @@ object SireumClient {
   )
   lazy val defaultFrame: Int = icons.length / 2 + 1
   lazy val statusBarWidget: SireumStatusWidget = new SireumStatusWidget
-  val prevAnalysisData: ConcurrentHashMap[String, (scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])] = new ConcurrentHashMap
+  val cachedAnalysisData: ConcurrentHashMap[(String, Long), (scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])] = new ConcurrentHashMap
   var usedMemory: org.sireum.Z = 0
   var shutdown: Boolean = false
   var queue: LinkedBlockingQueue[Vector[(Boolean, String)]] = new LinkedBlockingQueue
@@ -1190,30 +1191,6 @@ object SireumClient {
                 }
                 r match {
                   case r: org.sireum.server.protocol.Analysis.End =>
-                    analysisDataKey.synchronized {
-                      val edtr = pe._3
-                      val t = prevAnalysisData.get(edtr.getVirtualFile.getCanonicalPath)
-                      val q = edtr.getUserData(analysisDataKey)
-                      if (t != null) {
-                        t._1.addAll(q._1)
-                        for ((line, lm) <- q._3) {
-                          import org.sireum.$internal.CollectionCompat.Converters._
-                          val newLm = new DefaultListModel[SummoningReportItem]
-                          var ok = true
-                          for (ri <- lm.elements.asScala) {
-                            if (ri.ok) {
-                              newLm.add(newLm.size, ri)
-                            } else {
-                              ok = false
-                            }
-                          }
-                          if (ok) {
-                            t._2.put(line, newLm)
-                          }
-                        }
-                        t._3.addAll(q._4)
-                      }
-                    }
                     editorMap -= r.id
                   case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
                   case _: org.sireum.server.protocol.Analysis.Start =>
@@ -1241,7 +1218,7 @@ object SireumClient {
                 return
             }
           }
-          val (rhs, listModel, summoningListModelMap, hintListModelMap, coverageLines, prevRhs, prevSm, prevHm) =
+          val (rhs, listModel, summoningListModelMap, hintListModelMap, coverageLines) =
             analysisDataKey.synchronized {
               r match {
                 case r: org.sireum.server.protocol.Analysis.End =>
@@ -1262,16 +1239,7 @@ object SireumClient {
                     )
                     editor.putUserData(analysisDataKey, q)
                   }
-                  var t = prevAnalysisData.get(editor.getVirtualFile.getCanonicalPath)
-                  if (t == null) {
-                    t = (
-                      scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]](),
-                      scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]](),
-                      scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]]()
-                    )
-                    prevAnalysisData.put(editor.getVirtualFile.getCanonicalPath, t)
-                  }
-                  (q._1, q._2, q._3, q._4, q._5, t._1, t._2, t._3)
+                  (q._1, q._2, q._3, q._4, q._5)
               }
             }
           if (input != editor.getDocument.getText) {
@@ -1281,49 +1249,88 @@ object SireumClient {
           r match {
             case r: org.sireum.server.protocol.Analysis.Coverage => try {
               val mm = editor.getMarkupModel
-              for (i <- r.pos.beginLine to r.pos.endLine if !coverageLines.contains(i.toInt)) {
+              for (i <- r.pos.beginLine to r.pos.endLine) {
                 val line = i.toInt
-                if (LogikaConfigurable.coverage) {
+                if (LogikaConfigurable.coverage && !r.setCache && !coverageLines.contains(i.toInt)) {
                   val rh = addLineHighlighter(mm, line - 1, -1, coverageTextAttributes)
                   rh.putUserData(reportItemKey, CoverageReportItem)
                   coverageLines.add(line)
                 }
-                if (r.cached) {
-                  prevRhs.get(line) match {
-                    case Some(rhs) =>
-                      for (rh <- rhs) {
-                        val ri = rh.getUserData(reportItemKey)
-                        val skip: Boolean = ri match {
-                          case ri: ConsoleReportItem => ri.level == org.sireum.message.Level.InternalError ||
-                            ri.level == org.sireum.message.Level.Error
-                          case _ => false
+                val path = editor.getVirtualFile.getCanonicalPath
+                val key = (path, r.cached.value)
+                if (r.setCache) {
+                  cachedAnalysisData.synchronized {
+                    var t = cachedAnalysisData.get(key)
+                    if (t == null) {
+                      t = (new scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]],
+                        new scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]],
+                        new scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])
+                    }
+                    val (prevRhs, prevSm, prevHm) = t
+                    rhs.get(line) match {
+                      case Some(value) => prevRhs.put(line, value)
+                      case _ =>
+                    }
+                    summoningListModelMap.get(line) match {
+                      case Some(value) =>
+                        val lm = new DefaultListModel[SummoningReportItem]
+                        for (i <- 0 until value.size) {
+                          val ri = value.getElementAt(i)
+                          lm.addElement(ri.copy(message = ri.message.replace("Result:", "Result (Cached):")))
                         }
-                        if (!skip) {
-                          val newRh = mm.addLineHighlighter(line - 1, rh.getLayer, rh.getTextAttributes(null))
-                          newRh.putUserData(reportItemKey, ri)
+                        prevSm.put(line, lm)
+                      case _ =>
+                    }
+                    hintListModelMap.get(line) match {
+                      case Some(value) =>
+                        val lm = new DefaultListModel[HintReportItem]
+                        for (i <- 0 until value.size) {
+                          val ri = value.getElementAt(i)
+                          lm.addElement(ri.copy(message = ri.message + "\n// Cached"))
                         }
-                      }
-                    case _ =>
+                        prevHm.put(line, lm)
+                      case _ =>
+                    }
+                    cachedAnalysisData.put(key, t)
                   }
-                  prevSm.get(line) match {
-                    case Some(sm) =>
-                      for (i <- 0 until sm.size()) {
-                        val ri = sm.elementAt(i)
-                        summoningReportItem(summoningListModelMap, rhs, editor,
-                          ri.copy(message = ri.message.replace("Result:", "Result (Cached):")), line)
-                      }
-                    case _ =>
-                  }
-                  prevHm.get(line) match {
-                    case Some(hm) =>
-                      for (i <- 0 until hm.size) {
-                        val ri = hm.elementAt(i)
-                        if (!ri.terminated) {
-                          hintReportItem(hintListModelMap, rhs, editor,
-                            if (!ri.message.endsWith("Cached")) ri.copy(message = ri.message + "\n// Cached") else ri, line)
+                } else {
+                  val t = cachedAnalysisData.get(key)
+                  if (t != null) {
+                    val (prevRhs, prevSm, prevHm) = t
+                    prevRhs.get(line) match {
+                      case Some(rhs) =>
+                        for (rh <- rhs) {
+                          val ri = rh.getUserData(reportItemKey)
+                          val skip: Boolean = ri match {
+                            case ri: ConsoleReportItem => ri.level == org.sireum.message.Level.InternalError ||
+                              ri.level == org.sireum.message.Level.Error
+                            case _ => false
+                          }
+                          if (!skip) {
+                            val newRh = mm.addLineHighlighter(line - 1, rh.getLayer, rh.getTextAttributes(null))
+                            newRh.putUserData(reportItemKey, ri)
+                          }
                         }
-                      }
-                    case _ =>
+                      case _ =>
+                    }
+                    prevSm.get(line) match {
+                      case Some(sm) =>
+                        for (i <- 0 until sm.size()) {
+                          val ri = sm.elementAt(i)
+                          summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
+                        }
+                      case _ =>
+                    }
+                    prevHm.get(line) match {
+                      case Some(hm) =>
+                        for (i <- 0 until hm.size) {
+                          val ri = hm.elementAt(i)
+                          if (!ri.terminated) {
+                            hintReportItem(hintListModelMap, rhs, editor, ri, line)
+                          }
+                        }
+                      case _ =>
+                    }
                   }
                 }
               }
