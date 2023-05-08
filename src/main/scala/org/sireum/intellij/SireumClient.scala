@@ -45,7 +45,7 @@ import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, ToolWindowManager, W
 import com.intellij.ui.JBColor
 import org.jetbrains.plugins.terminal.{ShellTerminalWidget, TerminalToolWindowManager}
 import org.sireum.intellij.logika.LogikaConfigurable
-import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke}
+import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke, Smt2Query}
 import org.sireum.message.Level
 import org.sireum.server.protocol.Analysis
 
@@ -684,6 +684,7 @@ object SireumClient {
                                                          messageHeader: String,
                                                          info: String,
                                                          offset: Int,
+                                                         val ok: Boolean,
                                                          val message: String) extends ReportItem {
     override def toString: String = messageHeader
   }
@@ -716,7 +717,8 @@ object SireumClient {
         val offset = r.pos.offset.toInt
         val header = r.info.value.lines().limit(2).map(line => line.replace(';', ' ').
           replace("Result:", "").trim).toArray.mkString(": ")
-        return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset, text)))
+        return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset,
+          if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, text)))
       case r: Logika.Verify.State =>
         import org.sireum._
         val text = normalizeChars(r.claims.value)
@@ -1148,7 +1150,21 @@ object SireumClient {
                   val t = prevAnalysisData.get(editor.getVirtualFile.getCanonicalPath)
                   if (t != null) {
                     t._1.addAll(q._1)
-                    t._2.addAll(q._3)
+                    for ((line, lm) <- q._3) {
+                      import org.sireum.$internal.CollectionCompat.Converters._
+                      val newLm = new DefaultListModel[SummoningReportItem]
+                      var ok = true
+                      for (ri <- lm.elements.asScala) {
+                        if (ri.ok) {
+                          newLm.add(newLm.size, ri)
+                        } else {
+                          ok = false
+                        }
+                      }
+                      if (ok) {
+                        t._2.put(line, newLm)
+                      }
+                    }
                     t._3.addAll(q._4)
                   }
                   editor.putUserData(analysisDataKey, null)
