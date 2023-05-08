@@ -1147,26 +1147,6 @@ object SireumClient {
                   for (rh <- mm.getAllHighlighters if rh.getUserData(reportItemKey) != null) {
                     mm.removeHighlighter(rh)
                   }
-                  val t = prevAnalysisData.get(editor.getVirtualFile.getCanonicalPath)
-                  if (t != null) {
-                    t._1.addAll(q._1)
-                    for ((line, lm) <- q._3) {
-                      import org.sireum.$internal.CollectionCompat.Converters._
-                      val newLm = new DefaultListModel[SummoningReportItem]
-                      var ok = true
-                      for (ri <- lm.elements.asScala) {
-                        if (ri.ok) {
-                          newLm.add(newLm.size, ri)
-                        } else {
-                          ok = false
-                        }
-                      }
-                      if (ok) {
-                        t._2.put(line, newLm)
-                      }
-                    }
-                    t._3.addAll(q._4)
-                  }
                   editor.putUserData(analysisDataKey, null)
                 }
               }
@@ -1209,7 +1189,32 @@ object SireumClient {
                   clearScriptMarkings(pe._3)
                 }
                 r match {
-                  case r: org.sireum.server.protocol.Analysis.End => editorMap -= r.id
+                  case r: org.sireum.server.protocol.Analysis.End =>
+                    analysisDataKey.synchronized {
+                      val edtr = pe._3
+                      val t = prevAnalysisData.get(edtr.getVirtualFile.getCanonicalPath)
+                      val q = edtr.getUserData(analysisDataKey)
+                      if (t != null) {
+                        t._1.addAll(q._1)
+                        for ((line, lm) <- q._3) {
+                          import org.sireum.$internal.CollectionCompat.Converters._
+                          val newLm = new DefaultListModel[SummoningReportItem]
+                          var ok = true
+                          for (ri <- lm.elements.asScala) {
+                            if (ri.ok) {
+                              newLm.add(newLm.size, ri)
+                            } else {
+                              ok = false
+                            }
+                          }
+                          if (ok) {
+                            t._2.put(line, newLm)
+                          }
+                        }
+                        t._3.addAll(q._4)
+                      }
+                    }
+                    editorMap -= r.id
                   case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
                   case _: org.sireum.server.protocol.Analysis.Start =>
                     if (!pe._1.isDisposed && !pe._3.isDisposed) {
