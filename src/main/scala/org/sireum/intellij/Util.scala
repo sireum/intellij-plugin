@@ -25,7 +25,7 @@
 
 package org.sireum.intellij
 
-import com.intellij.notification.{Notification, Notifications}
+import com.intellij.notification.{Notification, NotificationType, Notifications}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.project.Project
@@ -126,6 +126,9 @@ object Util {
     val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p), content)
     return (hasSireum, compactFirstLine.contains("#Logika"))
   }
+
+  def notifyDebug(content: String, project: Project): Unit = notify(new Notification(SireumClient.groupId, content,
+    NotificationType.INFORMATION), project, None)
 
   def notify(n: Notification, project: Project, shouldExpire: Boolean): Unit =
     notify(n, project, if (shouldExpire) Some(5000) else None)

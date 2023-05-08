@@ -19,7 +19,7 @@ Click on `sireum-intellij-plugin`
 Rebuild project in IntelliJ, then:
 
 ```sbt
-packageArtifactZip
+clean; cleanFiles; packageArtifactZip
 ```
 
 ```bash
