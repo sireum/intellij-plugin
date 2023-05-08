@@ -27,6 +27,7 @@ package org.sireum.intellij
 
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.ui.ConsoleView
+import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{ActionManager, AnAction}
 import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor}
@@ -42,6 +43,7 @@ import org.sireum.intellij.logika.LogikaToolWindowForm
 
 import java.awt.Color
 import java.awt.event.{ActionEvent, ActionListener}
+import java.io.PrintWriter
 import javax.swing.event.{DocumentEvent, DocumentListener}
 import javax.swing.text.DefaultHighlighter
 
@@ -53,7 +55,7 @@ object SireumToolWindowFactory {
   val hpainter = new DefaultHighlighter.DefaultHighlightPainter(
     new JBColor(new Color(129, 62, 200, 64), new Color(129, 62, 200, 256 - 64)))
 
-  def createToolWindowContent(project: Project, toolWindow: ToolWindow): Unit = {
+  def createToolWindowContent(project: Project, toolWindow: ToolWindow): Unit = try {
     toolWindow.setAutoHide(false)
     toolWindow.setIcon(SireumClient.sireumGrayIcon)
     toolWindow match {
@@ -184,6 +186,14 @@ object SireumToolWindowFactory {
     })
 
     windows.put(project, Forms(toolWindow, logikaForm, console))
+  } catch {
+    case t: Throwable =>
+      val sw = new java.io.StringWriter
+      val pw = new PrintWriter(sw)
+      t.printStackTrace(pw)
+      Util.notify(new Notification(
+        SireumClient.groupId, s"Could not create Sireum toolwindow\n${sw.toString}",
+        NotificationType.ERROR), project, shouldExpire = true)
   }
 
   def removeToolWindow(project: Project): Unit = {

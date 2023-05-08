@@ -834,23 +834,24 @@ object SireumClient {
                     case _: Throwable => sri.info
                   }
                 }
-                f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
-                f.logika.logikaTextArea.setText(normalizeChars(content))
-                f.logika.logikaTextArea.setCaretPosition(0)
-                f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
-                f.logika.logikaToolTextField.setPlaceholder("Search ...")
-                f.logika.logikaToolTextField.setText("")
-                for (editor <- editorOpt if !editor.isDisposed)
-                  TransactionGuard.submitTransaction(project, (() =>
-                    FileEditorManager.getInstance(project).openTextEditor(
-                      new OpenFileDescriptor(sri.project, sri.file, sri.offset), true)): Runnable)
+                ApplicationManager.getApplication.invokeLater { () =>
+                  f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
+                  f.logika.logikaTextArea.setText(normalizeChars(content))
+                  f.logika.logikaTextArea.setCaretPosition(0)
+                  f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
+                  f.logika.logikaToolTextField.setPlaceholder("Search ...")
+                  f.logika.logikaToolTextField.setText("")
+                  for (editor <- editorOpt if !editor.isDisposed)
+                    TransactionGuard.submitTransaction(project, (() =>
+                      FileEditorManager.getInstance(project).openTextEditor(
+                        new OpenFileDescriptor(sri.project, sri.file, sri.offset), true)): Runnable)
+                }
               case cri: ConsoleReportItem =>
                 for (editor <- editorOpt if !editor.isDisposed)
                   TransactionGuard.submitTransaction(project, (() =>
                     FileEditorManager.getInstance(project).openTextEditor(
                       new OpenFileDescriptor(cri.project, cri.file, cri.offset), true)): Runnable)
               case hri: HintReportItem =>
-                f.logika.logikaToolSplitPane.setDividerLocation(if (list.getModel.getSize <= 1) 0 else dividerWeight)
                 var content = normalizeChars(hri.message)
                 if (LogikaConfigurable.hintMaxColumn > 0) {
                   org.sireum.Scalafmt.format(
@@ -861,20 +862,25 @@ object SireumClient {
                     case _ =>
                   }
                 }
-                f.logika.logikaTextArea.setText(content)
-                f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
-                f.logika.logikaToolTextField.setPlaceholder("Filter claims ...")
-                f.logika.logikaToolTextField.setText("")
-                f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
-                for (editor <- editorOpt if !editor.isDisposed)
-                  TransactionGuard.submitTransaction(project, (() =>
-                    FileEditorManager.getInstance(project).openTextEditor(
-                      new OpenFileDescriptor(hri.project, hri.file, hri.offset), true)): Runnable)
+                ApplicationManager.getApplication.invokeLater { () =>
+                  f.logika.logikaToolSplitPane.setDividerLocation(if (list.getModel.getSize <= 1) 0 else dividerWeight)
+                  f.logika.logikaTextArea.setText(content)
+                  f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
+                  f.logika.logikaToolTextField.setPlaceholder("Filter claims ...")
+                  f.logika.logikaToolTextField.setText("")
+                  f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
+                  for (editor <- editorOpt if !editor.isDisposed)
+                    TransactionGuard.submitTransaction(project, (() =>
+                      FileEditorManager.getInstance(project).openTextEditor(
+                        new OpenFileDescriptor(hri.project, hri.file, hri.offset), true)): Runnable)
+                }
             }
         })
       }
-      f.logika.logikaTextArea.setText("")
-      saveSetDividerLocation(f.logika.logikaToolSplitPane, 1.0)
+      ApplicationManager.getApplication.invokeLater { () =>
+        f.logika.logikaTextArea.setText("")
+        saveSetDividerLocation(f.logika.logikaToolSplitPane, 1.0)
+      }
     })
   }
 

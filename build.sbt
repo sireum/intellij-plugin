@@ -9,7 +9,8 @@ lazy val `sireum-intellij-plugin` = project.in(file("."))
       ThisBuild / intellijBuild      := "231.8770.65",
       ThisBuild / intellijPlatform   := IntelliJPlatform.IdeaCommunity,
       Global    / intellijAttachSources := true,
-      Compile / javacOptions ++= "--release" :: "17" :: Nil,
+      Compile / javacOptions ++= Seq("--release", "8"),
+      Compile / scalacOptions ++= Seq("-target:jvm-1.8", "-deprecation", "-Ydelambdafy:method", "-feature", "-unchecked"),
       intellijPlugins ++= Seq(
         "org.jetbrains.plugins.terminal".toPlugin,
         "org.intellij.scala".toPlugin
