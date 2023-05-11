@@ -1276,7 +1276,9 @@ object SireumClient {
                         val lm = new DefaultListModel[SummoningReportItem]
                         for (i <- 0 until value.size) {
                           val ri = value.getElementAt(i)
-                          lm.addElement(ri.copy(message = ri.message.replace("Result:", "Result (Cached):")))
+                          if (ri.ok) {
+                            lm.addElement(ri.copy(message = ri.message.replace("Result:", "Result (Cached):")))
+                          }
                         }
                         prevSm.put(line, lm)
                       case _ =>
