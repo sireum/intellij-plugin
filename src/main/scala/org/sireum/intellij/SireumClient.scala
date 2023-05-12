@@ -424,7 +424,7 @@ object SireumClient {
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
-              isBackground: Boolean, isInterprocedural: Boolean, disallowTransitionCaching: Boolean = false,
+              isBackground: Boolean, isInterprocedural: Boolean,
               typeCheckOnly: Boolean = false): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
@@ -459,7 +459,8 @@ object SireumClient {
             rawInscription = LogikaConfigurable.rawInscription,
             elideEncoding = LogikaConfigurable.elideEncoding,
             flipStrictPure = LogikaConfigurable.flipStrictPure,
-            transitionCache = LogikaConfigurable.transitionCache && !disallowTransitionCaching
+            transitionCache = LogikaConfigurable.transitionCache,
+            pureFun = LogikaConfigurable.pureFun
           )),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
@@ -1251,7 +1252,7 @@ object SireumClient {
               val mm = editor.getMarkupModel
               for (i <- r.pos.beginLine to r.pos.endLine) {
                 val line = i.toInt
-                if (LogikaConfigurable.coverage && !r.setCache && !coverageLines.contains(i.toInt)) {
+                if (LogikaConfigurable.coverage && !coverageLines.contains(i.toInt)) {
                   val rh = addLineHighlighter(mm, line - 1, -1, coverageTextAttributes)
                   rh.putUserData(reportItemKey, CoverageReportItem)
                   coverageLines.add(line)
