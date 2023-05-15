@@ -409,14 +409,14 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
     def updateSmt2ValidOpts(): Unit = {
       val text = smt2ValidConfigsTextArea.getText
-      validSmt2ValidOpts = Smt2.parseConfigs(nameExePathMap, false, text, timeout, rlimit).isLeft
+      validSmt2ValidOpts = Smt2.parseConfigs(nameExePathMap, false, text).isLeft
       smt2ValidConfigsLabel.setForeground(if (validSmt2ValidOpts) fgColor else JBColor.red)
       smt2ValidConfigsTextArea.setToolTipText(if (validSmt2ValidOpts) "OK" else "Invalid configurations")
     }
 
     def updateSmt2SatOpts(): Unit = {
       val text = smt2SatConfigsTextArea.getText
-      validSmt2SatOpts = Smt2.parseConfigs(nameExePathMap, true, text, timeout, rlimit).isLeft
+      validSmt2SatOpts = Smt2.parseConfigs(nameExePathMap, true, text).isLeft
       smt2SatConfigsLabel.setForeground(if (validSmt2SatOpts) fgColor else JBColor.red)
       smt2SatConfigsTextArea.setToolTipText(if (validSmt2SatOpts) "OK" else "Invalid configurations")
     }

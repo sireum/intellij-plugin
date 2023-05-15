@@ -30,7 +30,8 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.vfs.VirtualFile
-import org.sireum.intellij.{SireumAction, SireumClient, Util}
+import org.sireum.intellij.{SireumAction, SireumApplicationComponent, SireumClient, Util}
+import org.sireum.logika.options.OptionsUtil
 
 trait LogikaOnlyAction extends SireumAction {
   override def update(e: AnActionEvent): Unit = {
@@ -39,6 +40,66 @@ trait LogikaOnlyAction extends SireumAction {
     if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isLogikaSupportedPlatform &&
       Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText)) == (true, true))
   }
+}
+
+trait LogikaInsertOptionsAction extends SireumAction {
+  def updateText(editor: Editor, options: String): Unit
+  def isInterprocedural: Boolean
+  override def actionPerformed(e: AnActionEvent): Unit = {
+    e.getPresentation.setEnabled(false)
+    val project = e.getProject
+    val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
+    if (editor == null) return
+    SireumApplicationComponent.getSireumHome(project) match {
+      case Some(sireumHome) =>
+        val nameExePathMap = org.sireum.logika.Smt2Invoke.nameExePathMap(sireumHome)
+        val options = OptionsUtil.fromConfig(org.sireum.Os.numOfProcessors, nameExePathMap,
+          SireumClient.getLogikaConfig(project, isBackground = false, isInterprocedural = isInterprocedural))
+        updateText(editor, options.value)
+      case _ =>
+    }
+  }
+}
+
+trait LogikaInsertOptionsActionFileCommon extends LogikaInsertOptionsAction {
+  def updateText(editor: Editor, options: String): Unit = ApplicationManager.getApplication.invokeLater { () =>
+    if (editor == null) return
+    val text = editor.getDocument.getText
+    val i = text.indexOf('\n')
+    if (i < 0) return
+    editor.getDocument.setText(s"${text.substring(0, i + 1)}//@${OptionsUtil.logika}: $options\n${text.substring(i + 1, text.length)}")
+  }
+}
+
+final class LogikaInsertOptionsActionFile extends LogikaInsertOptionsActionFileCommon {
+  def isInterprocedural: Boolean = false
+}
+
+final class LogikaInsertOptionsActionFileInterp extends LogikaInsertOptionsActionFileCommon {
+  def isInterprocedural: Boolean = true
+}
+
+trait LogikaInsertOptionsActionLineCommon extends LogikaInsertOptionsAction {
+  def updateText(editor: Editor, options: String): Unit = ApplicationManager.getApplication.invokeLater { () =>
+    if (editor == null) return
+    val text = editor.getDocument.getText
+    val line = SireumClient.getCurrentLine(editor)
+    val lineOffset = SireumClient.getLineOffset(editor, line)
+    var i = lineOffset
+    while (text(i).isWhitespace) i += 1
+    val indent = (for (_ <- 0 until i - lineOffset) yield ' ').mkString
+    val tqs = "\"\"\""
+    val stmt = s"""${org.sireum.LibUtil.setOptions}("${OptionsUtil.logika}", $tqs$options$tqs)"""
+    editor.getDocument.setText(s"${text.substring(0, lineOffset)}$indent$stmt\n${text.substring(lineOffset, text.length)}")
+  }
+}
+
+final class LogikaInsertOptionsActionLine extends LogikaInsertOptionsActionLineCommon {
+  def isInterprocedural: Boolean = false
+}
+
+final class LogikaInsertOptionsActionLineInterp extends LogikaInsertOptionsActionLineCommon {
+  def isInterprocedural: Boolean = true
 }
 
 trait LogikaCheckAction extends LogikaOnlyAction {

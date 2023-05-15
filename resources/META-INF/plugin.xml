@@ -70,6 +70,30 @@
             <add-to-group group-id="SireumGroup" anchor="last"/>
         </group>
 
+        <action id="LogikaInsertOptionsFile" class="org.sireum.intellij.logika.LogikaInsertOptionsActionFile"
+                text="Logika options (File)"
+                description="Insert Logika options at the top of the file">
+            <add-to-group group-id="SireumInsertGroup" anchor="last"/>
+        </action>
+
+        <action id="LogikaInsertOptionsLine" class="org.sireum.intellij.logika.LogikaInsertOptionsActionLine"
+                text="Logika options (Line)"
+                description="Insert Logika options at the cursor line">
+            <add-to-group group-id="SireumInsertGroup" anchor="last"/>
+        </action>
+
+        <action id="LogikaInsertOptionsFileInterp" class="org.sireum.intellij.logika.LogikaInsertOptionsActionFileInterp"
+                text="Logika options (File, Interprocedural)"
+                description="Insert Logika options at the top of the file">
+            <add-to-group group-id="SireumInsertGroup" anchor="last"/>
+        </action>
+
+        <action id="LogikaInsertOptionsLineInterp" class="org.sireum.intellij.logika.LogikaInsertOptionsActionLineInterp"
+                text="Logika options (Line, Interprocedural)"
+                description="Insert Logika options at the cursor line">
+            <add-to-group group-id="SireumInsertGroup" anchor="last"/>
+        </action>
+
         <group id="SlangGroup" text="Slang" popup="true">
             <add-to-group group-id="SireumGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>

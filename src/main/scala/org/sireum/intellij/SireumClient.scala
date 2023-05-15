@@ -417,10 +417,40 @@ object SireumClient {
   def getSmt2Configs(project: Project): org.sireum.ISZ[Smt2Config] = SireumApplicationComponent.getSireumHome(project) match {
     case Some(sireumHome) if Util.isLogikaSupportedPlatform =>
       val nameExePathMap = Smt2Invoke.nameExePathMap(sireumHome)
-      Smt2.parseConfigs(nameExePathMap, false, LogikaConfigurable.smt2ValidOpts, LogikaConfigurable.timeout, LogikaConfigurable.rlimit).left ++
-        Smt2.parseConfigs(nameExePathMap, true, LogikaConfigurable.smt2SatOpts, LogikaConfigurable.timeout, LogikaConfigurable.rlimit).left
+      Smt2.parseConfigs(nameExePathMap, false, LogikaConfigurable.smt2ValidOpts).left ++
+        Smt2.parseConfigs(nameExePathMap, true, LogikaConfigurable.smt2SatOpts).left
     case _ => org.sireum.ISZ()
   }
+
+  def getLogikaConfig(project: Project, isBackground: Boolean,
+                      isInterprocedural: Boolean): org.sireum.logika.Config = org.sireum.server.service.AnalysisService.defaultConfig(
+    logPc = LogikaConfigurable.hint,
+    logVc = LogikaConfigurable.inscribeSummonings,
+    parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
+    sat = LogikaConfigurable.checkSat,
+    timeoutInMs = LogikaConfigurable.timeout,
+    rlimit = LogikaConfigurable.rlimit,
+    useReal = LogikaConfigurable.useReal,
+    fpRoundingMode = LogikaConfigurable.fpRoundingMode,
+    caching = LogikaConfigurable.smt2Cache,
+    simplifiedQuery = LogikaConfigurable.smt2Simplify,
+    smt2Configs = getSmt2Configs(project),
+    branchPar = LogikaConfigurable.branchPar,
+    branchParCores = LogikaConfigurable.branchParCores,
+    splitIf = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitConds,
+    splitMatch = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitMatchCases,
+    splitContract = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitContractCases,
+    atLinesFresh = LogikaConfigurable.hintLinesFresh,
+    interp = isInterprocedural,
+    loopBound = LogikaConfigurable.loopBound,
+    callBound = LogikaConfigurable.callBound,
+    interpContracts = LogikaConfigurable.interpContracts,
+    rawInscription = LogikaConfigurable.rawInscription,
+    elideEncoding = LogikaConfigurable.elideEncoding,
+    flipStrictPure = LogikaConfigurable.flipStrictPure,
+    transitionCache = LogikaConfigurable.transitionCache,
+    pureFun = LogikaConfigurable.pureFun
+  )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
               ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
@@ -436,32 +466,7 @@ object SireumClient {
         case _ => return Vector()
       }
       Vector(
-        Logika.Verify.Config(LogikaConfigurable.hint, LogikaConfigurable.inscribeSummonings, LogikaConfigurable.infoFlow,
-          org.sireum.server.service.AnalysisService.defaultConfig(
-            parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
-            sat = LogikaConfigurable.checkSat,
-            timeoutInMs = LogikaConfigurable.timeout,
-            useReal = LogikaConfigurable.useReal,
-            fpRoundingMode = LogikaConfigurable.fpRoundingMode,
-            caching = LogikaConfigurable.smt2Cache,
-            simplifiedQuery = LogikaConfigurable.smt2Simplify,
-            smt2Configs = getSmt2Configs(project),
-            branchPar = LogikaConfigurable.branchPar,
-            branchParCores = LogikaConfigurable.branchParCores,
-            splitIf = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitConds,
-            splitMatch = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitMatchCases,
-            splitContract = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitContractCases,
-            atLinesFresh = LogikaConfigurable.hintLinesFresh,
-            interp = isInterprocedural,
-            loopBound = LogikaConfigurable.loopBound,
-            callBound = LogikaConfigurable.callBound,
-            interpContracts = LogikaConfigurable.interpContracts,
-            rawInscription = LogikaConfigurable.rawInscription,
-            elideEncoding = LogikaConfigurable.elideEncoding,
-            flipStrictPure = LogikaConfigurable.flipStrictPure,
-            transitionCache = LogikaConfigurable.transitionCache,
-            pureFun = LogikaConfigurable.pureFun
-          )),
+        Logika.Verify.Config(LogikaConfigurable.infoFlow, getLogikaConfig(project, isBackground, isInterprocedural)),
         if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
           Slang.Check.Script(
             isBackground = isBackground,
@@ -549,9 +554,17 @@ object SireumClient {
     return r
   }
 
+  def getCurrentOffset(editor: Editor): Int = {
+    return editor.getCaretModel.getPrimaryCaret.getOffset
+  }
+
   def getCurrentLine(editor: Editor): Int = {
-    val offset = editor.getCaretModel.getPrimaryCaret.getOffset
+    val offset = getCurrentOffset(editor)
     return editor.getDocument.getLineNumber(offset) + 1
+  }
+
+  def getLineOffset(editor: Editor, line: Int): Int = {
+    return editor.getDocument.getLineStartOffset(line - 1)
   }
 
   def enableEditor(project: Project, file: VirtualFile, editor: Editor): Unit = {
@@ -1269,7 +1282,12 @@ object SireumClient {
                     }
                     val (prevRhs, prevSm, prevHm) = t
                     rhs.get(line) match {
-                      case Some(value) => prevRhs.put(line, value)
+                      case Some(value) => prevRhs.put(line, value.filter { rh =>
+                        rh.getUserData(reportItemKey) match {
+                          case ri: ConsoleReportItem => ri.level == Level.Info || ri.level == Level.Warning
+                          case _ => false
+                        }
+                      })
                       case _ =>
                     }
                     summoningListModelMap.get(line) match {
@@ -1304,15 +1322,8 @@ object SireumClient {
                       case Some(rhs) =>
                         for (rh <- rhs) {
                           val ri = rh.getUserData(reportItemKey)
-                          val skip: Boolean = ri match {
-                            case ri: ConsoleReportItem => ri.level == org.sireum.message.Level.InternalError ||
-                              ri.level == org.sireum.message.Level.Error
-                            case _ => false
-                          }
-                          if (!skip) {
-                            val newRh = mm.addLineHighlighter(line - 1, rh.getLayer, rh.getTextAttributes(null))
-                            newRh.putUserData(reportItemKey, ri)
-                          }
+                          val newRh = mm.addLineHighlighter(line - 1, rh.getLayer, rh.getTextAttributes(null))
+                          newRh.putUserData(reportItemKey, ri)
                         }
                       case _ =>
                     }
