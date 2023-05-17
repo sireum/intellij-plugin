@@ -183,3 +183,8 @@ final class SireumInsertEquiv extends SireumInsertSymbol {
 final class SireumInsertInequiv extends SireumInsertSymbol {
   val symbol: String = "≢"
 }
+
+final class SireumInsertUniSpace extends SireumInsertSymbol {
+  val symbol: String = "␣"
+}
+

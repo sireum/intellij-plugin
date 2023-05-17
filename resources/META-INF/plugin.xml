@@ -160,35 +160,42 @@
                 text="Forall"
                 description="Insert forall symbol">
             <add-to-group group-id="SireumInsertGroup"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="A"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="A"/>
         </action>
 
         <action id="SireumInsertExists" class="org.sireum.intellij.SireumInsertExists"
                 text="Exists"
                 description="Insert exists symbol">
             <add-to-group group-id="SireumInsertGroup"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="E"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="E"/>
         </action>
 
         <action id="SireumInsertSequent" class="org.sireum.intellij.SireumInsertSequent"
                 text="Sequent"
                 description="Insert sequent symbol">
             <add-to-group group-id="SireumInsertGroup"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="BACK_SLASH"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="BACK_SLASH"/>
         </action>
 
         <action id="SireumInsertEquiv" class="org.sireum.intellij.SireumInsertEquiv"
                 text="Equiv"
                 description="Insert equivalent symbol">
             <add-to-group group-id="SireumInsertGroup"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="EQUALS"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="EQUALS"/>
         </action>
 
         <action id="SireumInsertInequiv" class="org.sireum.intellij.SireumInsertInequiv"
                 text="Inequiv"
                 description="Insert inequivalent symbol">
             <add-to-group group-id="SireumInsertGroup"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl SEMICOLON" second-keystroke="1"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="1"/>
+        </action>
+
+        <action id="SireumInsertUniSpace" class="org.sireum.intellij.SireumInsertUniSpace"
+                text="Unicode Whitespace"
+                description="Insert whitespace unicode symbol">
+            <add-to-group group-id="SireumInsertGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="MINUS"/>
         </action>
     </actions>
 
