@@ -432,7 +432,7 @@ object SireumClient {
     rlimit = LogikaConfigurable.rlimit,
     useReal = LogikaConfigurable.useReal,
     fpRoundingMode = LogikaConfigurable.fpRoundingMode,
-    caching = LogikaConfigurable.smt2Cache,
+    smt2Caching = LogikaConfigurable.smt2Cache,
     simplifiedQuery = LogikaConfigurable.smt2Simplify,
     smt2Configs = getSmt2Configs(project),
     branchPar = LogikaConfigurable.branchPar,
@@ -449,7 +449,8 @@ object SireumClient {
     elideEncoding = LogikaConfigurable.elideEncoding,
     flipStrictPure = LogikaConfigurable.flipStrictPure,
     transitionCache = LogikaConfigurable.transitionCache,
-    pureFun = LogikaConfigurable.pureFun
+    pureFun = LogikaConfigurable.pureFun,
+    detailedInfo = LogikaConfigurable.detailedInfo
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
