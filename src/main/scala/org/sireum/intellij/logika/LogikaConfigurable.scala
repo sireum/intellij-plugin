@@ -72,7 +72,7 @@ object LogikaConfigurable {
   private val splitMatchCasesKey = logikaKey + "split.matchCases"
   private val splitContractCasesKey = logikaKey + "split.contractCases"
   private val interpContractsKey = logikaKey + "interp.contracts"
-  private val flipStrictPureKey = logikaKey + "strictpure.flip"
+  private val strictPureModeKey = logikaKey + "strictPureMode"
   private val infoFlowKey = logikaKey + "infoflow"
   private val rawInscriptionKey = logikaKey + "smt2.raw"
   private val elideEncodingKey = logikaKey + "smt2.elide"
@@ -113,7 +113,7 @@ object LogikaConfigurable {
   private[intellij] var splitMatchCases: Boolean = false
   private[intellij] var splitContractCases: Boolean = false
   private[intellij] var interpContracts: Boolean = false
-  private[intellij] var flipStrictPure: Boolean = false
+  private[intellij] var strictPureMode: org.sireum.logika.Config.StrictPureMode.Type = org.sireum.logika.Config.StrictPureMode.Default
   private[intellij] var infoFlow: Boolean = false
   private[intellij] var rawInscription: Boolean = false
   private[intellij] var elideEncoding: Boolean = false
@@ -171,7 +171,7 @@ object LogikaConfigurable {
     splitMatchCases = pc.getBoolean(splitMatchCasesKey, splitMatchCases)
     splitContractCases = pc.getBoolean(splitContractCasesKey, splitContractCases)
     interpContracts = pc.getBoolean(interpContractsKey, interpContracts)
-    flipStrictPure = pc.getBoolean(flipStrictPureKey, flipStrictPure)
+    strictPureMode = org.sireum.logika.Config.StrictPureMode.byOrdinal(pc.getInt(strictPureModeKey, strictPureMode.ordinal.toInt)).get
     infoFlow = pc.getBoolean(infoFlowKey, infoFlow)
     rawInscription = pc.getBoolean(rawInscriptionKey, rawInscription)
     elideEncoding = pc.getBoolean(elideEncodingKey, elideEncoding)
@@ -213,7 +213,7 @@ object LogikaConfigurable {
     pc.setValue(splitMatchCasesKey, splitMatchCases.toString)
     pc.setValue(splitContractCasesKey, splitContractCases.toString)
     pc.setValue(interpContractsKey, interpContracts.toString)
-    pc.setValue(flipStrictPureKey, flipStrictPure.toString)
+    pc.setValue(strictPureModeKey, strictPureMode.ordinal.toString)
     pc.setValue(infoFlowKey, infoFlow.toString)
     pc.setValue(rawInscriptionKey, rawInscription.toString)
     pc.setValue(elideEncodingKey, elideEncoding.toString)
@@ -311,7 +311,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         splitMatchCasesCheckBox.isSelected != splitMatchCases ||
         splitContractCasesCheckBox.isSelected != splitContractCases ||
         interpContractCheckBox.isSelected != interpContracts ||
-        flipStrictPureModeCheckBox.isSelected != flipStrictPure ||
+        selectedStrictPureMode != strictPureMode ||
         infoFlowCheckBox.isSelected != infoFlow ||
         rawInscriptionCheckBox.isSelected != rawInscription ||
         elideEncodingCheckBox.isSelected != elideEncoding ||
@@ -342,6 +342,13 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     else if (branchParReturnsRadioButton.isSelected) org.sireum.logika.Config.BranchPar.OnlyAllReturns
     else if (branchParAllRadioButton.isSelected) org.sireum.logika.Config.BranchPar.All
     else sys.error("Unexpected branch par")
+  }
+
+  private def selectedStrictPureMode: org.sireum.logika.Config.StrictPureMode.Type = {
+    if (spModeDefaultRadioButton.isSelected) org.sireum.logika.Config.StrictPureMode.Default
+    else if (spModeFlipRadioButton.isSelected) org.sireum.logika.Config.StrictPureMode.Flip
+    else if (spModeUninterpretedRadioButton.isSelected) org.sireum.logika.Config.StrictPureMode.Uninterpreted
+    else sys.error("Unexpected strictpure mode")
   }
 
   override def createComponent(): JComponent = {
@@ -600,7 +607,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitMatchCases = splitMatchCasesCheckBox.isSelected
     splitContractCases = splitContractCasesCheckBox.isSelected
     interpContracts = interpContractCheckBox.isSelected
-    flipStrictPure = flipStrictPureModeCheckBox.isSelected
+    strictPureMode = selectedStrictPureMode
     infoFlow = infoFlowCheckBox.isSelected
     rawInscription = rawInscriptionCheckBox.isSelected
     elideEncoding = elideEncodingCheckBox.isSelected
@@ -655,7 +662,11 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     splitMatchCasesCheckBox.setSelected(splitMatchCases)
     splitContractCasesCheckBox.setSelected(splitContractCases)
     interpContractCheckBox.setSelected(interpContracts)
-    flipStrictPureModeCheckBox.setSelected(flipStrictPure)
+    strictPureMode match {
+      case org.sireum.logika.Config.StrictPureMode.Default => spModeDefaultRadioButton.setSelected(true)
+      case org.sireum.logika.Config.StrictPureMode.Flip => spModeFlipRadioButton.setSelected(true)
+      case org.sireum.logika.Config.StrictPureMode.Uninterpreted => spModeUninterpretedRadioButton.setSelected(true)
+    }
     infoFlowCheckBox.setSelected(infoFlow)
     rawInscriptionCheckBox.setSelected(rawInscription)
     elideEncodingCheckBox.setSelected(elideEncoding)

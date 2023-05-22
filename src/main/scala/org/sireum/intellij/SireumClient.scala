@@ -447,7 +447,7 @@ object SireumClient {
     interpContracts = LogikaConfigurable.interpContracts,
     rawInscription = LogikaConfigurable.rawInscription,
     elideEncoding = LogikaConfigurable.elideEncoding,
-    flipStrictPure = LogikaConfigurable.flipStrictPure,
+    strictPureMode = LogikaConfigurable.strictPureMode,
     transitionCache = LogikaConfigurable.transitionCache,
     pureFun = LogikaConfigurable.pureFun,
     detailedInfo = LogikaConfigurable.detailedInfo
