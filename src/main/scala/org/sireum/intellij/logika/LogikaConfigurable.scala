@@ -80,6 +80,7 @@ object LogikaConfigurable {
   private val patternExhaustiveKey = logikaKey + "pattern.exhaustiveness"
   private val pureFunKey = logikaKey + "pureFun"
   private val detailedInfoKey = logikaKey + "detailedInfo"
+  private val satTimeoutKey = logikaKey + "timeout.sat"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -121,6 +122,7 @@ object LogikaConfigurable {
   private[intellij] var patternExhaustive: Boolean = true
   private[intellij] var pureFun: Boolean = false
   private[intellij] var detailedInfo: Boolean = true
+  private[intellij] var satTimeout: Boolean = false
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -179,6 +181,7 @@ object LogikaConfigurable {
     patternExhaustive = pc.getBoolean(patternExhaustiveKey, patternExhaustive)
     pureFun = pc.getBoolean(pureFunKey, pureFun)
     detailedInfo = pc.getBoolean(detailedInfoKey, detailedInfo)
+    satTimeout = pc.getBoolean(satTimeoutKey, satTimeout)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -221,6 +224,7 @@ object LogikaConfigurable {
     pc.setValue(patternExhaustiveKey, patternExhaustive.toString)
     pc.setValue(pureFunKey, pureFun.toString)
     pc.setValue(detailedInfoKey, detailedInfo.toString)
+    pc.setValue(satTimeoutKey, satTimeout.toString)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -318,7 +322,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         transitionCacheCheckBox.isSelected != transitionCache ||
         patternExhaustiveCheckBox.isSelected != patternExhaustive ||
         pureFunCheckBox.isSelected != pureFun ||
-        detailedInfoCheckBox.isSelected != detailedInfo)
+        detailedInfoCheckBox.isSelected != detailedInfo ||
+        satTimeoutCheckBox.isSelected != satTimeout)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -615,6 +620,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     patternExhaustive = patternExhaustiveCheckBox.isSelected
     pureFun = pureFunCheckBox.isSelected
     detailedInfo = detailedInfoCheckBox.isSelected
+    satTimeout = satTimeoutCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -674,5 +680,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     patternExhaustiveCheckBox.setSelected(patternExhaustive)
     pureFunCheckBox.setSelected(pureFun)
     detailedInfoCheckBox.setSelected(detailedInfo)
+    satTimeoutCheckBox.setSelected(satTimeout)
   }
 }

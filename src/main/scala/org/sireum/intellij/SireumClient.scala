@@ -450,7 +450,8 @@ object SireumClient {
     strictPureMode = LogikaConfigurable.strictPureMode,
     transitionCache = LogikaConfigurable.transitionCache,
     pureFun = LogikaConfigurable.pureFun,
-    detailedInfo = LogikaConfigurable.detailedInfo
+    detailedInfo = LogikaConfigurable.detailedInfo,
+    satTimeout = LogikaConfigurable.satTimeout
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
