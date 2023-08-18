@@ -124,7 +124,7 @@ object Util {
     if (!path.exists) return (false, false)
     val p = path.string.value
     val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p), content)
-    return (hasSireum, compactFirstLine.contains("#Logika"))
+    return (hasSireum, compactFirstLine.contains("#Logika") || path.ext.value == "logika")
   }
 
   def notifyDebug(content: String, project: Project): Unit = notify(new Notification(SireumClient.groupId, content,

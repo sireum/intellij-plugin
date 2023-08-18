@@ -38,7 +38,7 @@ trait LogikaOnlyAction extends SireumAction {
     val project = e.getProject
     val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
     if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isLogikaSupportedPlatform &&
-      Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText)) == (true, true))
+      Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText))._2)
   }
 }
 
@@ -117,8 +117,7 @@ trait LogikaCheckAction extends LogikaOnlyAction {
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     if (editor == null) return
     SireumClient.enableEditor(project, file, editor)
-    SireumClient.analyze(project, file, editor, getLine(editor), SireumClient.getModifiedFiles(project, file),
-      isBackground = false, isInterprocedural = isInterprocedural)
+    SireumClient.analyze(project, file, editor, getLine(editor), isBackground = false, isInterprocedural = isInterprocedural)
     e.getPresentation.setEnabled(true)
   }
 
@@ -135,6 +134,13 @@ final class LogikaCheckActionFile extends LogikaCheckAction {
 final class LogikaCheckActionLine extends LogikaCheckAction {
   def getLine(editor: Editor): Int = SireumClient.getCurrentLine(editor)
   def isInterprocedural: Boolean = false
+
+  override def update(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
+    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.isLogikaSupportedPlatform &&
+      Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText)) == (true, true))
+  }
 }
 
 final class LogikaCheckActionInterprocedural extends LogikaCheckAction {

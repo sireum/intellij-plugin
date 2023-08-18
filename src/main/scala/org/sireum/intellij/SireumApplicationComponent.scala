@@ -308,8 +308,7 @@ class SireumApplicationComponent extends ApplicationComponent {
             val editor = getEditor(d)
             if (file == null || editor == null || !editor.getProject.isInitialized) return
             val project = editor.getProject
-            SireumClient.analyzeOpt(project, file, editor, SireumClient.getCurrentLine(editor),
-              getModifiedFiles(project, file), isBackground = true)
+            SireumClient.analyzeOpt(project, file, editor, SireumClient.getCurrentLine(editor), isBackground = true)
           }
 
           def getFile(d: Document): VirtualFile = {

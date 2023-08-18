@@ -56,8 +56,7 @@ final class SlangCheckActionFile extends SireumAction {
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     if (editor == null) return
     SireumClient.enableEditor(project, file, editor)
-    SireumClient.analyze(project, file, editor, 0, SireumClient.getModifiedFiles(project, file),
-      isBackground = false, isInterprocedural = false, typeCheckOnly = true)
+    SireumClient.analyze(project, file, editor, 0, isBackground = false, isInterprocedural = false, typeCheckOnly = true)
     e.getPresentation.setEnabled(true)
   }
 }

@@ -455,11 +455,11 @@ object SireumClient {
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
-              ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String],
               isBackground: Boolean, isInterprocedural: Boolean,
               typeCheckOnly: Boolean = false): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
+    val ofiles = SireumClient.getModifiedFiles(project, file)
 
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
       import org.sireum.server.protocol._
@@ -469,7 +469,8 @@ object SireumClient {
       }
       Vector(
         Logika.Verify.Config(LogikaConfigurable.infoFlow, getLogikaConfig(project, isBackground, isInterprocedural)),
-        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" || p.ext.value == "cmd") {
+        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" ||
+          p.ext.value == "cmd" || p.ext.value == "logika") {
           Slang.Check.Script(
             isBackground = isBackground,
             logikaEnabled = !typeCheckOnly && Util.isLogikaSupportedPlatform && (!isBackground ||
@@ -515,8 +516,7 @@ object SireumClient {
     addRequest(f, project, file, editor, isBackground, input, isInterprocedural)
   }
 
-  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int,
-                 ofiles: org.sireum.HashSMap[org.sireum.String, org.sireum.String], isBackground: Boolean): Unit = {
+  def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int, isBackground: Boolean): Unit = {
     val pOpt = Util.getPath(file)
     if (pOpt.isEmpty) {
       return
@@ -525,11 +525,11 @@ object SireumClient {
     if (isLogika) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        analyze(project, file, editor, line, ofiles, isBackground = isBackground, isInterprocedural = false)
+        analyze(project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
     } else if (isSireum) {
       enableEditor(project, file, editor)
       if (SireumApplicationComponent.backgroundAnalysis != 0)
-        analyze(project, file, editor, line, ofiles, isBackground = isBackground, isInterprocedural = false)
+        analyze(project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
     }
   }
 
@@ -575,7 +575,7 @@ object SireumClient {
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit =
         if (SireumApplicationComponent.backgroundAnalysis == 2 && !project.isDisposed && !editor.isDisposed) {
-          analyzeOpt(project, file, editor, getCurrentLine(editor), getModifiedFiles(project, file), isBackground = true)
+          analyzeOpt(project, file, editor, getCurrentLine(editor), isBackground = true)
         }
 
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
@@ -597,13 +597,13 @@ object SireumClient {
         statusBar.updateWidget(id)
       }
     }
-    analyzeOpt(project, file, editor, 0, getModifiedFiles(project, file), isBackground =
+    analyzeOpt(project, file, editor, 0, isBackground =
       !(SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis))
   }
 
   val sireumServerTitle = "Sireum Server"
 
-  val slangErrorTitle = "Slang Error"
+  val errorTitle = "Error"
 
   val logikaErrorTitle = "Logika Error"
 
@@ -626,14 +626,14 @@ object SireumClient {
             if (r.hasLogika) {
               if (r.isIllFormed) {
                 Util.notify(new Notification(
-                  groupId, slangErrorTitle,
-                  s"Ill-formed program with ${r.numOfErrors} error(s)",
+                  groupId, errorTitle,
+                  s"Ill-formed file with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
               else {
                 Util.notify(new Notification(
                   groupId, logikaErrorTitle,
-                  s"Programming logic proof is rejected with ${r.numOfErrors} error(s)",
+                  s"Proof is rejected with ${r.numOfErrors} error(s)",
                   NotificationType.ERROR), project, shouldExpire = true)
               }
             }
@@ -642,13 +642,13 @@ object SireumClient {
         } else if (r.hasLogika && r.numOfWarnings > 0) {
           Util.notify(new Notification(
             groupId, logikaWarningTitle,
-            s"Programming logic proof is accepted with ${r.numOfWarnings} warning(s)",
+            s"Proof is accepted with ${r.numOfWarnings} warning(s)",
             NotificationType.WARNING, null), project, shouldExpire = true)
           editorOpt.foreach(_.putUserData(statusKey, true))
         } else if (!r.wasCancelled) {
           val icon = verifiedInfoIcon
           if (r.hasLogika && (!r.isBackground || !(statusOpt.getOrElse(false)))) {
-            Util.notify(new Notification(groupId, logikaVerifiedTitle, "Programming logic proof is accepted",
+            Util.notify(new Notification(groupId, logikaVerifiedTitle, "Proof is accepted",
               NotificationType.INFORMATION, null) {
               override def getIcon: Icon = icon
             }, project, shouldExpire = true)
