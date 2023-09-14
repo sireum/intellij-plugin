@@ -422,7 +422,7 @@ object SireumClient {
     case _ => org.sireum.ISZ()
   }
 
-  def getLogikaConfig(project: Project, isBackground: Boolean,
+  def getLogikaConfig(project: Project, isBackground: Boolean, isScript: Boolean,
                       isInterprocedural: Boolean): org.sireum.logika.Config = org.sireum.server.service.AnalysisService.defaultConfig(
     logPc = LogikaConfigurable.hint,
     logVc = LogikaConfigurable.inscribeSummonings,
@@ -451,7 +451,11 @@ object SireumClient {
     transitionCache = LogikaConfigurable.transitionCache,
     pureFun = LogikaConfigurable.pureFun,
     detailedInfo = LogikaConfigurable.detailedInfo,
-    satTimeout = LogikaConfigurable.satTimeout
+    satTimeout = LogikaConfigurable.satTimeout,
+    mode = if (isScript) LogikaConfigurable.mode else org.sireum.logika.Config.VerificationMode.SymExe,
+    atRewrite = if (!isScript) LogikaConfigurable.hintAtRewrite else
+      if (LogikaConfigurable.mode == org.sireum.logika.Config.VerificationMode.SymExe)
+      LogikaConfigurable.hintAtRewrite else true
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
@@ -467,9 +471,10 @@ object SireumClient {
         case Some(path) => path
         case _ => return Vector()
       }
+      val isScript = p.ext.value == "sc"
       Vector(
-        Logika.Verify.Config(LogikaConfigurable.infoFlow, getLogikaConfig(project, isBackground, isInterprocedural)),
-        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || p.ext.value == "sc" ||
+        Logika.Verify.Config(LogikaConfigurable.infoFlow, getLogikaConfig(project, isBackground, isScript, isInterprocedural)),
+        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || isScript ||
           p.ext.value == "cmd" || p.ext.value == "logika") {
           Slang.Check.Script(
             isBackground = isBackground,

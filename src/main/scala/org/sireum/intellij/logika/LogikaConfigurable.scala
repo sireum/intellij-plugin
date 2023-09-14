@@ -52,6 +52,7 @@ object LogikaConfigurable {
   private val coverageIntensityKey = logikaKey + "coverage.intensity"
   private val hintMaxColumnKey = logikaKey + "hintMaxColumn"
   private val hintUnicodeKey = logikaKey + "hintUnicode"
+  private val hintAtRewriteKey = logikaKey + "hintAtRewrite"
   private val hintLinesFreshKey = logikaKey + "hintLinesFresh"
   private val inscribeSummoningsKey = logikaKey + "inscribeSummonings"
   private val bitWidthKey = logikaKey + "bitWidth"
@@ -81,6 +82,7 @@ object LogikaConfigurable {
   private val pureFunKey = logikaKey + "pureFun"
   private val detailedInfoKey = logikaKey + "detailedInfo"
   private val satTimeoutKey = logikaKey + "timeout.sat"
+  private val modeKey = logikaKey + "mode"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -95,6 +97,7 @@ object LogikaConfigurable {
   private[intellij] var coverageIntensity: Int = 20
   private[intellij] var hintMaxColumn: Int = 60
   private[intellij] var hintUnicode: Boolean = SystemInfo.isMac
+  private[intellij] var hintAtRewrite: Boolean = true
   private[intellij] var hintLinesFresh: Boolean = false
   private[intellij] var inscribeSummonings: Boolean = true
   private[intellij] var bitWidth: Int = 0
@@ -123,6 +126,7 @@ object LogikaConfigurable {
   private[intellij] var pureFun: Boolean = false
   private[intellij] var detailedInfo: Boolean = true
   private[intellij] var satTimeout: Boolean = false
+  private[intellij] var mode: org.sireum.logika.Config.VerificationMode.Type = org.sireum.logika.Config.VerificationMode.SymExe
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -136,6 +140,7 @@ object LogikaConfigurable {
     coverageIntensity = pc.getInt(coverageIntensityKey, coverageIntensity)
     hintMaxColumn = pc.getInt(hintMaxColumnKey, hintMaxColumn)
     hintUnicode = pc.getBoolean(hintUnicodeKey, hintUnicode)
+    hintAtRewrite = pc.getBoolean(hintAtRewriteKey, hintAtRewrite)
     hintLinesFresh = pc.getBoolean(hintLinesFreshKey, hintLinesFresh)
     inscribeSummonings = pc.getBoolean(inscribeSummoningsKey, inscribeSummonings)
     smt2Cache = pc.getBoolean(smt2CacheOptsKey, smt2Cache)
@@ -182,6 +187,7 @@ object LogikaConfigurable {
     pureFun = pc.getBoolean(pureFunKey, pureFun)
     detailedInfo = pc.getBoolean(detailedInfoKey, detailedInfo)
     satTimeout = pc.getBoolean(satTimeoutKey, satTimeout)
+    mode = org.sireum.logika.Config.VerificationMode.byOrdinal(pc.getInt(modeKey, mode.ordinal.toInt)).getOrElse(mode)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -197,6 +203,7 @@ object LogikaConfigurable {
     pc.setValue(coverageIntensityKey, coverageIntensityKey.toString)
     pc.setValue(hintMaxColumnKey, hintMaxColumn.toString)
     pc.setValue(hintUnicodeKey, hintUnicode.toString)
+    pc.setValue(hintAtRewriteKey, hintAtRewrite.toString)
     pc.setValue(hintLinesFreshKey, hintLinesFresh.toString)
     pc.setValue(inscribeSummoningsKey, inscribeSummonings.toString)
     pc.setValue(smt2CacheOptsKey, smt2Cache.toString)
@@ -225,6 +232,7 @@ object LogikaConfigurable {
     pc.setValue(pureFunKey, pureFun.toString)
     pc.setValue(detailedInfoKey, detailedInfo.toString)
     pc.setValue(satTimeoutKey, satTimeout.toString)
+    pc.setValue(modeKey, mode.ordinal.toString)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -297,6 +305,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         coverageIntensitySpinner.getValue.asInstanceOf[Int] != coverageIntensity ||
         hintMaxColumnTextField.getText != hintMaxColumn.toString ||
         hintUnicodeCheckBox.isSelected != hintUnicode ||
+        hintAtRewriteCheckBox.isSelected != hintAtRewrite ||
         hintLinesFreshCheckBox.isSelected != hintLinesFresh ||
         inscribeSummoningsCheckBox.isSelected != inscribeSummonings ||
         smt2CacheCheckBox.isSelected != smt2Cache ||
@@ -323,7 +332,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         patternExhaustiveCheckBox.isSelected != patternExhaustive ||
         pureFunCheckBox.isSelected != pureFun ||
         detailedInfoCheckBox.isSelected != detailedInfo ||
-        satTimeoutCheckBox.isSelected != satTimeout)
+        satTimeoutCheckBox.isSelected != satTimeout ||
+        selectedMode != mode)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -354,6 +364,13 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     else if (spModeFlipRadioButton.isSelected) org.sireum.logika.Config.StrictPureMode.Flip
     else if (spModeUninterpretedRadioButton.isSelected) org.sireum.logika.Config.StrictPureMode.Uninterpreted
     else sys.error("Unexpected strictpure mode")
+  }
+
+  private def selectedMode: org.sireum.logika.Config.VerificationMode.Type = {
+    if (modeSymExeRadioButton.isSelected) org.sireum.logika.Config.VerificationMode.SymExe
+    else if (modeAutoRadioButton.isSelected) org.sireum.logika.Config.VerificationMode.Auto
+    else if (modeManualRadioButton.isSelected) org.sireum.logika.Config.VerificationMode.Manual
+    else sys.error("Unexpected verification mode")
   }
 
   override def createComponent(): JComponent = {
@@ -594,6 +611,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     coverageIntensity = coverageIntensitySpinner.getValue.asInstanceOf[Int]
     hintMaxColumn = parseGe(hintMaxColumnTextField.getText, 0).getOrElse(hintMaxColumn.toLong).intValue
     hintUnicode = hintUnicodeCheckBox.isSelected
+    hintAtRewrite = hintAtRewriteCheckBox.isSelected
     hintLinesFresh = hintLinesFreshCheckBox.isSelected
     inscribeSummonings = inscribeSummoningsCheckBox.isSelected
     smt2Cache = smt2CacheCheckBox.isSelected
@@ -621,6 +639,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     pureFun = pureFunCheckBox.isSelected
     detailedInfo = detailedInfoCheckBox.isSelected
     satTimeout = satTimeoutCheckBox.isSelected
+    mode = selectedMode
     saveConfiguration()
   }
 
@@ -634,6 +653,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     coverageIntensitySpinner.setValue(coverageIntensity)
     hintMaxColumnTextField.setText(hintMaxColumn.toString)
     hintUnicodeCheckBox.setSelected(hintUnicode)
+    hintAtRewriteCheckBox.setSelected(hintAtRewrite)
     hintLinesFreshCheckBox.setSelected(hintLinesFresh)
     inscribeSummoningsCheckBox.setSelected(inscribeSummonings)
     smt2CacheCheckBox.setSelected(smt2Cache)
@@ -681,5 +701,10 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     pureFunCheckBox.setSelected(pureFun)
     detailedInfoCheckBox.setSelected(detailedInfo)
     satTimeoutCheckBox.setSelected(satTimeout)
+    mode match {
+      case org.sireum.logika.Config.VerificationMode.SymExe => modeSymExeRadioButton.setSelected(true)
+      case org.sireum.logika.Config.VerificationMode.Auto => modeAutoRadioButton.setSelected(true)
+      case org.sireum.logika.Config.VerificationMode.Manual => modeManualRadioButton.setSelected(true)
+    }
   }
 }

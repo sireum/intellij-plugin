@@ -53,8 +53,10 @@ trait LogikaInsertOptionsAction extends SireumAction {
     SireumApplicationComponent.getSireumHome(project) match {
       case Some(sireumHome) =>
         val nameExePathMap = org.sireum.logika.Smt2Invoke.nameExePathMap(sireumHome)
-        val options = OptionsUtil.fromConfig(org.sireum.Os.numOfProcessors, nameExePathMap,
-          SireumClient.getLogikaConfig(project, isBackground = false, isInterprocedural = isInterprocedural))
+        val isScript = editor.getVirtualFile.getExtension == "sc"
+        val options = OptionsUtil.fromConfig(isScript, org.sireum.Os.numOfProcessors,
+          nameExePathMap, SireumClient.getLogikaConfig(project, isBackground = false, isScript = isScript,
+            isInterprocedural = isInterprocedural))
         updateText(editor, options.value)
       case _ =>
     }
