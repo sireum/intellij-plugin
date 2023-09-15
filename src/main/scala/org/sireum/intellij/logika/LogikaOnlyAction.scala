@@ -53,9 +53,9 @@ trait LogikaInsertOptionsAction extends SireumAction {
     SireumApplicationComponent.getSireumHome(project) match {
       case Some(sireumHome) =>
         val nameExePathMap = org.sireum.logika.Smt2Invoke.nameExePathMap(sireumHome)
-        val isScript = editor.getVirtualFile.getExtension == "sc"
-        val options = OptionsUtil.fromConfig(isScript, org.sireum.Os.numOfProcessors,
-          nameExePathMap, SireumClient.getLogikaConfig(project, isBackground = false, isScript = isScript,
+        val ext = editor.getVirtualFile.getExtension
+        val options = OptionsUtil.fromConfig(ext, org.sireum.Os.numOfProcessors,
+          nameExePathMap, SireumClient.getLogikaConfig(project, isBackground = false, isScript = ext == "sc",
             isInterprocedural = isInterprocedural))
         updateText(editor, options.value)
       case _ =>
@@ -64,13 +64,17 @@ trait LogikaInsertOptionsAction extends SireumAction {
 }
 
 trait LogikaInsertOptionsActionFileCommon extends LogikaInsertOptionsAction {
-  def updateText(editor: Editor, options: String): Unit = ApplicationManager.getApplication.invokeLater { () =>
+  def updateText(editor: Editor, options: String): Unit = ApplicationManager.getApplication.runWriteAction({ () =>
     if (editor == null) return
     val text = editor.getDocument.getText
     val i = text.indexOf('\n')
     if (i < 0) return
-    editor.getDocument.setText(s"${text.substring(0, i + 1)}//@${OptionsUtil.logika}: $options\n${text.substring(i + 1, text.length)}")
-  }
+    if (text.startsWith("//") && !text.startsWith("//@")) {
+      editor.getDocument.setText(s"${text.substring(0, i + 1)}//@${OptionsUtil.logika}: $options\n${text.substring(i + 1, text.length)}")
+    } else {
+      editor.getDocument.setText(s"//@${OptionsUtil.logika}: $options\n${text.substring(0, text.length)}")
+    }
+  }: Runnable)
 }
 
 final class LogikaInsertOptionsActionFile extends LogikaInsertOptionsActionFileCommon {
@@ -82,7 +86,7 @@ final class LogikaInsertOptionsActionFileInterp extends LogikaInsertOptionsActio
 }
 
 trait LogikaInsertOptionsActionLineCommon extends LogikaInsertOptionsAction {
-  def updateText(editor: Editor, options: String): Unit = ApplicationManager.getApplication.invokeLater { () =>
+  def updateText(editor: Editor, options: String): Unit = ApplicationManager.getApplication.runWriteAction( { () =>
     if (editor == null) return
     val text = editor.getDocument.getText
     val line = SireumClient.getCurrentLine(editor)
@@ -93,7 +97,7 @@ trait LogikaInsertOptionsActionLineCommon extends LogikaInsertOptionsAction {
     val tqs = "\"\"\""
     val stmt = s"""${org.sireum.LibUtil.setOptions}("${OptionsUtil.logika}", $tqs$options$tqs)"""
     editor.getDocument.setText(s"${text.substring(0, lineOffset)}$indent$stmt\n${text.substring(lineOffset, text.length)}")
-  }
+  }: Runnable)
 }
 
 final class LogikaInsertOptionsActionLine extends LogikaInsertOptionsActionLineCommon {

@@ -455,7 +455,12 @@ object SireumClient {
     mode = if (isScript) LogikaConfigurable.mode else org.sireum.logika.Config.VerificationMode.SymExe,
     atRewrite = if (!isScript) LogikaConfigurable.hintAtRewrite else
       if (LogikaConfigurable.mode == org.sireum.logika.Config.VerificationMode.SymExe)
-      LogikaConfigurable.hintAtRewrite else true
+      LogikaConfigurable.hintAtRewrite else true,
+    background = if (LogikaConfigurable.backgroundAnalysis) SireumApplicationComponent.backgroundAnalysis match {
+      case 0 => org.sireum.logika.Config.BackgroundMode.Disabled
+      case 1 => org.sireum.logika.Config.BackgroundMode.Save
+      case 2 => org.sireum.logika.Config.BackgroundMode.Type
+    } else org.sireum.logika.Config.BackgroundMode.Disabled
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
@@ -478,8 +483,7 @@ object SireumClient {
           p.ext.value == "cmd" || p.ext.value == "logika") {
           Slang.Check.Script(
             isBackground = isBackground,
-            logikaEnabled = !typeCheckOnly && Util.isLogikaSupportedPlatform && (!isBackground ||
-              (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)),
+            logikaEnabled = !typeCheckOnly && Util.isLogikaSupportedPlatform,
             id = requestId,
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
             content = input,
@@ -494,9 +498,7 @@ object SireumClient {
               val (hasSireum, compactFirstLine, _) = org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(p.toUri), content)
               if (hasSireum) {
                 files = files + p.string ~> content
-                if (Util.isLogikaSupportedPlatform && (!isBackground ||
-                  (SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis)) &&
-                  (compactFirstLine.contains("#Logika") || isInterprocedural)) {
+                if (Util.isLogikaSupportedPlatform && (compactFirstLine.contains("#Logika") || isInterprocedural)) {
                   vfiles = vfiles :+ p.string
                 }
               }
@@ -521,6 +523,20 @@ object SireumClient {
     addRequest(f, project, file, editor, isBackground, input, isInterprocedural)
   }
 
+  def getBackground(project: Project, editor: Editor, file: VirtualFile): org.sireum.logika.Config.BackgroundMode.Type = {
+    val pOpt = Util.getPath(file)
+    if (pOpt.isEmpty) {
+      return org.sireum.logika.Config.BackgroundMode.Disabled
+    }
+    val path = pOpt.get
+    val defaultConfig = getLogikaConfig(project, isBackground = false, path.ext.value != "scala",
+      isInterprocedural = false)
+    val maxCores = Runtime.getRuntime.availableProcessors
+    val config = org.sireum.logika.options.OptionsUtil.mineConfig(defaultConfig, maxCores, "file", org.sireum.HashMap.empty,
+      editor.getDocument.getText, org.sireum.None(), org.sireum.message.Reporter.create)
+    config.background
+  }
+
   def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int, isBackground: Boolean): Unit = {
     val pOpt = Util.getPath(file)
     if (pOpt.isEmpty) {
@@ -529,11 +545,11 @@ object SireumClient {
     val (isSireum, isLogika) = Util.isSireumOrLogikaFile(pOpt.get)(org.sireum.String(editor.getDocument.getText))
     if (isLogika) {
       enableEditor(project, file, editor)
-      if (SireumApplicationComponent.backgroundAnalysis != 0)
+      if (isBackground)
         analyze(project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
     } else if (isSireum) {
       enableEditor(project, file, editor)
-      if (SireumApplicationComponent.backgroundAnalysis != 0)
+      if (isBackground)
         analyze(project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
     }
   }
@@ -579,7 +595,8 @@ object SireumClient {
     editor.putUserData(sireumKey, EditorEnabled)
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit =
-        if (SireumApplicationComponent.backgroundAnalysis == 2 && !project.isDisposed && !editor.isDisposed) {
+        if (!project.isDisposed && !editor.isDisposed &&
+          getBackground(project, editor, file) == org.sireum.logika.Config.BackgroundMode.Type) {
           analyzeOpt(project, file, editor, getCurrentLine(editor), isBackground = true)
         }
 
@@ -603,7 +620,7 @@ object SireumClient {
       }
     }
     analyzeOpt(project, file, editor, 0, isBackground =
-      !(SireumApplicationComponent.backgroundAnalysis != 0 && LogikaConfigurable.backgroundAnalysis))
+      getBackground(project, editor, file) != org.sireum.logika.Config.BackgroundMode.Disabled)
   }
 
   val sireumServerTitle = "Sireum Server"

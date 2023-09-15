@@ -303,12 +303,13 @@ class SireumApplicationComponent extends ApplicationComponent {
 
     ApplicationManager.getApplication.getMessageBus.connect.subscribe(AppTopics.FILE_DOCUMENT_SYNC,
         new FileDocumentManagerListener {
-          override def beforeDocumentSaving(d: Document): Unit = if (SireumApplicationComponent.backgroundAnalysis == 1) {
+          override def beforeDocumentSaving(d: Document): Unit = {
             val file = getFile(d)
             val editor = getEditor(d)
             if (file == null || editor == null || !editor.getProject.isInitialized) return
             val project = editor.getProject
-            SireumClient.analyzeOpt(project, file, editor, SireumClient.getCurrentLine(editor), isBackground = true)
+            if (SireumClient.getBackground(project, editor, file) == org.sireum.logika.Config.BackgroundMode.Save)
+              SireumClient.analyzeOpt(project, file, editor, SireumClient.getCurrentLine(editor), isBackground = true)
           }
 
           def getFile(d: Document): VirtualFile = {
