@@ -144,11 +144,11 @@
             <add-to-group group-id="SlangGroup"/>
         </action>
 
-        <action id="SlangRenumberProofSteps" class="org.sireum.intellij.SlangRenumberProofStepsAction"
+        <!--action id="SlangRenumberProofSteps" class="org.sireum.intellij.SlangRenumberProofStepsAction"
                 text="Renumber Proof Steps"
                 description="Renumber proof steps">
             <add-to-group group-id="SlangGroup"/>
-        </action>
+        </action-->
 
         <action id="SlangReplaceEnumSymbols" class="org.sireum.intellij.SlangReplaceEnumSymbolsAction"
                 text="Replace Enum Symbols"
