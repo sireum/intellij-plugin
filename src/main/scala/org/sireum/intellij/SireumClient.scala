@@ -452,10 +452,9 @@ object SireumClient {
     pureFun = LogikaConfigurable.pureFun,
     detailedInfo = LogikaConfigurable.detailedInfo,
     satTimeout = LogikaConfigurable.satTimeout,
-    mode = if (isScript) LogikaConfigurable.mode else org.sireum.logika.Config.VerificationMode.SymExe,
+    isAuto = if (isScript) LogikaConfigurable.auto else true,
     atRewrite = if (!isScript) LogikaConfigurable.hintAtRewrite else
-      if (LogikaConfigurable.mode == org.sireum.logika.Config.VerificationMode.SymExe)
-      LogikaConfigurable.hintAtRewrite else true,
+      if (LogikaConfigurable.auto) LogikaConfigurable.hintAtRewrite else true,
     background = if (LogikaConfigurable.backgroundAnalysis) SireumApplicationComponent.backgroundAnalysis match {
       case 0 => org.sireum.logika.Config.BackgroundMode.Disabled
       case 1 => org.sireum.logika.Config.BackgroundMode.Save

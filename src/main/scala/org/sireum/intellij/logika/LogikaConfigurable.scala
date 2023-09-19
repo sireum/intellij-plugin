@@ -82,7 +82,7 @@ object LogikaConfigurable {
   private val pureFunKey = logikaKey + "pureFun"
   private val detailedInfoKey = logikaKey + "detailedInfo"
   private val satTimeoutKey = logikaKey + "timeout.sat"
-  private val modeKey = logikaKey + "mode"
+  private val autoKey = logikaKey + "auto"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -90,7 +90,6 @@ object LogikaConfigurable {
   private[intellij] var backgroundAnalysis: Boolean = true
   private[intellij] var timeout: Int = org.sireum.logika.Smt2.validTimeoutInMs.toInt
   private[intellij] var rlimit: Long = org.sireum.logika.Smt2.rlimit.toInt
-  private[intellij] var autoEnabled: Boolean = true
   private[intellij] var checkSat: Boolean = false
   private[intellij] var hint: Boolean = true
   private[intellij] var coverage: Boolean = true
@@ -126,14 +125,13 @@ object LogikaConfigurable {
   private[intellij] var pureFun: Boolean = false
   private[intellij] var detailedInfo: Boolean = true
   private[intellij] var satTimeout: Boolean = false
-  private[intellij] var mode: org.sireum.logika.Config.VerificationMode.Type = org.sireum.logika.Config.VerificationMode.SymExe
+  private[intellij] var auto: Boolean = true
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
     backgroundAnalysis = pc.getBoolean(backgroundAnalysisKey, backgroundAnalysis)
     timeout = pc.getInt(timeoutKey, timeout)
     rlimit = pc.getLong(rlimitKey, rlimit)
-    autoEnabled = pc.getBoolean(autoEnabledKey, autoEnabled)
     checkSat = pc.getBoolean(checkSatKey, checkSat)
     hint = pc.getBoolean(hintKey, hint)
     coverage = pc.getBoolean(coverageKey, coverage)
@@ -187,7 +185,7 @@ object LogikaConfigurable {
     pureFun = pc.getBoolean(pureFunKey, pureFun)
     detailedInfo = pc.getBoolean(detailedInfoKey, detailedInfo)
     satTimeout = pc.getBoolean(satTimeoutKey, satTimeout)
-    mode = org.sireum.logika.Config.VerificationMode.byOrdinal(pc.getInt(modeKey, mode.ordinal.toInt)).getOrElse(mode)
+    auto = pc.getBoolean(autoKey, auto)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -196,7 +194,6 @@ object LogikaConfigurable {
     pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
     pc.setValue(rlimitKey, rlimit.toString)
     pc.setValue(timeoutKey, timeout.toString)
-    pc.setValue(autoEnabledKey, autoEnabled.toString)
     pc.setValue(checkSatKey, checkSat.toString)
     pc.setValue(hintKey, hint.toString)
     pc.setValue(coverageKey, coverage.toString)
@@ -232,7 +229,7 @@ object LogikaConfigurable {
     pc.setValue(pureFunKey, pureFun.toString)
     pc.setValue(detailedInfoKey, detailedInfo.toString)
     pc.setValue(satTimeoutKey, satTimeout.toString)
-    pc.setValue(modeKey, mode.ordinal.toString)
+    pc.setValue(autoKey, auto.toString)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -333,7 +330,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         pureFunCheckBox.isSelected != pureFun ||
         detailedInfoCheckBox.isSelected != detailedInfo ||
         satTimeoutCheckBox.isSelected != satTimeout ||
-        selectedMode != mode)
+        modeAutoRadioButton.isSelected != auto)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -364,13 +361,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     else if (spModeFlipRadioButton.isSelected) org.sireum.logika.Config.StrictPureMode.Flip
     else if (spModeUninterpretedRadioButton.isSelected) org.sireum.logika.Config.StrictPureMode.Uninterpreted
     else sys.error("Unexpected strictpure mode")
-  }
-
-  private def selectedMode: org.sireum.logika.Config.VerificationMode.Type = {
-    if (modeSymExeRadioButton.isSelected) org.sireum.logika.Config.VerificationMode.SymExe
-    else if (modeAutoRadioButton.isSelected) org.sireum.logika.Config.VerificationMode.Auto
-    else if (modeManualRadioButton.isSelected) org.sireum.logika.Config.VerificationMode.Manual
-    else sys.error("Unexpected verification mode")
   }
 
   override def createComponent(): JComponent = {
@@ -639,7 +629,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     pureFun = pureFunCheckBox.isSelected
     detailedInfo = detailedInfoCheckBox.isSelected
     satTimeout = satTimeoutCheckBox.isSelected
-    mode = selectedMode
+    auto = modeAutoRadioButton.isSelected
     saveConfiguration()
   }
 
@@ -701,10 +691,10 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     pureFunCheckBox.setSelected(pureFun)
     detailedInfoCheckBox.setSelected(detailedInfo)
     satTimeoutCheckBox.setSelected(satTimeout)
-    mode match {
-      case org.sireum.logika.Config.VerificationMode.SymExe => modeSymExeRadioButton.setSelected(true)
-      case org.sireum.logika.Config.VerificationMode.Auto => modeAutoRadioButton.setSelected(true)
-      case org.sireum.logika.Config.VerificationMode.Manual => modeManualRadioButton.setSelected(true)
+    if (auto) {
+      modeAutoRadioButton.setSelected(true)
+    } else {
+      modeManualRadioButton.setSelected(true)
     }
   }
 }
