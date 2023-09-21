@@ -792,7 +792,7 @@ object SireumClient {
 
   def gutterIconRenderer(tooltipText: String, icon: Icon, action: AnAction): GutterIconRenderer = {
     new GutterIconRenderer {
-      val ttext: String = if (tooltipText.length > maxTooltipLength) tooltipText.substring(0, maxTooltipLength) + "..." else tooltipText
+      val ttext: String = toHtml(if (tooltipText.length > maxTooltipLength) tooltipText.substring(0, maxTooltipLength) + "..." else tooltipText)
 
       override val getTooltipText: String = ttext
 
@@ -803,6 +803,29 @@ object SireumClient {
       override def hashCode: Int = System.identityHashCode(this)
 
       override def getClickAction: AnAction = action
+
+      def toHtml(text: String): String = {
+        val sb = new StringBuilder
+        for (line <- text.linesIterator) {
+          val cs = line.toCharArray
+          var i = 0
+          while (i < cs.size && cs(i).isWhitespace) {
+            sb.append("&nbsp;")
+            i = i + 1
+          }
+          while (i < cs.size) {
+            cs(i) match {
+              case '<' => sb.append("&lt;")
+              case '>' => sb.append("&gt;")
+              case '&' => sb.append("&amp;")
+              case c => sb.append(c)
+            }
+            i = i + 1
+          }
+          sb.append("\n")
+        }
+        sb.toString
+      }
     }
   }
 
