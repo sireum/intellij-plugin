@@ -163,6 +163,14 @@ trait SireumInsertSymbol extends SireumAction {
   }
 }
 
+final class SireumInsertImply extends SireumInsertSymbol {
+  val symbol: String = "__>:"
+}
+
+final class SireumInsertSimply extends SireumInsertSymbol {
+  val symbol: String = "___>:"
+}
+
 final class SireumInsertForAll extends SireumInsertSymbol {
   val symbol: String = "∀"
 }
