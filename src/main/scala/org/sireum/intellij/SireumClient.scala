@@ -592,6 +592,11 @@ object SireumClient {
   def enableEditor(project: Project, file: VirtualFile, editor: Editor): Unit = {
     if (editor.getUserData(sireumKey) != null) return
     editor.putUserData(sireumKey, EditorEnabled)
+    if (SireumApplicationComponent.sireumFont) {
+      val cs = editor.getColorsScheme
+      cs.setEditorFontName("Sireum Mono Plus")
+      cs.setUseLigatures(true)
+    }
     editor.getDocument.addDocumentListener(new DocumentListener {
       override def documentChanged(event: DocumentEvent): Unit =
         if (!project.isDisposed && !editor.isDisposed &&

@@ -57,6 +57,7 @@ object SireumApplicationComponent {
   private val backgroundAnalysisKey = sireumKey + "background"
   private val idleKey = sireumKey + "idle"
   private val bgcoresKey = sireumKey + "bgcores"
+  private val sireumFontKey = sireumKey + "font"
 
   private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
@@ -74,6 +75,7 @@ object SireumApplicationComponent {
   private[intellij] var startup: Boolean = false
   private[intellij] var logging: Boolean = false
   private[intellij] var verbose: Boolean = false
+  private[intellij] var sireumFont: Boolean = true
 
   private[intellij] val platform: String = org.sireum.Os.kind match {
     case org.sireum.Os.Kind.Mac => "mac"
@@ -273,6 +275,7 @@ object SireumApplicationComponent {
     backgroundAnalysis = pc.getInt(backgroundAnalysisKey, backgroundAnalysis)
     idle = pc.getInt(idleKey, idle)
     bgCores = pc.getInt(bgcoresKey, bgCores)
+    sireumFont = pc.getBoolean(sireumFontKey, sireumFont)
   }
 
   def saveConfiguration(): Unit = {
@@ -288,6 +291,7 @@ object SireumApplicationComponent {
     pc.setValue(backgroundAnalysisKey, backgroundAnalysis.toString)
     pc.setValue(idleKey, idle.toString)
     pc.setValue(bgcoresKey, bgCores.toString)
+    pc.setValue(sireumFontKey, sireumFont.toString)
   }
 }
 

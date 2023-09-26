@@ -65,7 +65,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
         cacheType != cacheTypeCheckBox.isSelected ||
         backgroundAnalysis != bgValue ||
         idle.toString != idleTextField.getText ||
-        bgCores != parSpinner.getValue.asInstanceOf[Int])
+        bgCores != parSpinner.getValue.asInstanceOf[Int] ||
+        sireumFont != sireumFontCheckBox.isSelected)
   }
 
   def parseGe200(text: String): Option[Int] =
@@ -207,6 +208,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
         backgroundAnalysis = bgValue
         idle = parseGe200(idleTextField.getText).getOrElse(idle)
         bgCores = parSpinner.getValue.asInstanceOf[Int]
+        sireumFont = sireumFontCheckBox.isSelected
         saveConfiguration()
       }
     } else {
@@ -235,6 +237,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
       }
       idleTextField.setText(idle.toString)
       parSpinner.setValue(bgCores)
+      sireumFontCheckBox.setSelected(sireumFont)
     }
   }
 
