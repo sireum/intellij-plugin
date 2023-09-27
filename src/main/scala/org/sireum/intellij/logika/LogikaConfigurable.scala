@@ -83,6 +83,7 @@ object LogikaConfigurable {
   private val detailedInfoKey = logikaKey + "detailedInfo"
   private val satTimeoutKey = logikaKey + "timeout.sat"
   private val autoKey = logikaKey + "auto"
+  private val searchPcKey = logikaKey + "searchPc"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -126,6 +127,7 @@ object LogikaConfigurable {
   private[intellij] var detailedInfo: Boolean = true
   private[intellij] var satTimeout: Boolean = false
   private[intellij] var auto: Boolean = true
+  private[intellij] var searchPc: Boolean = false
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -186,6 +188,7 @@ object LogikaConfigurable {
     detailedInfo = pc.getBoolean(detailedInfoKey, detailedInfo)
     satTimeout = pc.getBoolean(satTimeoutKey, satTimeout)
     auto = pc.getBoolean(autoKey, auto)
+    searchPc = pc.getBoolean(searchPcKey, searchPc)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -230,6 +233,7 @@ object LogikaConfigurable {
     pc.setValue(detailedInfoKey, detailedInfo.toString)
     pc.setValue(satTimeoutKey, satTimeout.toString)
     pc.setValue(autoKey, auto.toString)
+    pc.setValue(searchPcKey, searchPc)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -330,7 +334,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         pureFunCheckBox.isSelected != pureFun ||
         detailedInfoCheckBox.isSelected != detailedInfo ||
         satTimeoutCheckBox.isSelected != satTimeout ||
-        modeAutoRadioButton.isSelected != auto)
+        modeAutoRadioButton.isSelected != auto ||
+        searchPcCheckBox.isSelected != searchPc)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -630,6 +635,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     detailedInfo = detailedInfoCheckBox.isSelected
     satTimeout = satTimeoutCheckBox.isSelected
     auto = modeAutoRadioButton.isSelected
+    searchPc = searchPcCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -696,5 +702,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     } else {
       modeManualRadioButton.setSelected(true)
     }
+    searchPcCheckBox.setSelected(searchPc)
   }
 }
