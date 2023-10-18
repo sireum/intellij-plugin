@@ -41,7 +41,6 @@ import com.intellij.openapi.fileEditor.{FileDocumentManager, FileDocumentManager
 import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
-import org.sireum.intellij.SireumClient.{getModifiedFiles, groupId, shutdownServer}
 import org.sireum.intellij.logika.LogikaConfigurable
 
 object SireumApplicationComponent {
@@ -138,7 +137,7 @@ object SireumApplicationComponent {
     pathOpt.foreach(path =>
       if (checkSireumDir(path).isEmpty) {
         Util.notify(new Notification(
-          groupId, "Invalid Sireum Configuration",
+          SireumClient.groupId, "Invalid Sireum Configuration",
           sireumInvalid(path),
           NotificationType.ERROR), project, shouldExpire = true)
       }
@@ -343,7 +342,7 @@ class SireumApplicationComponent extends ApplicationComponent {
 
   override def disposeComponent(): Unit = {
     SireumApplicationComponent.terminated = true
-    shutdownServer()
+    SireumClient.shutdownServer()
     Util.finalise()
   }
 }

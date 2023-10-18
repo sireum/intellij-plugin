@@ -100,7 +100,7 @@ trait SlangRewriteAction extends SireumOnlyAction {
 
   def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type
 
-  final override def actionPerformed(e: AnActionEvent): Unit = {
+  override def actionPerformed(e: AnActionEvent): Unit = {
     val project = e.getProject
     val editor = FileEditorManager.
       getInstance(project).getSelectedTextEditor
@@ -130,6 +130,34 @@ class SlangInsertConstructorValsAction extends SlangRewriteAction {
 class SlangRenumberProofStepsAction extends SlangRewriteAction {
   def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type =
     org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps
+
+  override def actionPerformed(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.
+      getInstance(project).getSelectedTextEditor
+    val fileUriOpt: org.sireum.Option[org.sireum.String] = Util.getFilePath(project) match {
+      case Some(p) => org.sireum.Some(p.canon.toUri)
+      case _ => org.sireum.None()
+    }
+    val document = editor.getDocument
+    val text = document.getText
+    val isWorksheet = fileUriOpt match {
+      case org.sireum.Some(fileUri) => !fileUri.value.endsWith(".scala") && !fileUri.value.endsWith(".slang")
+      case _ => true
+    }
+    val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
+
+    SireumClient.addRequest(id => Vector(
+      if (isWorksheet) org.sireum.server.protocol.Slang.Check.Script(
+        isBackground = false, false, id, fileUriOpt, text, 0,
+        renumberProofSteps = true
+      ) else org.sireum.server.protocol.Slang.Check.Project(
+        isBackground = false, id, org.sireum.Os.path(project.getBasePath).string,
+        org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String] + fileUriOpt.get ~> text,
+        org.sireum.ISZ(), 0, fileUriOpt
+      )
+    ), project, file, editor, isBackground = false, text, isInterprocedural = false)
+  }
 }
 
 class SlangReplaceEnumSymbolsAction extends SlangRewriteAction {

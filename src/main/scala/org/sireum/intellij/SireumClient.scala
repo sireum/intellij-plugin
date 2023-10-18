@@ -468,7 +468,10 @@ object SireumClient {
               typeCheckOnly: Boolean = false): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
-    val ofiles = SireumClient.getModifiedFiles(project, file)
+    var ofiles = SireumClient.getModifiedFiles(project, file)
+    if (typeCheckOnly && ofiles.isEmpty) {
+      ofiles = ofiles + org.sireum.Os.path(file.getCanonicalPath).canon.string ~> input
+    }
 
     def f(requestId: org.sireum.ISZ[org.sireum.String]): Vector[org.sireum.server.protocol.Request] = {
       import org.sireum.server.protocol._
@@ -487,7 +490,8 @@ object SireumClient {
             id = requestId,
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
             content = input,
-            line = line
+            line = line,
+            renumberProofSteps = false
           )
         } else {
           var files = ofiles
@@ -514,7 +518,8 @@ object SireumClient {
             proyek = org.sireum.Os.path(project.getBasePath).string,
             files = files,
             vfiles = vfiles,
-            line = line
+            line = line,
+            renumberProofStepsUriOpt = org.sireum.None()
           )
         }
       )

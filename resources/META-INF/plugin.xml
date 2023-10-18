@@ -135,7 +135,7 @@
                 text="Type Check"
                 description="Type check">
             <add-to-group group-id="SlangGroup" anchor="last"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl Y"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl X"/>
         </action>
 
         <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"
@@ -144,11 +144,11 @@
             <add-to-group group-id="SlangGroup"/>
         </action>
 
-        <!--action id="SlangRenumberProofSteps" class="org.sireum.intellij.SlangRenumberProofStepsAction"
+        <action id="SlangRenumberProofSteps" class="org.sireum.intellij.SlangRenumberProofStepsAction"
                 text="Renumber Proof Steps"
                 description="Renumber proof steps">
             <add-to-group group-id="SlangGroup"/>
-        </action-->
+        </action>
 
         <action id="SlangReplaceEnumSymbols" class="org.sireum.intellij.SlangReplaceEnumSymbolsAction"
                 text="Replace Enum Symbols"
