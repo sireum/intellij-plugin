@@ -48,6 +48,23 @@
 
         <applicationConfigurable id="SireumLogikaConfigurable" instance="org.sireum.intellij.logika.LogikaConfigurable"
                                  displayName="Logika" parentId="SireumConfigurable"/>
+        <fileTypeFactory implementation="org.sireum.intellij.hamr.sysml.SysMLv2FileTypeFactory" />
+        <lang.syntaxHighlighterFactory language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2SyntaxHighlighterFactory"/>
+
+        <lang.parserDefinition language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ParserDefinition"/>
+        <lang.ast.factory language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ASTFactory"/>
+
+        <lang.psiStructureViewFactory language="SysMLv2"
+                                      implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2StructureViewFactory"/>
+
+        <colorSettingsPage implementation="org.sireum.intellij.hamr.sysml.SysMLv2ColorSettingsPage"/>
+        <lang.foldingBuilder
+                language="SysMLv2"
+                implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2FoldingBuilder"/>
+        <!--externalAnnotator language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ExternalAnnotator"/-->
+
+        <!--lang.findUsagesProvider language="SysMLv2"
+                                 implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2FindUsagesProvider"/-->
     </extensions>
 
     <actions>

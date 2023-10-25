@@ -7,3 +7,4 @@
 /.idea
 /.bsp
 /lib
+/src/main/java/org/antlr/intellij

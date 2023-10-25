@@ -12,6 +12,7 @@ Set IntelliJ preference: `Editor` -> `GUI Designer`:
 
 * `Generate GUI into:` -> `Java source code`
 * `Default accessibility for UI-bound fields:` -> `protected`
+* `Build, Execution, Deployment` -> `Compiler` -> Disable `Add runtime assertion for notnull...`
 
 ## To Run/Deebug
 
