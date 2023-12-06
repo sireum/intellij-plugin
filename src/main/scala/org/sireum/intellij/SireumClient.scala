@@ -49,6 +49,7 @@ import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke, Smt2Query}
 import org.sireum.message.Level
 import org.sireum.server.protocol.Analysis
 
+import java.awt.font.TextAttribute
 import java.awt.{Color, Font}
 import java.util.concurrent._
 import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
@@ -912,6 +913,10 @@ object SireumClient {
                   f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
                   f.logika.logikaTextArea.setText(normalizeChars(content))
                   f.logika.logikaTextArea.setCaretPosition(0)
+                  val font = f.logika.logikaTextArea.getFont
+                  val attrs = font.getAttributes.asInstanceOf[java.util.Map[TextAttribute, Object]]
+                  attrs.put(TextAttribute.LIGATURES, Integer.valueOf(0))
+                  f.logika.logikaTextArea.setFont(font.deriveFont(attrs))
                   f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
                   f.logika.logikaToolTextField.setPlaceholder("Search ...")
                   f.logika.logikaToolTextField.setText("")
@@ -939,6 +944,9 @@ object SireumClient {
                 ApplicationManager.getApplication.invokeLater { () =>
                   f.logika.logikaToolSplitPane.setDividerLocation(if (list.getModel.getSize <= 1) 0 else dividerWeight)
                   f.logika.logikaTextArea.setText(content)
+                  val font = f.logika.logikaTextArea.getFont
+                  val attrs = font.getAttributes.asInstanceOf[java.util.Map[TextAttribute, Object]]
+                  attrs.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON)
                   f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
                   f.logika.logikaToolTextField.setPlaceholder("Filter claims ...")
                   f.logika.logikaToolTextField.setText("")
