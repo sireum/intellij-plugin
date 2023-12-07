@@ -1435,7 +1435,7 @@ object SireumClient {
   }
 
   def launchSMT2Solver(project: Project, editor: Editor): Unit = {
-    def execute(command: String): Unit = ApplicationManager.getApplication.invokeLater(() => {
+    def execute(command: String): Unit = ApplicationManager.getApplication.invokeLaterOnWriteThread(() => {
       val ttwm = TerminalToolWindowManager.getInstance(project)
       var window = ttwm.getToolWindow
       if (window == null) {
@@ -1443,8 +1443,10 @@ object SireumClient {
       }
       window.activate(null)
       val content = window.getContentManager.findContent(smt2TabName)
-      val widget = if (content == null) ttwm.createLocalShellWidget(project.getBasePath, smt2TabName)
-      else TerminalToolWindowManager.getWidgetByContent(content).asInstanceOf[ShellTerminalWidget]
+      if (content != null) {
+        ttwm.detachWidgetAndRemoveContent(content)
+      }
+      val widget = ttwm.createLocalShellWidget(project.getBasePath, smt2TabName)
       widget.setAutoscrolls(true)
       widget.requestFocus()
       widget.executeCommand(command.replaceAll(" -in ", " "))

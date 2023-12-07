@@ -29,7 +29,7 @@ import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{ActionManager, AnAction}
-import com.intellij.openapi.application.TransactionGuard
+import com.intellij.openapi.application.{ApplicationManager, TransactionGuard}
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor}
 
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
@@ -65,7 +65,7 @@ object SireumToolWindowFactory {
         toolWindow.setTitleActions(list)
       case _ =>
     }
-    val contentFactory = ContentFactory.SERVICE.getInstance
+    val contentFactory = ContentFactory.getInstance
     val logikaForm = new LogikaToolWindowForm()
     toolWindow.getContentManager.addContent(
       contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Output", false))
@@ -102,13 +102,13 @@ object SireumToolWindowFactory {
       import org.sireum.Os._
       val f = tempFix("logika-", ext)
       f.writeOver(text)
-      TransactionGuard.submitTransaction(project, {
+      ApplicationManager.getApplication.invokeLaterOnWriteThread({
         () =>
           val editor = FileEditorManager.getInstance(project).openTextEditor(
             new OpenFileDescriptor(project, LocalFileSystem.getInstance().findFileByPath(f.canon.string.value)), true)
 
           SireumClient.launchSMT2Solver(project, editor)
-      }: Runnable)
+      })
     })
 
     logikaForm.logikaToolTextField.setPlaceholderColor(new JBColor(Color.darkGray, Color.gray))
