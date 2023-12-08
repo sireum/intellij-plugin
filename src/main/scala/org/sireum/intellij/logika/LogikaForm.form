@@ -707,7 +707,7 @@
                     </constraints>
                     <properties>
                       <text value="Validity configs"/>
-                      <toolTipText value="Solvers: alt-ergo (if installed), alt-ergo-open, cvc4, cvc5, z5"/>
+                      <toolTipText value="Solvers: alt-ergo (if installed), cvc4, cvc5, z5"/>
                     </properties>
                   </component>
                   <component id="7cbe2" class="javax.swing.JLabel" binding="smt2SatConfigsLabel">
@@ -716,7 +716,7 @@
                     </constraints>
                     <properties>
                       <text value="Satisfiability configs"/>
-                      <toolTipText value="Solvers: alt-ergo (if installed), alt-ergo-open, cvc4, cvc5, z5"/>
+                      <toolTipText value="Solvers: alt-ergo (if installed), cvc4, cvc5, z5"/>
                     </properties>
                   </component>
                   <component id="25194" class="javax.swing.JLabel" binding="defaultSmt2SatConfigsLabel">

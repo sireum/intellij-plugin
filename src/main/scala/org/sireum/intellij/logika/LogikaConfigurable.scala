@@ -429,7 +429,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     }
 
     val nameExePathMap = org.sireum.HashMap.empty[org.sireum.String, org.sireum.String] ++ org.sireum.ISZ(
-      org.sireum.String("alt-ergo-open") -> org.sireum.String("alt-ergo"),
       org.sireum.String("alt-ergo") -> org.sireum.String("alt-ergo"),
       org.sireum.String("cvc4") -> org.sireum.String("cvc4"),
       org.sireum.String("cvc5") -> org.sireum.String("cvc5"),

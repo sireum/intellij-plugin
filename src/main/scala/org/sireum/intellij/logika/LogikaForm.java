@@ -405,11 +405,11 @@ public abstract class LogikaForm {
         panel3.add(smt2ConfigPanel, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         smt2ValidConfigsLabel = new JLabel();
         smt2ValidConfigsLabel.setText("Validity configs");
-        smt2ValidConfigsLabel.setToolTipText("Solvers: alt-ergo (if installed), alt-ergo-open, cvc4, cvc5, z5");
+        smt2ValidConfigsLabel.setToolTipText("Solvers: alt-ergo (if installed), cvc4, cvc5, z5");
         smt2ConfigPanel.add(smt2ValidConfigsLabel, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_SOUTHEAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         smt2SatConfigsLabel = new JLabel();
         smt2SatConfigsLabel.setText("Satisfiability configs");
-        smt2SatConfigsLabel.setToolTipText("Solvers: alt-ergo (if installed), alt-ergo-open, cvc4, cvc5, z5");
+        smt2SatConfigsLabel.setToolTipText("Solvers: alt-ergo (if installed), cvc4, cvc5, z5");
         smt2ConfigPanel.add(smt2SatConfigsLabel, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_SOUTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         defaultSmt2SatConfigsLabel = new JLabel();
         defaultSmt2SatConfigsLabel.setIcon(new ImageIcon(getClass().getResource("/icon/sync.png")));
