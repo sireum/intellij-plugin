@@ -176,6 +176,7 @@ object Util {
   }
 
   lazy val isLogikaSupportedPlatform: Boolean = org.sireum.Os.kind match {
+    case org.sireum.Os.Kind.LinuxArm => false
     case org.sireum.Os.Kind.Unsupported => false
     case _ => true
   }
