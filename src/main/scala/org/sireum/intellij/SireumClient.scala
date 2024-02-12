@@ -462,7 +462,9 @@ object SireumClient {
       case 1 => org.sireum.logika.Config.BackgroundMode.Save
       case 2 => org.sireum.logika.Config.BackgroundMode.Type
     } else org.sireum.logika.Config.BackgroundMode.Disabled,
-    searchPc = LogikaConfigurable.searchPc
+    searchPc = LogikaConfigurable.searchPc,
+    rwTrace = LogikaConfigurable.rwTrace,
+    rwMax = LogikaConfigurable.rwMax
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,

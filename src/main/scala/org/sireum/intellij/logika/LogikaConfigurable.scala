@@ -84,6 +84,8 @@ object LogikaConfigurable {
   private val satTimeoutKey = logikaKey + "timeout.sat"
   private val autoKey = logikaKey + "auto"
   private val searchPcKey = logikaKey + "searchPc"
+  private val rwTraceKey = logikaKey + "rw.trace"
+  private val rwMaxKey = logikaKey + "rw.max"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -128,6 +130,9 @@ object LogikaConfigurable {
   private[intellij] var satTimeout: Boolean = false
   private[intellij] var auto: Boolean = true
   private[intellij] var searchPc: Boolean = false
+  private[intellij] var rwTrace: Boolean = true
+  private[intellij] var rwMax: Int = 100
+
 
   def loadConfiguration(): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -189,6 +194,8 @@ object LogikaConfigurable {
     satTimeout = pc.getBoolean(satTimeoutKey, satTimeout)
     auto = pc.getBoolean(autoKey, auto)
     searchPc = pc.getBoolean(searchPcKey, searchPc)
+    rwTrace = pc.getBoolean(rwTraceKey, rwTrace)
+    rwMax = pc.getInt(rwMaxKey, rwMax)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -233,7 +240,9 @@ object LogikaConfigurable {
     pc.setValue(detailedInfoKey, detailedInfo.toString)
     pc.setValue(satTimeoutKey, satTimeout.toString)
     pc.setValue(autoKey, auto.toString)
-    pc.setValue(searchPcKey, searchPc)
+    pc.setValue(searchPcKey, searchPc.toString)
+    pc.setValue(rwTraceKey, rwTrace.toString)
+    pc.setValue(rwMaxKey, rwMax.toString)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -288,6 +297,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
   private var validRecursionBound: Boolean = true
   private var validSmt2ValidOpts: Boolean = true
   private var validSmt2SatOpts: Boolean = true
+  private var validRwMax: Boolean = true
   private var fgColor: Color = _
 
   override def getDisplayName: String = "Logika"
@@ -296,7 +306,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
 
   override def isModified: Boolean =
     validTimeout && validRLimit && validHintMaxColumn && validSmt2ValidOpts && validSmt2SatOpts &&
-      validLoopBound && validRecursionBound &&
+      validLoopBound && validRecursionBound && validRwMax &&
       (backgroundCheckBox.isSelected != backgroundAnalysis ||
         rlimitTextField.getText != rlimit.toString ||
         timeoutTextField.getText != timeout.toString ||
@@ -335,7 +345,9 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         detailedInfoCheckBox.isSelected != detailedInfo ||
         satTimeoutCheckBox.isSelected != satTimeout ||
         modeAutoRadioButton.isSelected != auto ||
-        searchPcCheckBox.isSelected != searchPc)
+        searchPcCheckBox.isSelected != searchPc ||
+        rwTraceCheckBox.isSelected != rwTrace ||
+        rwMaxTextField.getText != rwMax.toString)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -468,6 +480,13 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       elideEncodingCheckBox.setEnabled(enabled)
     }
 
+    def updateRwMax(): Unit = {
+      val text = rwMaxTextField.getText
+      validRwMax = parseGe(text, 1).nonEmpty
+      rwMaxLabel.setForeground(if (validRwMax) fgColor else JBColor.red)
+      rwMaxTextField.setToolTipText(if (validRwMax) "OK" else "Must be at least 1.")
+    }
+
     logoLabel.setIcon(logo)
 
     reset()
@@ -581,6 +600,14 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     }
     coverageCheckBox.addChangeListener(_ => updateCoverage())
 
+    rwMaxTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = updateRwMax()
+
+      override def changedUpdate(e: DocumentEvent): Unit = updateRwMax()
+
+      override def removeUpdate(e: DocumentEvent): Unit = updateRwMax()
+    })
+
     updateSymExe()
     updateHints()
     updateHintMaxColumn()
@@ -589,6 +616,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     updateSummoning()
     updateInfoFlow()
     updateCoverage()
+    updateRwMax()
 
     logikaPanel
   }
@@ -635,6 +663,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     satTimeout = satTimeoutCheckBox.isSelected
     auto = modeAutoRadioButton.isSelected
     searchPc = searchPcCheckBox.isSelected
+    rwTrace = rwTraceCheckBox.isSelected
+    rwMax = parsePosInteger(rwMaxTextField.getText).getOrElse(rwMax)
     saveConfiguration()
   }
 
@@ -702,5 +732,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
       modeManualRadioButton.setSelected(true)
     }
     searchPcCheckBox.setSelected(searchPc)
+    rwTraceCheckBox.setSelected(rwTrace)
+    rwMaxTextField.setText(rwMax.toString)
   }
 }
