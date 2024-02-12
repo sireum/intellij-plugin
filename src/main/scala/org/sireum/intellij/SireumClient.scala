@@ -43,16 +43,17 @@ import com.intellij.openapi.wm.StatusBarWidget.{IconPresentation, WidgetPresenta
 import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, ToolWindowManager, WindowManager}
 import com.intellij.ui.JBColor
-import org.jetbrains.plugins.terminal.{ShellTerminalWidget, TerminalToolWindowManager}
+import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke, Smt2Query}
 import org.sireum.message.Level
 import org.sireum.server.protocol.Analysis
 
+import java.awt.event.{ComponentAdapter, ComponentEvent}
 import java.awt.font.TextAttribute
-import java.awt.{Color, Font}
+import java.awt.{BorderLayout, Color, Component, Font}
 import java.util.concurrent._
-import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
+import javax.swing.{DefaultListCellRenderer, DefaultListModel, Icon, JComponent, JList, JMenu, JMenuItem, JPanel, JPopupMenu, JSplitPane, JTextArea}
 
 object SireumClient {
 
@@ -762,7 +763,7 @@ object SireumClient {
             return Some((line, ConsoleReportItem(iproject, file, Level.Info, line, column, offset, length, msg.text.value)))
         }
       case r: Logika.Verify.Smt2Query =>
-        val text: Predef.String = r.query.value
+        val text: Predef.String = s"${r.info.value}\n${r.query.value}"
         val line = r.pos.beginLine.toInt
         val offset = r.pos.offset.toInt
         val header = r.info.value.lines().limit(2).map(line => line.replace(';', ' ').
@@ -890,10 +891,25 @@ object SireumClient {
   }
 
   def resetSireumView(project: Project, editorOpt: Option[Editor]): Unit = {
-    import javax.swing.event.{DocumentEvent, DocumentListener}
     sireumToolWindowFactory(project, f => {
       val list = f.logika.logikaList
       list.synchronized {
+        list.setCellRenderer(new DefaultListCellRenderer {
+          val ta = new JTextArea
+          override def getListCellRendererComponent(list: JList[_], value: AnyRef, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
+            ta.setText(value.toString)
+            val width = list.getWidth
+            if (width > 0)
+              ta.setSize(width, Short.MaxValue)
+            ta
+          }
+        })
+        list.addComponentListener(new ComponentAdapter {
+          override def componentResized(e: ComponentEvent): Unit = {
+            list.setFixedCellHeight(10)
+            list.setFixedCellHeight(-1)
+          }
+        })
         for (lsl <- list.getListSelectionListeners) {
           list.removeListSelectionListener(lsl)
         }
