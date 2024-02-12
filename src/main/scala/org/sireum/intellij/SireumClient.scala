@@ -767,7 +767,7 @@ object SireumClient {
         val line = r.pos.beginLine.toInt
         val offset = r.pos.offset.toInt
         val header = r.info.value.lines().limit(2).map(line => line.replace(';', ' ').
-          replace("Result:", "").trim).toArray.mkString(": ")
+          replace("Result:", "").replace("Result (Cached):", "").trim).toArray.mkString(": ")
         return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset,
           if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, text)))
       case r: Logika.Verify.State =>
@@ -894,6 +894,10 @@ object SireumClient {
     sireumToolWindowFactory(project, f => {
       val list = f.logika.logikaList
       list.synchronized {
+        if (SireumApplicationComponent.sireumFont) {
+          val font = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${list.getFont.getSize}")).getOrElse(list.getFont)
+          list.setFont(font)
+        }
         list.setCellRenderer(new DefaultListCellRenderer {
           val ta = new JTextArea
           override def getListCellRendererComponent(list: JList[_], value: AnyRef, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
