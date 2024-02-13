@@ -438,7 +438,6 @@ object SireumClient {
     simplifiedQuery = LogikaConfigurable.smt2Simplify,
     smt2Configs = getSmt2Configs(project),
     branchPar = LogikaConfigurable.branchPar,
-    branchParCores = LogikaConfigurable.branchParCores,
     splitIf = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitConds,
     splitMatch = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitMatchCases,
     splitContract = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitContractCases,
@@ -464,7 +463,8 @@ object SireumClient {
     } else org.sireum.logika.Config.BackgroundMode.Disabled,
     searchPc = LogikaConfigurable.searchPc,
     rwTrace = LogikaConfigurable.rwTrace,
-    rwMax = LogikaConfigurable.rwMax
+    rwMax = LogikaConfigurable.rwMax,
+    rwPar = LogikaConfigurable.rwPar
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,

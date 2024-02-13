@@ -86,6 +86,7 @@ object LogikaConfigurable {
   private val searchPcKey = logikaKey + "searchPc"
   private val rwTraceKey = logikaKey + "rw.trace"
   private val rwMaxKey = logikaKey + "rw.max"
+  private val rwParKey = logikaKey + "rw.par"
 
   private lazy val defaultSmt2ValidOpts: String = org.sireum.logika.Smt2.defaultValidOpts.value.split(';').map(_.trim).mkString(";\n")
   private lazy val defaultSmt2SatOpts: String = org.sireum.logika.Smt2.defaultSatOpts.value.split(';').map(_.trim).mkString(";\n")
@@ -132,6 +133,7 @@ object LogikaConfigurable {
   private[intellij] var searchPc: Boolean = false
   private[intellij] var rwTrace: Boolean = true
   private[intellij] var rwMax: Int = 100
+  private[intellij] var rwPar: Boolean = true
 
 
   def loadConfiguration(): Unit = {
@@ -196,6 +198,7 @@ object LogikaConfigurable {
     searchPc = pc.getBoolean(searchPcKey, searchPc)
     rwTrace = pc.getBoolean(rwTraceKey, rwTrace)
     rwMax = pc.getInt(rwMaxKey, rwMax)
+    rwPar = pc.getBoolean(rwParKey, rwPar)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -243,6 +246,7 @@ object LogikaConfigurable {
     pc.setValue(searchPcKey, searchPc.toString)
     pc.setValue(rwTraceKey, rwTrace.toString)
     pc.setValue(rwMaxKey, rwMax.toString)
+    pc.setValue(rwParKey, rwPar.toString)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -347,7 +351,8 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
         modeAutoRadioButton.isSelected != auto ||
         searchPcCheckBox.isSelected != searchPc ||
         rwTraceCheckBox.isSelected != rwTrace ||
-        rwMaxTextField.getText != rwMax.toString)
+        rwMaxTextField.getText != rwMax.toString ||
+        rwParCheckBox.isSelected != rwPar)
 
   def selectedFPRoundingMode: String = {
     if (fpRNERadioButton.isSelected) "RNE"
@@ -665,6 +670,7 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     searchPc = searchPcCheckBox.isSelected
     rwTrace = rwTraceCheckBox.isSelected
     rwMax = parsePosInteger(rwMaxTextField.getText).getOrElse(rwMax)
+    rwPar = rwParCheckBox.isSelected
     saveConfiguration()
   }
 
@@ -734,5 +740,6 @@ final class LogikaConfigurable extends LogikaForm with Configurable {
     searchPcCheckBox.setSelected(searchPc)
     rwTraceCheckBox.setSelected(rwTrace)
     rwMaxTextField.setText(rwMax.toString)
+    rwParCheckBox.setSelected(rwPar)
   }
 }
