@@ -464,7 +464,8 @@ object SireumClient {
     searchPc = LogikaConfigurable.searchPc,
     rwTrace = LogikaConfigurable.rwTrace,
     rwMax = LogikaConfigurable.rwMax,
-    rwPar = LogikaConfigurable.rwPar
+    rwPar = LogikaConfigurable.rwPar,
+    rwEvalTrace = LogikaConfigurable.rwEvalTrace
   )
 
   def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
@@ -970,7 +971,11 @@ object SireumClient {
                   val attrs = font.getAttributes.asInstanceOf[java.util.Map[TextAttribute, Object]]
                   attrs.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON)
                   f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
-                  f.logika.logikaToolTextField.setPlaceholder("Filter claims ...")
+                  val desc = if (content.startsWith("{")) "claims "
+                  else if (content.lines.anyMatch(l => l.startsWith("Trace:"))) "trace "
+                  else ""
+                  f.logika.logikaToolTextField.getDocument.putProperty("Logika Kind", desc)
+                  f.logika.logikaToolTextField.setPlaceholder(s"Filter $desc...")
                   f.logika.logikaToolTextField.setText("")
                   f.logika.logikaTextArea.setCaretPosition(f.logika.logikaTextArea.getDocument.getLength)
                   for (editor <- editorOpt if !editor.isDisposed)

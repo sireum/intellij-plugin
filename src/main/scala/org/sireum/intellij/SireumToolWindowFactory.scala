@@ -95,6 +95,7 @@ object SireumToolWindowFactory {
             val k = i + checkSat.length
             text = s"${text.substring(0, k)}\n(get-model)${text.substring(k, text.length)}"
           }
+
           updateIfInvalid()
           ".smt2"
         case _ => ".txt"
@@ -114,7 +115,9 @@ object SireumToolWindowFactory {
     logikaForm.logikaToolTextField.setPlaceholderColor(new JBColor(Color.darkGray, Color.gray))
     logikaForm.logikaToolTextField.getDocument.addDocumentListener(new DocumentListener {
       override def insertUpdate(documentEvent: DocumentEvent): Unit = update(documentEvent)
+
       override def removeUpdate(documentEvent: DocumentEvent): Unit = update(documentEvent)
+
       override def changedUpdate(documentEvent: DocumentEvent): Unit = update(documentEvent)
 
       def update(documentEvent: DocumentEvent): Unit = {
@@ -123,15 +126,16 @@ object SireumToolWindowFactory {
         if (text == null) {
           return
         }
+        val kind = document.getProperty("Logika Kind").asInstanceOf[String]
         val content = document.getText(0, documentEvent.getDocument.getLength)
         SireumClient.singleExecutor.schedule({ () =>
           if (content == document.getText(0, documentEvent.getDocument.getLength)) {
-            text(0) match {
-              case '{' =>
-                if (content.isEmpty) {
-                  logikaForm.logikaTextArea.setText(text)
-                  logikaForm.logikaTextArea.getHighlighter.removeAllHighlights()
-                } else {
+            if (content.isEmpty) {
+              logikaForm.logikaTextArea.setText(text)
+              logikaForm.logikaTextArea.getHighlighter.removeAllHighlights()
+            } else {
+              kind match {
+                case "claims " =>
                   val lines = text.split('\n')
                   val size = lines.length
                   var newLines = List[String]()
@@ -168,17 +172,51 @@ object SireumToolWindowFactory {
                     highlighter.addHighlight(offset, i, hpainter)
                     offset = newText.indexOf(content, i)
                   }
-                }
-              case _ =>
-                val highlighter = logikaForm.logikaTextArea.getHighlighter
-                highlighter.removeAllHighlights()
-                var i = 0
-                var offset = text.indexOf(content, i)
-                while (offset > 0) {
-                  i = offset + content.length
-                  highlighter.addHighlight(offset, i, hpainter)
-                  offset = text.indexOf(content, i)
-                }
+                case "trace " =>
+                  val lines = text.lines.toArray
+                  var chunks = Vector[String]()
+                  var i = 0
+                  while (i < lines.length) {
+                    val line = lines(i).toString
+                    if (line.startsWith("by [") || line.startsWith("∴") || line.startsWith("Begin") ) {
+                      var j = i + 1
+                      var l = lines(j).toString
+                      var ls = Vector(line)
+                      while (l.nonEmpty) {
+                        ls = ls :+ l
+                        j = j + 1
+                        l = if (j < lines.length) lines(j).toString else ""
+                      }
+                      ls = ls :+ ""
+                      val chunk = ls.mkString("\n")
+                      if (chunk.contains(content)) {
+                        chunks = chunks :+ chunk
+                      }
+                    }
+                    i = i + 1
+                  }
+                  val newText = s"// Filtered by: $content\n\n${chunks.mkString("\n")}"
+                  logikaForm.logikaTextArea.setText(newText)
+                  val highlighter = logikaForm.logikaTextArea.getHighlighter
+                  highlighter.removeAllHighlights()
+                  i = 0
+                  var offset = newText.indexOf(content, i)
+                  while (offset > 0) {
+                    i = offset + content.length
+                    highlighter.addHighlight(offset, i, hpainter)
+                    offset = newText.indexOf(content, i)
+                  }
+                case _ =>
+                  var i = 0
+                  var offset = text.indexOf(content, i)
+                  val highlighter = logikaForm.logikaTextArea.getHighlighter
+                  highlighter.removeAllHighlights()
+                  while (offset > 0) {
+                    i = offset + content.length
+                    highlighter.addHighlight(offset, i, hpainter)
+                    offset = text.indexOf(content, i)
+                  }
+              }
             }
           }
         }: Runnable, 100, TimeUnit.MILLISECONDS)
