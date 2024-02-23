@@ -51,7 +51,7 @@ import org.sireum.server.protocol.Analysis
 
 import java.awt.event.{ComponentAdapter, ComponentEvent}
 import java.awt.font.TextAttribute
-import java.awt.{BorderLayout, Color, Component, Font}
+import java.awt.{Color, Component, Font}
 import java.util.concurrent._
 import javax.swing.{DefaultListCellRenderer, DefaultListModel, Icon, JComponent, JList, JMenu, JMenuItem, JPanel, JPopupMenu, JSplitPane, JTextArea}
 
@@ -766,13 +766,12 @@ object SireumClient {
             return Some((line, ConsoleReportItem(iproject, file, Level.Info, line, column, offset, length, msg.text.value)))
         }
       case r: Logika.Verify.Smt2Query =>
-        val text: Predef.String = s"${r.info.value}\n${r.query.value}"
         val line = r.pos.beginLine.toInt
         val offset = r.pos.offset.toInt
         val header = r.info.value.lines().limit(2).map(line => line.replace(';', ' ').
           replace("Result:", "").replace("Result (Cached):", "").trim).toArray.mkString(": ")
         return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset,
-          if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, text)))
+          if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, r.query.value)))
       case r: Logika.Verify.State =>
         import org.sireum._
         val text = normalizeChars(r.claims.value)
@@ -903,7 +902,11 @@ object SireumClient {
         }
         list.setCellRenderer(new DefaultListCellRenderer {
           val ta = new JTextArea
+          val border = com.intellij.util.ui.JBUI.Borders.customLineBottom(new JBColor(Color.lightGray, Color.darkGray))
           override def getListCellRendererComponent(list: JList[_], value: AnyRef, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
+            ta.setBorder(border)
+            ta.setBackground(list.getBackground)
+            ta.setForeground(list.getForeground)
             ta.setText(value.toString)
             val width = list.getWidth
             if (width > 0)
@@ -926,9 +929,9 @@ object SireumClient {
           if (0 <= i && i < list.getModel.getSize)
             list.getModel.getElementAt(i) match {
               case sri: SummoningReportItem =>
-                val content: Predef.String = if (sri.message.startsWith(";")) sri.message else {
+                val content: Predef.String = if (sri.message.startsWith(";")) s"${sri.info}\n${sri.message}" else {
                   val p = org.sireum.Os.path(sri.message)
-                  try p.read.value catch {
+                  try s"${sri.info}\n${p.read.value}" catch {
                     case _: Throwable => sri.info
                   }
                 }
