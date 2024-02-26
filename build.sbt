@@ -4,7 +4,7 @@ lazy val `sireum-intellij-plugin` = project.in(file("."))
     .enablePlugins(SbtIdeaPlugin)
     .settings(
       version := "5.0.0-SNAPSHOT",
-      scalaVersion := "2.13.12",
+      scalaVersion := "2.13.13",
       ThisBuild / intellijPluginName := "sireum-intellij-plugin",
       ThisBuild / intellijBuild      := "233.11799.241",
       ThisBuild / intellijPlatform   := IntelliJPlatform.IdeaCommunity,
