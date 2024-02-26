@@ -317,14 +317,14 @@ final class SireumInsertProofStepRegular extends SireumInsertProofStep {
 final class SireumInsertProofStepAssume extends SireumInsertProofStep {
   val proofStep: String = {
     import org.sireum._
-    st"""Assume(CLAIM)""".render.value
+    st"""Assume(  CLAIM  )""".render.value
   }
 }
 
 final class SireumInsertProofStepAssert extends SireumInsertProofStep {
   val proofStep: String = {
     import org.sireum._
-    st"""Assert(CLAIM, SubProof {
+    st"""Assert(  CLAIM, SubProof {
         |})""".render.value
   }
 }
