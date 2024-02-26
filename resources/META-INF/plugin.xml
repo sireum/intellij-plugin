@@ -116,6 +116,10 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
 
+        <group id="SlangInsertTemplate" text="Insert Template" popup="true">
+            <add-to-group group-id="SlangGroup" anchor="last"/>
+        </group>
+
         <action id="LogikaCheckActionFile" class="org.sireum.intellij.logika.LogikaCheckActionFile"
                 text="Logika Check (All in File)"
                 description="Check all Logika proofs in the file">
@@ -173,6 +177,12 @@
             <add-to-group group-id="SlangGroup"/>
         </action>
 
+        <action id="SlangReformatProofs" class="org.sireum.intellij.SlangReformatProofsAction"
+                text="Reformat Proofs"
+                description="Reformat proofs">
+            <add-to-group group-id="SlangGroup"/>
+        </action>
+
         <action id="SireumInsertImplication" class="org.sireum.intellij.SireumInsertImply"
                 text="Imply"
                 description="Insert implication symbol">
@@ -181,7 +191,7 @@
         </action>
 
         <action id="SireumInsertSImplication" class="org.sireum.intellij.SireumInsertSimply"
-                text="Imply (short-circuit)"
+                text="Imply (Short-Circuit)"
                 description="Insert short-circuit implication symbol">
             <add-to-group group-id="SireumInsertGroup"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="S"/>
@@ -228,6 +238,56 @@
             <add-to-group group-id="SireumInsertGroup"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="MINUS"/>
         </action>
+
+        <action id="SireumInsertQuantForAll" class="org.sireum.intellij.SireumInsertQuantForAll"
+                text="Forall"
+                description="Insert forall template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="A"/>
+        </action>
+
+        <action id="SireumInsertQuantExists" class="org.sireum.intellij.SireumInsertQuantExists"
+                text="Exists"
+                description="Insert exists template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="E"/>
+        </action>
+
+        <action id="SireumInsertProofStepRegular" class="org.sireum.intellij.SireumInsertProofStepRegular"
+                text="Proof Step"
+                description="Insert proof step template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="R"/>
+        </action>
+
+        <action id="SireumInsertProofStepAssume" class="org.sireum.intellij.SireumInsertProofStepAssume"
+                text="Assume Proof Step"
+                description="Insert assume proof step template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="U"/>
+        </action>
+
+        <action id="SireumInsertProofStepAssert" class="org.sireum.intellij.SireumInsertProofStepAssert"
+                text="Assert Proof Step"
+                description="Insert assert proof step template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="T"/>
+        </action>
+
+        <action id="SireumInsertProofStepSubProof" class="org.sireum.intellij.SireumInsertProofStepSubProof"
+                text="SubProof"
+                description="Insert sub-proof template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="S"/>
+        </action>
+
+        <action id="SireumInsertProofStepLet" class="org.sireum.intellij.SireumInsertProofStepLet"
+                text="SubProof/Fresh"
+                description="Insert sub-proof with a fresh variable template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="F"/>
+        </action>
+
     </actions>
 
     <application-components>

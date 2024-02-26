@@ -83,13 +83,10 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
       }
 
       if (Util.recommendReload(iproject)) {
-        iproject.getBaseDir.refresh(false, true)
-        Util.notify(new Notification(SireumClient.groupId, "Proyek reload?",
+        Util.notify(Util.notification(SireumClient.groupId, "Proyek reload?",
           """<p>Project definition and/or version dependencies have changed. <a href="">Reload</a>?</p>""",
-          NotificationType.INFORMATION, new NotificationListener.Adapter {
-            override def hyperlinkActivated(notification: Notification, hyperlinkEvent: HyperlinkEvent): Unit = {
-              ProyekSyncAction.sync(iproject, restart = false)
-            }
+          NotificationType.INFORMATION, (_: Notification, _: HyperlinkEvent) => {
+            ProyekSyncAction.sync(iproject)
           }), iproject, scala.None)
       }
     }).start()

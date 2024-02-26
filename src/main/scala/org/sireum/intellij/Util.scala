@@ -25,11 +25,13 @@
 
 package org.sireum.intellij
 
-import com.intellij.notification.{Notification, NotificationType, Notifications}
+import com.intellij.notification.{Notification, NotificationListener, NotificationType, Notifications}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+
+import javax.swing.event.HyperlinkEvent
 
 object Util {
   def getPath(file: VirtualFile): Option[org.sireum.Os.Path] =
@@ -67,12 +69,95 @@ object Util {
     return (root / "bin" / "project.cmd").isFile
   }
 
+  def genProyek(iproject: Project, root: org.sireum.Os.Path): Unit = {
+    import org.sireum._
+    val prjCmd = root / "bin" / "project.cmd"
+    if (!prjCmd.exists) {
+      prjCmd.up.mkdirAll()
+      val name = iproject.getName
+      val bslash = "\\"
+      val text =
+        st"""::/*#! 2> /dev/null                                 #
+            |@ 2>/dev/null # 2>nul & echo off & goto BOF         #
+            |if [ -z $${SIREUM_HOME} ]; then                      #
+            |  echo "Please set SIREUM_HOME env var"             #
+            |  exit -1                                           #
+            |fi                                                  #
+            |exec $${SIREUM_HOME}/bin/sireum slang run "$$0" "$$@"  #
+            |:BOF
+            |setlocal
+            |if not defined SIREUM_HOME (
+            |  echo Please set SIREUM_HOME env var
+            |  exit /B -1
+            |)
+            |%SIREUM_HOME%${bslash}bin${bslash}sireum.bat slang run "%0" %*
+            |exit /B %errorlevel%
+            |::!#*/
+            |// #Sireum
+            |
+            |import org.sireum._
+            |import org.sireum.project.{Module, Project, Target}
+            |
+            |val home = Os.slashDir.up.canon
+            |
+            |val m = Module(
+            |  id = "$name",
+            |  basePath = home.string,
+            |  subPathOpt = None(),
+            |  deps = ISZ(),
+            |  targets = ISZ(Target.Jvm),
+            |  ivyDeps = ISZ("org.sireum.kekinian::library:"),
+            |  sources = ISZ(Os.path("src").string),
+            |  resources = ISZ(),
+            |  testSources = ISZ(),
+            |  testResources = ISZ(),
+            |  publishInfoOpt = None()
+            |)
+            |
+            |val prj = Project.empty + m
+            |
+            |println(project.JSON.fromProject(prj, T))""".render
+      prjCmd.write(text.value.replace("\n", "\r\n"))
+      prjCmd.chmod("+x")
+    }
+  }
+
+  def hasSlang(root: org.sireum.Os.Path): Boolean = {
+    import org.sireum._
+    var found = F
+    def rec(dir: Os.Path): Unit = {
+      for (p <- dir.list if !found) {
+        if (p.isDir) {
+          rec(p)
+        } else {
+          if (p.ext.value == "sc" || p.ext.value == "scala") {
+            for (line <- p.readLineStream.take(1)) {
+              if (lang.parser.SlangParser.detectSlang(Some(p.toUri), line)._1) {
+                found = T
+              }
+            }
+          }
+        }
+      }
+    }
+    rec(root)
+    found
+  }
+
   def recommendReload(iproject: Project): Boolean = {
     import org.sireum._
+    val root = Os.path(iproject.getBasePath)
     if (!isProyek(iproject)) {
+      if (!(root / "build.sbt").exists && !(root / "build.sc").exists && hasSlang(root)) {
+        Util.notify(Util.notification(SireumClient.groupId, "Generate proyek?",
+          """<p>Proyek definition is not defined. <a href="">Generate</a>?</p>""",
+          NotificationType.INFORMATION, (_: Notification, _: HyperlinkEvent) => {
+            genProyek(iproject, root)
+            ProyekSyncAction.sync(iproject)
+          }), iproject, scala.None)
+      }
       return false
     }
-    val root = Os.path(iproject.getBasePath)
     val sireumHome = SireumApplicationComponent.getSireumHome(iproject) match {
       case scala.Some(home) =>
         System.setProperty("org.sireum.home", home.string.value)
@@ -80,44 +165,64 @@ object Util {
       case _ => return false
     }
     val prjOpt = org.sireum.proyek.Proyek.getProject(sireumHome, root, None(), None())
-    val errorF = root / ".idea" / "error.txt"
-    errorF.removeAll()
+    val projectF = root / ".idea" / "project.txt"
+    projectF.removeAll()
     if (prjOpt.isEmpty) {
-      errorF.writeOver("Could not load project\n")
-      errorF.removeOnExit()
+      projectF.writeOver("Could not load project\n")
+      projectF.removeOnExit()
       return true
     }
     val prj = prjOpt.get
     val vsOpt = org.sireum.proyek.Proyek.getVersions(prj, root, ISZ(), SireumApi.versions.entries)
     if (vsOpt.isEmpty) {
-      errorF.writeAppend("Could not load versions\n")
-      errorF.removeOnExit()
+      projectF.writeAppend("Could not load versions\n")
+      projectF.removeOnExit()
       return true
     }
     val versions = vsOpt.get
     val projectJson = root / ".idea" / "project.json"
     val versionsJson = root / ".idea" / "versions.json"
     project.ProjectUtil.load(projectJson) match {
-      case Some(prjCache) if prjCache == prj =>
-      case _ =>
-        if (projectJson.exists) {
+      case Some(prjCache) =>
+        if (prjCache != prj) {
+          projectF.writeOver({
+            import org.sireum._
+            st"""Project definition changes detected:
+                |Cached: $prjCache
+                |Loaded: $prj""".render
+          })
           val backup = projectJson.up / "project.old.json"
-          projectJson.moveTo(backup)
-          backup.removeOnExit()
+          projectJson.moveOverTo(backup)
+          return true
         }
+      case _ =>
+        projectF.writeOver({
+          import org.sireum._
+          st"""No existing project definition cache at: $projectJson""".render
+        })
         return true
     }
     proyek.Proyek.loadVersions(versionsJson) match {
-      case Some(versionsCache) if versionsCache == versions =>
-      case _ =>
-        if (versionsJson.exists) {
+      case Some(versionsCache) =>
+        if (versionsCache != versions) {
+          projectF.writeOver({
+            import org.sireum._
+            st"""Versions changes detected:
+                |Cached: $versionsCache
+                |Loaded: $versions""".render
+          })
           val backup = versionsJson.up / "versions.old.json"
-          versionsJson.moveTo(backup)
-          backup.removeOnExit()
+          versionsJson.moveOverTo(backup)
+          return true
         }
+      case _ =>
+        projectF.writeOver({
+          import org.sireum._
+          st"""No versions cache at: $versionsJson""".render
+        })
         return true
     }
-    return false
+    false
   }
 
   def isSireumOrLogikaFile(path: org.sireum.Os.Path)(content: => org.sireum.String = path.read): (Boolean, Boolean) = {
@@ -146,6 +251,16 @@ object Util {
       case _ =>
         Notifications.Bus.notify(n, project)
     }
+
+  def notification(groupId: String,
+                   title: String,
+                   content: String,
+                   tipe: NotificationType,
+                   listener: NotificationListener): Notification = {
+    val n = new Notification(groupId, title, content, tipe)
+    n.setListener(listener)
+    n
+  }
 
   val queue: java.util.concurrent.LinkedBlockingQueue[Option[() => Unit]] = new java.util.concurrent.LinkedBlockingQueue
   private var threadOpt: Option[Thread] = None

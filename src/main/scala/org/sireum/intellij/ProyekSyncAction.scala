@@ -25,9 +25,10 @@
 
 package org.sireum.intellij
 
+import com.intellij.configurationStore.StoreReloadManager
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.{KillableColoredProcessHandler, ProcessEvent, ProcessListener}
-import com.intellij.notification.{Notification, NotificationListener, NotificationType}
+import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{AnAction, AnActionEvent}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.{ProgressIndicator, ProgressManager, Task}
@@ -35,71 +36,70 @@ import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.util.Key
 
 import java.nio.charset.Charset
-import javax.swing.event.HyperlinkEvent
 
 object ProyekSyncAction {
-  def sync(iproject: IProject, restart: Boolean): Unit = {
+  def sync(iproject: IProject): Unit = {
     import org.sireum._
     SireumApplicationComponent.getSireumHome(iproject) match {
       case scala.Some(home) =>
         ProgressManager.getInstance().run(new Task.Backgroundable(iproject, "Proyek") {
           override def run(indicator: ProgressIndicator): Unit = {
-            indicator.setIndeterminate(true)
-            indicator.setText("Importing project ...")
-            val cmds = new java.util.ArrayList[Predef.String]
-            if (Os.isWin) {
-              cmds.add("cmd")
-              cmds.add("/c")
-              cmds.add("sireum.bat")
-            } else {
-              cmds.add("./sireum")
-            }
-            cmds.add("proyek")
-            cmds.add("ive")
-            cmds.add(iproject.getBasePath)
-            val generalCommandLine = new GeneralCommandLine(cmds)
-            generalCommandLine.setWorkDirectory((home / "bin").string.value)
-            generalCommandLine.setCharset(Charset.forName("UTF-8"))
-            val processHandler = new KillableColoredProcessHandler(generalCommandLine)
-            SireumClient.sireumToolWindowFactory(iproject, forms => {
-              forms.consoleView.clear()
-              forms.consoleView.attachToProcess(processHandler)
-              ApplicationManager.getApplication.invokeLater(() => {
-                forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
+            val srm: StoreReloadManager = StoreReloadManager.Companion.getInstance(iproject)
+            try {
+              srm.blockReloadingProjectOnExternalChanges()
+              indicator.setIndeterminate(true)
+              indicator.setText("Importing project ...")
+              val cmds = new java.util.ArrayList[Predef.String]
+              if (Os.isWin) {
+                cmds.add("cmd")
+                cmds.add("/c")
+                cmds.add("sireum.bat")
+              } else {
+                cmds.add("./sireum")
+              }
+              cmds.add("proyek")
+              cmds.add("ive")
+              cmds.add("--force")
+              cmds.add(iproject.getBasePath)
+              val generalCommandLine = new GeneralCommandLine(cmds)
+              generalCommandLine.setWorkDirectory((home / "bin").string.value)
+              generalCommandLine.setCharset(Charset.forName("UTF-8"))
+              val processHandler = new KillableColoredProcessHandler(generalCommandLine)
+              SireumClient.sireumToolWindowFactory(iproject, forms => {
+                forms.consoleView.clear()
+                forms.consoleView.attachToProcess(processHandler)
+                ApplicationManager.getApplication.invokeLater(() => {
+                  forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
+                })
               })
-            })
-            processHandler.addProcessListener(new ProcessListener {
-              override def processTerminated(event: ProcessEvent): Unit = {
-                if (event.getExitCode == 0) {
+              processHandler.addProcessListener(new ProcessListener {
+                override def processTerminated(event: ProcessEvent): Unit = {
                   iproject.getBaseDir.refresh(false, true)
-                  if (restart) {
+                  srm.reloadProject()
+                  if (event.getExitCode == 0) {
                     Util.notify(new Notification(
                       SireumClient.groupId, "Proyek synchronized",
                       """<p>Proyek synchronization was successful</p>""",
                       NotificationType.INFORMATION), iproject, shouldExpire = true)
-                    ApplicationManager.getApplication.invokeLater(() => ApplicationManager.getApplication.restart())
                   } else {
                     Util.notify(new Notification(
-                      SireumClient.groupId, "Proyek synchronized",
-                      """<p>Proyek synchronization was successful. <a href="">Restart</a>?</p>""",
-                      NotificationType.INFORMATION, new NotificationListener.Adapter {
-                        override def hyperlinkActivated(notification: Notification, hyperlinkEvent: HyperlinkEvent): Unit = {
-                          ApplicationManager.getApplication.invokeLater(() => ApplicationManager.getApplication.restart())
-                        }
-                      }), iproject, scala.Some(8000))
+                      SireumClient.groupId, "Proyek failed to synchronize",
+                      "<p>Could not synchronize Proyek</p>",
+                      NotificationType.ERROR), iproject, shouldExpire = true)
                   }
-                } else {
-                  Util.notify(new Notification(
-                    SireumClient.groupId, "Proyek failed to synchronize",
-                    "<p>Could not synchronize Proyek</p>",
-                    NotificationType.ERROR), iproject, shouldExpire = true)
                 }
+
+                override def startNotified(event: ProcessEvent): Unit = {}
+
+                override def onTextAvailable(event: ProcessEvent, outputType: Key[_]): Unit = {}
+              })
+              processHandler.startNotify()
+              processHandler.waitFor()
+            } finally {
+              if (srm.isReloadBlocked) {
+                srm.unblockReloadingProjectOnExternalChanges()
               }
-              override def startNotified(event: ProcessEvent): Unit = {}
-              override def onTextAvailable(event: ProcessEvent, outputType: Key[_]): Unit = {}
-            })
-            processHandler.startNotify()
-            processHandler.waitFor()
+            }
           }
         })
       case _ =>
@@ -112,7 +112,7 @@ object ProyekSyncAction {
 }
 class ProyekSyncAction extends AnAction {
   override def actionPerformed(e: AnActionEvent): Unit = {
-    ProyekSyncAction.sync(e.getProject, false)
+    ProyekSyncAction.sync(e.getProject)
   }
 
   override def update(e: AnActionEvent): Unit = {

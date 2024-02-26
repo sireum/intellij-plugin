@@ -122,12 +122,12 @@ trait SlangRewriteAction extends SireumOnlyAction {
   }
 }
 
-class SlangInsertConstructorValsAction extends SlangRewriteAction {
+final class SlangInsertConstructorValsAction extends SlangRewriteAction {
   def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type =
     org.sireum.server.protocol.Slang.Rewrite.Kind.InsertConstructorVals
 }
 
-class SlangRenumberProofStepsAction extends SlangRewriteAction {
+final class SlangRenumberProofStepsAction extends SlangRewriteAction {
   def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type =
     org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps
 
@@ -165,6 +165,46 @@ class SlangReplaceEnumSymbolsAction extends SlangRewriteAction {
     org.sireum.server.protocol.Slang.Rewrite.Kind.ReplaceEnumSymbols
 }
 
+final class SlangReformatProofsAction extends SireumAction {
+  final override def actionPerformed(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.
+      getInstance(project).getSelectedTextEditor
+    if (editor == null) return
+    val fileUriOpt: org.sireum.Option[org.sireum.String] = Util.getFilePath(project) match {
+      case Some(p) => org.sireum.Some(p.canon.toUri)
+      case _ => org.sireum.None()
+    }
+    val document = editor.getDocument
+    val text = document.getText
+    val isWorksheet = fileUriOpt match {
+      case org.sireum.Some(fileUri) => !fileUri.value.endsWith(".scala") && !fileUri.value.endsWith(".slang")
+      case _ => true
+    }
+    import org.sireum._
+    lang.FrontEnd.reformatProof(isWorksheet, fileUriOpt, text) match {
+      case Some((r, n)) =>
+        if (n > 0) {
+          WriteCommandAction.runWriteCommandAction(project,
+            (() => document.setText(r.value)): Runnable)
+          Util.notify(new Notification(
+            SireumClient.groupId, "Proofs reformatted",
+            s"Program proofs have been reformatted with $n number of edit(s)",
+            NotificationType.INFORMATION), project, shouldExpire = true)
+        } else {
+          Util.notify(new Notification(
+            SireumClient.groupId, "Proofs well-formatted",
+            s"Program proofs are already well-formatted",
+            NotificationType.INFORMATION), project, shouldExpire = true)
+        }
+      case _ =>
+        Util.notify(new Notification(
+          SireumClient.groupId, "Ill-formed program",
+          s"Cannot reformat proofs in ill-formed programs",
+          NotificationType.ERROR), project, shouldExpire = true)
+    }
+  }
+}
 
 trait SireumInsertSymbol extends SireumAction {
   def symbol: String
@@ -223,3 +263,84 @@ final class SireumInsertUniSpace extends SireumInsertSymbol {
   val symbol: String = "␣"
 }
 
+final class SireumInsertQuantForAll extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = "∀((ID: TYPE) => CLAIM)"
+}
+
+final class SireumInsertQuantExists extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = "∃((ID: TYPE) => CLAIM)"
+}
+
+trait SireumInsertProofStep extends SireumOnlyAction {
+  def proofStep: String
+
+  final override def actionPerformed(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.
+      getInstance(project).getSelectedTextEditor
+    if (editor == null) return
+    val fileUriOpt: org.sireum.Option[org.sireum.String] = Util.getFilePath(project) match {
+      case Some(p) => org.sireum.Some(p.canon.toUri)
+      case _ => org.sireum.None()
+    }
+    val document = editor.getDocument
+    val text = document.getText
+    val isWorksheet = fileUriOpt match {
+      case org.sireum.Some(fileUri) => !fileUri.value.endsWith(".scala") && !fileUri.value.endsWith(".slang")
+      case _ => true
+    }
+    val caretModel = editor.getCaretModel
+    val caret = caretModel.getPrimaryCaret
+    val line = document.getLineNumber(caret.getOffset) + 1
+    import org.sireum._
+    lang.FrontEnd.insertProofStep(Os.lineSep, isWorksheet, fileUriOpt, text, proofStep, line) match {
+      case Some(r) => WriteCommandAction.runWriteCommandAction(project, (() => {
+        caret.removeSelection()
+        document.setText(r.value)
+      }): Runnable)
+      case _ =>
+        Util.notify(new Notification(
+          SireumClient.groupId, "Could not insert proof step",
+          s"Please navigate caret to a suitable place for proof step insertion",
+          NotificationType.ERROR), project, shouldExpire = true)
+    }
+  }
+}
+
+final class SireumInsertProofStepRegular extends SireumInsertProofStep {
+  val proofStep: String = {
+    import org.sireum._
+    st"""(  CLAIM  ) by Premise""".render.value
+  }
+}
+
+final class SireumInsertProofStepAssume extends SireumInsertProofStep {
+  val proofStep: String = {
+    import org.sireum._
+    st"""Assume(CLAIM)""".render.value
+  }
+}
+
+final class SireumInsertProofStepAssert extends SireumInsertProofStep {
+  val proofStep: String = {
+    import org.sireum._
+    st"""Assert(CLAIM, SubProof {
+        |})""".render.value
+  }
+}
+
+final class SireumInsertProofStepSubProof extends SireumInsertProofStep {
+  val proofStep: String = {
+    import org.sireum._
+    st"""SubProof {
+        |})""".render.value
+  }
+}
+
+final class SireumInsertProofStepLet extends SireumInsertProofStep {
+  val proofStep: String = {
+    import org.sireum._
+    st"""SubProof { (ID: TYPE) =>
+        |})""".render.value
+  }
+}
