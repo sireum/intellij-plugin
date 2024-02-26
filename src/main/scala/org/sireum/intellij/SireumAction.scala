@@ -184,7 +184,7 @@ final class SlangReformatProofsAction extends SireumAction {
     import org.sireum._
     lang.FrontEnd.reformatProof(isWorksheet, fileUriOpt, text) match {
       case Some((r, n)) =>
-        if (n > 0) {
+        if (n > 0 && text != r.value) {
           WriteCommandAction.runWriteCommandAction(project,
             (() => document.setText(r.value)): Runnable)
           Util.notify(new Notification(
