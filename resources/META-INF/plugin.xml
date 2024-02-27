@@ -159,6 +159,12 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl X"/>
         </action>
 
+        <action id="SlangReplaceEnumSymbols" class="org.sireum.intellij.SlangReplaceEnumSymbolsAction"
+                text="Replace Enum Symbols"
+                description="Replace enum symbols with strings">
+            <add-to-group group-id="SlangGroup"/>
+        </action>
+
         <action id="SlangInsertConstructorVals" class="org.sireum.intellij.SlangInsertConstructorValsAction"
                 text="Insert val Modifiers"
                 description="Insert constructor parameter val modifiers">
@@ -169,18 +175,14 @@
                 text="Renumber Proof Steps"
                 description="Renumber proof steps">
             <add-to-group group-id="SlangGroup"/>
-        </action>
-
-        <action id="SlangReplaceEnumSymbols" class="org.sireum.intellij.SlangReplaceEnumSymbolsAction"
-                text="Replace Enum Symbols"
-                description="Replace enum symbols with strings">
-            <add-to-group group-id="SlangGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="N"/>
         </action>
 
         <action id="SlangReformatProofs" class="org.sireum.intellij.SlangReformatProofsAction"
                 text="Reformat Proofs"
                 description="Reformat proofs">
             <add-to-group group-id="SlangGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="F"/>
         </action>
 
         <action id="SireumInsertImplication" class="org.sireum.intellij.SireumInsertImply"
@@ -239,20 +241,6 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="MINUS"/>
         </action>
 
-        <action id="SireumInsertQuantForAll" class="org.sireum.intellij.SireumInsertQuantForAll"
-                text="Forall"
-                description="Insert forall template">
-            <add-to-group group-id="SlangInsertTemplate"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="A"/>
-        </action>
-
-        <action id="SireumInsertQuantExists" class="org.sireum.intellij.SireumInsertQuantExists"
-                text="Exists"
-                description="Insert exists template">
-            <add-to-group group-id="SlangInsertTemplate"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="E"/>
-        </action>
-
         <action id="SireumInsertProofStepRegular" class="org.sireum.intellij.SireumInsertProofStepRegular"
                 text="Proof Step"
                 description="Insert proof step template">
@@ -286,6 +274,56 @@
                 description="Insert sub-proof with a fresh variable template">
             <add-to-group group-id="SlangInsertTemplate"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="F"/>
+        </action>
+
+        <action id="SireumInsertQuantForAll" class="org.sireum.intellij.SireumInsertQuantForAll"
+                text="Forall"
+                description="Insert forall template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="A"/>
+        </action>
+
+        <action id="SireumInsertQuantExists" class="org.sireum.intellij.SireumInsertQuantExists"
+                text="Exists"
+                description="Insert exists template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl BACK_SLASH" second-keystroke="E"/>
+        </action>
+
+        <action id="SireumInsertQuantForAllRange" class="org.sireum.intellij.SireumInsertQuantForAllRange"
+                text="Forall Integer Range"
+                description="Insert forall-integer-range template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+        </action>
+
+        <action id="SireumInsertQuantExistsRange" class="org.sireum.intellij.SireumInsertQuantExistsRange"
+                text="Exists Integer Range"
+                description="Insert exists-integer-range template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+        </action>
+
+        <action id="SireumInsertQuantForAllEach" class="org.sireum.intellij.SireumInsertQuantForAllEach"
+                text="Forall Sequence Elements"
+                description="Insert forall-sequence-elements template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+        </action>
+
+        <action id="SireumInsertQuantExistsEach" class="org.sireum.intellij.SireumInsertQuantExistsEach"
+                text="Exists Sequence Elements"
+                description="Insert exists-sequence-elements template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+        </action>
+
+        <action id="SireumInsertQuantForAllIndices" class="org.sireum.intellij.SireumInsertQuantForAllEachIndices"
+                text="Forall Sequence Indices"
+                description="Insert forall-sequence-indices template">
+            <add-to-group group-id="SlangInsertTemplate"/>
+        </action>
+
+        <action id="SireumInsertQuantExistsIndices" class="org.sireum.intellij.SireumInsertQuantExistsEachIndices"
+                text="Exists Sequence Indices"
+                description="Insert exists-sequence-indices template">
+            <add-to-group group-id="SlangInsertTemplate"/>
         </action>
 
     </actions>

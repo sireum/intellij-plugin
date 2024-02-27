@@ -263,13 +263,7 @@ final class SireumInsertUniSpace extends SireumInsertSymbol {
   val symbol: String = "␣"
 }
 
-final class SireumInsertQuantForAll extends SireumOnlyAction with SireumInsertSymbol {
-  val symbol: String = "∀((ID: TYPE) => CLAIM)"
-}
-
-final class SireumInsertQuantExists extends SireumOnlyAction with SireumInsertSymbol {
-  val symbol: String = "∃((ID: TYPE) => CLAIM)"
-}
+import org.sireum.lang.{ast => AST}
 
 trait SireumInsertProofStep extends SireumOnlyAction {
   def proofStep: String
@@ -308,39 +302,55 @@ trait SireumInsertProofStep extends SireumOnlyAction {
 }
 
 final class SireumInsertProofStepRegular extends SireumInsertProofStep {
-  val proofStep: String = {
-    import org.sireum._
-    st"""(  CLAIM  ) by Premise""".render.value
-  }
+  val proofStep: String = AST.Util.ProofStepTemplate.regular.value
 }
 
 final class SireumInsertProofStepAssume extends SireumInsertProofStep {
-  val proofStep: String = {
-    import org.sireum._
-    st"""Assume(  CLAIM  )""".render.value
-  }
+  val proofStep: String = AST.Util.ProofStepTemplate.assum.value
 }
 
 final class SireumInsertProofStepAssert extends SireumInsertProofStep {
-  val proofStep: String = {
-    import org.sireum._
-    st"""Assert(  CLAIM, SubProof {
-        |})""".render.value
-  }
+  val proofStep: String = AST.Util.ProofStepTemplate.asser.value
 }
 
 final class SireumInsertProofStepSubProof extends SireumInsertProofStep {
-  val proofStep: String = {
-    import org.sireum._
-    st"""SubProof {
-        |})""".render.value
-  }
+  val proofStep: String = AST.Util.ProofStepTemplate.subProof.value
 }
 
 final class SireumInsertProofStepLet extends SireumInsertProofStep {
-  val proofStep: String = {
-    import org.sireum._
-    st"""SubProof { (ID: TYPE) =>
-        |})""".render.value
-  }
+  val proofStep: String = AST.Util.ProofStepTemplate.let.value
 }
+
+final class SireumInsertQuantForAll extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.all.value
+}
+
+final class SireumInsertQuantExists extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.exists.value
+}
+
+final class SireumInsertQuantForAllRange extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.allRange.value
+}
+
+final class SireumInsertQuantExistsRange extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.existsRange.value
+}
+
+final class SireumInsertQuantForAllEach extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.allEach.value
+}
+
+final class SireumInsertQuantExistsEach extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.existsEach.value
+}
+
+final class SireumInsertQuantForAllEachIndices extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.allEachIndex.value
+}
+
+final class SireumInsertQuantExistsEachIndices extends SireumOnlyAction with SireumInsertSymbol {
+  val symbol: String = AST.Util.ProofStepTemplate.existsEachIndex.value
+}
+
+
