@@ -1381,7 +1381,7 @@ object SireumClient {
                         val lm = new DefaultListModel[HintReportItem]
                         for (i <- 0 until value.size) {
                           val ri = value.getElementAt(i)
-                          lm.addElement(ri.copy(message = ri.message + "\n// Cached"))
+                          lm.addElement(ri.copy(message = ri.message + "\n\n// Cached"))
                         }
                         prevHm.put(line, lm)
                       case _ =>
