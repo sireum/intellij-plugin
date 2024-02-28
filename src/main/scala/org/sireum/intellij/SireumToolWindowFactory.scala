@@ -41,9 +41,10 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.content.ContentFactory
 import org.sireum.intellij.logika.LogikaToolWindowForm
 
-import java.awt.Color
-import java.awt.event.{ActionEvent, ActionListener}
+import java.awt.{Color, Component}
+import java.awt.event.{ActionEvent, ActionListener, ComponentAdapter, ComponentEvent}
 import java.io.PrintWriter
+import javax.swing.{DefaultListCellRenderer, JList, JTextArea}
 import javax.swing.event.{DocumentEvent, DocumentListener}
 import javax.swing.text.DefaultHighlighter
 
@@ -52,8 +53,12 @@ object SireumToolWindowFactory {
   final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm, consoleView: ConsoleView)
 
   val windows = new ConcurrentHashMap[Project, Forms]()
-  val hpainter = new DefaultHighlighter.DefaultHighlightPainter(
-    new JBColor(new Color(129, 62, 200, 64), new Color(129, 62, 200, 256 - 64)))
+  val hpainterColor = new Color(129, 62, 200, 64)
+  val hpainterDarkColor = new Color(129, 62, 200, 256 - 64)
+  val hpainter = new DefaultHighlighter.DefaultHighlightPainter(new JBColor(hpainterColor, hpainterDarkColor))
+  val selectedListItemColor = new JBColor(
+    hpainterColor.brighter().brighter().brighter(),
+    hpainterDarkColor.darker().darker().darker())
 
   def createToolWindowContent(project: Project, toolWindow: ToolWindow): Unit = try {
     toolWindow.setAutoHide(false)
@@ -74,6 +79,31 @@ object SireumToolWindowFactory {
     toolWindow.getContentManager.addContent(
       contentFactory.createContent(console.getComponent, "Console", false))
     logikaForm.logikaTextArea.setEditable(false)
+    logikaForm.logikaList.setCellRenderer(new DefaultListCellRenderer {
+      val ta = new JTextArea
+      val border = com.intellij.util.ui.JBUI.Borders.customLineBottom(new JBColor(Color.lightGray, Color.darkGray))
+      override def getListCellRendererComponent(list: JList[_], value: AnyRef, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
+        ta.setBorder(border)
+        if (isSelected) {
+          ta.setBackground(selectedListItemColor)
+        } else {
+          ta.setBackground(list.getBackground)
+        }
+        ta.setForeground(list.getForeground)
+        ta.setText(value.toString)
+        val width = list.getWidth
+        if (width > 0)
+          ta.setSize(width, Short.MaxValue)
+        ta
+      }
+    })
+    logikaForm.logikaList.addComponentListener(new ComponentAdapter {
+      override def componentResized(e: ComponentEvent): Unit = {
+        logikaForm.logikaList.setFixedCellHeight(10)
+        logikaForm.logikaList.setFixedCellHeight(-1)
+      }
+    })
+
 
     logikaForm.logikaToolTextExportButton.addActionListener((_: ActionEvent) => {
       var text = logikaForm.logikaTextArea.getText

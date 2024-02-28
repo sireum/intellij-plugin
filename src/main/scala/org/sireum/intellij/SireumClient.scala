@@ -49,11 +49,10 @@ import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke, Smt2Query}
 import org.sireum.message.Level
 import org.sireum.server.protocol.Analysis
 
-import java.awt.event.{ComponentAdapter, ComponentEvent}
 import java.awt.font.TextAttribute
-import java.awt.{Color, Component, Font}
+import java.awt.{Color, Font}
 import java.util.concurrent._
-import javax.swing.{DefaultListCellRenderer, DefaultListModel, Icon, JComponent, JList, JMenu, JMenuItem, JPanel, JPopupMenu, JSplitPane, JTextArea}
+import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
 
 object SireumClient {
 
@@ -900,26 +899,6 @@ object SireumClient {
           val font = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${list.getFont.getSize}")).getOrElse(list.getFont)
           list.setFont(font)
         }
-        list.setCellRenderer(new DefaultListCellRenderer {
-          val ta = new JTextArea
-          val border = com.intellij.util.ui.JBUI.Borders.customLineBottom(new JBColor(Color.lightGray, Color.darkGray))
-          override def getListCellRendererComponent(list: JList[_], value: AnyRef, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
-            ta.setBorder(border)
-            ta.setBackground(list.getBackground)
-            ta.setForeground(list.getForeground)
-            ta.setText(value.toString)
-            val width = list.getWidth
-            if (width > 0)
-              ta.setSize(width, Short.MaxValue)
-            ta
-          }
-        })
-        list.addComponentListener(new ComponentAdapter {
-          override def componentResized(e: ComponentEvent): Unit = {
-            list.setFixedCellHeight(10)
-            list.setFixedCellHeight(-1)
-          }
-        })
         for (lsl <- list.getListSelectionListeners) {
           list.removeListSelectionListener(lsl)
         }
