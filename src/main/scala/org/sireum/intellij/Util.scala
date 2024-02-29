@@ -74,6 +74,10 @@ object Util {
     val prjCmd = root / "bin" / "project.cmd"
     if (!prjCmd.exists) {
       prjCmd.up.mkdirAll()
+      val src = root / "src"
+      if (!src.exists) {
+        src.mkdirAll()
+      }
       val name = iproject.getName
       val bslash = "\\"
       val text =
