@@ -283,21 +283,21 @@ trait SireumInsertProofStep extends SireumOnlyAction {
       case org.sireum.Some(fileUri) => !fileUri.value.endsWith(".scala") && !fileUri.value.endsWith(".slang")
       case _ => true
     }
-    val caretModel = editor.getCaretModel
-    val caret = caretModel.getPrimaryCaret
-    val line = document.getLineNumber(caret.getOffset) + 1
-    import org.sireum._
-    lang.FrontEnd.insertProofStep(Os.lineSep, isWorksheet, fileUriOpt, text, proofStep, line) match {
-      case Some(r) => WriteCommandAction.runWriteCommandAction(project, (() => {
-        caret.removeSelection()
-        document.setText(r.value)
-      }): Runnable)
-      case _ =>
-        Util.notify(new Notification(
-          SireumClient.groupId, "Could not insert proof step",
-          s"Please navigate caret to a suitable place for proof step insertion",
-          NotificationType.ERROR), project, shouldExpire = true)
-    }
+    WriteCommandAction.runWriteCommandAction(project, (() => {
+      val caretModel = editor.getCaretModel
+      val caret = caretModel.getPrimaryCaret
+      val line = document.getLineNumber(caret.getOffset) + 1
+      org.sireum.lang.FrontEnd.insertProofStep(org.sireum.Os.lineSep, isWorksheet, fileUriOpt, text, proofStep, line) match {
+        case org.sireum.Some(r) =>
+          caret.removeSelection()
+          document.setText(r.value)
+        case _ =>
+          Util.notify(new Notification(
+            SireumClient.groupId, "Could not insert proof step",
+            s"Please navigate caret to a suitable place for proof step insertion",
+            NotificationType.ERROR), project, shouldExpire = true)
+      }
+    }): Runnable)
   }
 }
 

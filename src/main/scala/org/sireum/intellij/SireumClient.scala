@@ -68,11 +68,6 @@ object SireumClient {
     override def ID(): String = "Sireum"
 
     def clearCache(kind: Analysis.Cache.Kind.Type): Unit = {
-      kind match {
-        case Analysis.Cache.Kind.All => cachedAnalysisData.clear()
-        case Analysis.Cache.Kind.Transitions => cachedAnalysisData.clear()
-        case _ =>
-      }
       SireumClient.queue.add(Vector((true, org.sireum.server.protocol.JSON.fromRequest(
         org.sireum.server.protocol.Analysis.Cache.Clear(kind), true).value)))
     }
@@ -180,7 +175,6 @@ object SireumClient {
   )
   lazy val defaultFrame: Int = icons.length / 2 + 1
   lazy val statusBarWidget: SireumStatusWidget = new SireumStatusWidget
-  val cachedAnalysisData: ConcurrentHashMap[(String, Long), (scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]], scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]], scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])] = new ConcurrentHashMap
   var usedMemory: org.sireum.Z = 0
   var shutdown: Boolean = false
   var queue: LinkedBlockingQueue[Vector[(Boolean, String)]] = new LinkedBlockingQueue
@@ -727,8 +721,9 @@ object SireumClient {
                                                     file: VirtualFile,
                                                     messageHeader: String,
                                                     offset: Int,
-                                                    val message: String,
-                                                    terminated: Boolean) extends ReportItem {
+                                                    message: String,
+                                                    terminated: Boolean,
+                                                    cached: Boolean) extends ReportItem {
     override def toString: String = messageHeader
   }
 
@@ -737,8 +732,9 @@ object SireumClient {
                                                          messageHeader: String,
                                                          info: String,
                                                          offset: Int,
-                                                         val ok: Boolean,
-                                                         val message: String) extends ReportItem {
+                                                         ok: Boolean,
+                                                         message: String,
+                                                         cached: Boolean) extends ReportItem {
     override def toString: String = messageHeader
   }
 
@@ -770,7 +766,7 @@ object SireumClient {
         val header = r.info.value.lines().limit(2).map(line => line.replace(';', ' ').
           replace("Result:", "").replace("Result (Cached):", "").trim).toArray.mkString(": ")
         return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset,
-          if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, r.query.value)))
+          if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, r.query.value, r.cached)))
       case r: Logika.Verify.State =>
         import org.sireum._
         val text = normalizeChars(r.claims.value)
@@ -783,7 +779,7 @@ object SireumClient {
           ) ++ r.labels
           labels.elements.reverse.mkString(" / ")
         }
-        return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text, r.terminated)))
+        return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text, r.terminated, r.cached)))
       case r: Logika.Verify.Info =>
         val pos = r.pos
         val line = pos.beginLine.toInt
@@ -797,7 +793,7 @@ object SireumClient {
           }
           s"Info: $firstLine"
         }
-        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, header, offset, text, false)))
+        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, header, offset, text, false, r.cached)))
 
       case _ =>
     }
@@ -908,11 +904,14 @@ object SireumClient {
           if (0 <= i && i < list.getModel.getSize)
             list.getModel.getElementAt(i) match {
               case sri: SummoningReportItem =>
-                val content: Predef.String = if (sri.message.startsWith(";")) s"${sri.info}\n${sri.message}" else {
+                var content: Predef.String = if (sri.message.startsWith(";")) s"${sri.info}\n${sri.message}" else {
                   val p = org.sireum.Os.path(sri.message)
                   try s"${sri.info}\n${p.read.value}" catch {
                     case _: Throwable => sri.info
                   }
+                }
+                if (sri.cached) {
+                  content = content.replace("Result:", "Result (cached):")
                 }
                 ApplicationManager.getApplication.invokeLater { () =>
                   f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
@@ -937,6 +936,9 @@ object SireumClient {
                       new OpenFileDescriptor(cri.project, cri.file, cri.offset), true)): Runnable)
               case hri: HintReportItem =>
                 var content = normalizeChars(hri.message)
+                if (hri.cached) {
+                  content = content + "\n\n// Cached"
+                }
                 if (LogikaConfigurable.hintMaxColumn > 0) {
                   org.sireum.Scalafmt.format(
                     s"${org.sireum.Scalafmt.minimalConfig}\nmaxColumn = ${LogikaConfigurable.hintMaxColumn}", true,
@@ -1343,83 +1345,6 @@ object SireumClient {
                   val rh = addLineHighlighter(mm, line - 1, -1, coverageTextAttributes)
                   rh.putUserData(reportItemKey, CoverageReportItem)
                   coverageLines.add(line)
-                }
-                val path = editor.getVirtualFile.getCanonicalPath
-                val key = (path, r.cached.value)
-                if (r.setCache) {
-                  cachedAnalysisData.synchronized {
-                    var t = cachedAnalysisData.get(key)
-                    if (t == null) {
-                      t = (new scala.collection.mutable.HashMap[Int, Vector[RangeHighlighter]],
-                        new scala.collection.mutable.HashMap[Int, DefaultListModel[SummoningReportItem]],
-                        new scala.collection.mutable.HashMap[Int, DefaultListModel[HintReportItem]])
-                    }
-                    val (prevRhs, prevSm, prevHm) = t
-                    rhs.get(line) match {
-                      case Some(value) => prevRhs.put(line, value.filter { rh =>
-                        rh.getUserData(reportItemKey) match {
-                          case ri: ConsoleReportItem => ri.level == Level.Info || ri.level == Level.Warning
-                          case _ => false
-                        }
-                      })
-                      case _ =>
-                    }
-                    summoningListModelMap.get(line) match {
-                      case Some(value) =>
-                        val lm = new DefaultListModel[SummoningReportItem]
-                        for (i <- 0 until value.size) {
-                          val ri = value.getElementAt(i)
-                          if (ri.ok) {
-                            lm.addElement(ri.copy(message = ri.message.replace("Result:", "Result (Cached):")))
-                          }
-                        }
-                        prevSm.put(line, lm)
-                      case _ =>
-                    }
-                    hintListModelMap.get(line) match {
-                      case Some(value) =>
-                        val lm = new DefaultListModel[HintReportItem]
-                        for (i <- 0 until value.size) {
-                          val ri = value.getElementAt(i)
-                          lm.addElement(ri.copy(message = ri.message + "\n\n// Cached"))
-                        }
-                        prevHm.put(line, lm)
-                      case _ =>
-                    }
-                    cachedAnalysisData.put(key, t)
-                  }
-                } else {
-                  val t = cachedAnalysisData.get(key)
-                  if (t != null) {
-                    val (prevRhs, prevSm, prevHm) = t
-                    prevRhs.get(line) match {
-                      case Some(rhs) =>
-                        for (rh <- rhs) {
-                          val ri = rh.getUserData(reportItemKey)
-                          val newRh = mm.addLineHighlighter(line - 1, rh.getLayer, rh.getTextAttributes(null))
-                          newRh.putUserData(reportItemKey, ri)
-                        }
-                      case _ =>
-                    }
-                    prevSm.get(line) match {
-                      case Some(sm) =>
-                        for (i <- 0 until sm.size()) {
-                          val ri = sm.elementAt(i)
-                          summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
-                        }
-                      case _ =>
-                    }
-                    prevHm.get(line) match {
-                      case Some(hm) =>
-                        for (i <- 0 until hm.size) {
-                          val ri = hm.elementAt(i)
-                          if (!ri.terminated) {
-                            hintReportItem(hintListModelMap, rhs, editor, ri, line)
-                          }
-                        }
-                      case _ =>
-                    }
-                  }
                 }
               }
             } catch {
