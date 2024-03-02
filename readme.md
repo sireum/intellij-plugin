@@ -5,7 +5,7 @@ This IntelliJ plugin integrates [Sireum](https://github.com/sireum/kekinian) too
 ## Setup
 
 ```bash
-./setup.sh
+./setup.cmd
 ```
 
 Set IntelliJ preference: `Editor` -> `GUI Designer`:
@@ -27,5 +27,5 @@ clean; cleanFiles; packageArtifactZip
 ```
 
 ```bash
-./post.sh
+./post.cmd
 ```
