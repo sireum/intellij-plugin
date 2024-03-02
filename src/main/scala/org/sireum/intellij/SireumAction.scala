@@ -182,25 +182,35 @@ final class SlangReformatProofsAction extends SireumAction {
       case _ => true
     }
     import org.sireum._
-    lang.FrontEnd.reformatProof(isWorksheet, fileUriOpt, text) match {
-      case Some((r, n)) =>
-        if (n > 0 && text != r.value) {
-          WriteCommandAction.runWriteCommandAction(project,
-            (() => document.setText(r.value)): Runnable)
+    try {
+      lang.FrontEnd.reformatProof(isWorksheet, fileUriOpt, text) match {
+        case Some((r, n)) =>
+          if (n > 0 && text != r.value) {
+            WriteCommandAction.runWriteCommandAction(project,
+              (() => document.setText(r.value)): Runnable)
+            Util.notify(new Notification(
+              SireumClient.groupId, "Proofs reformatted",
+              s"Program proofs have been reformatted with $n number of edit(s)",
+              NotificationType.INFORMATION), project, shouldExpire = true)
+          } else {
+            Util.notify(new Notification(
+              SireumClient.groupId, "Proofs well-formatted",
+              s"Program proofs are already well-formatted",
+              NotificationType.INFORMATION), project, shouldExpire = true)
+          }
+        case _ =>
           Util.notify(new Notification(
-            SireumClient.groupId, "Proofs reformatted",
-            s"Program proofs have been reformatted with $n number of edit(s)",
-            NotificationType.INFORMATION), project, shouldExpire = true)
-        } else {
-          Util.notify(new Notification(
-            SireumClient.groupId, "Proofs well-formatted",
-            s"Program proofs are already well-formatted",
-            NotificationType.INFORMATION), project, shouldExpire = true)
-        }
-      case _ =>
+            SireumClient.groupId, "Ill-formed program",
+            s"Cannot reformat proofs in ill-formed programs",
+            NotificationType.ERROR), project, shouldExpire = true)
+      }
+    } catch {
+      case e: Throwable =>
+        val sw = new java.io.StringWriter()
+        val pw = new java.io.PrintWriter(sw)
+        e.printStackTrace(pw)
         Util.notify(new Notification(
-          SireumClient.groupId, "Ill-formed program",
-          s"Cannot reformat proofs in ill-formed programs",
+          SireumClient.groupId, "Internal error", sw.toString,
           NotificationType.ERROR), project, shouldExpire = true)
     }
   }
@@ -287,15 +297,25 @@ trait SireumInsertProofStep extends SireumOnlyAction {
     val caret = caretModel.getPrimaryCaret
     val line = document.getLineNumber(caret.getOffset) + 1
     import org.sireum._
-    lang.FrontEnd.insertProofStep(Os.lineSep, isWorksheet, fileUriOpt, text, proofStep, line) match {
-      case Some(r) => WriteCommandAction.runWriteCommandAction(project, (() => {
-        caret.removeSelection()
-        document.setText(r.value)
-      }): Runnable)
-      case _ =>
+    try {
+      lang.FrontEnd.insertProofStep(isWorksheet, fileUriOpt, text, proofStep, line) match {
+        case Some(r) => WriteCommandAction.runWriteCommandAction(project, (() => {
+          caret.removeSelection()
+          document.setText(r.value)
+        }): Runnable)
+        case _ =>
+          Util.notify(new Notification(
+            SireumClient.groupId, "Could not insert proof step",
+            s"Please navigate caret to a suitable place for proof step insertion",
+            NotificationType.ERROR), project, shouldExpire = true)
+      }
+    } catch {
+      case e: Throwable =>
+        val sw = new java.io.StringWriter()
+        val pw = new java.io.PrintWriter(sw)
+        e.printStackTrace(pw)
         Util.notify(new Notification(
-          SireumClient.groupId, "Could not insert proof step",
-          s"Please navigate caret to a suitable place for proof step insertion",
+          SireumClient.groupId, "Internal error", sw.toString,
           NotificationType.ERROR), project, shouldExpire = true)
     }
   }
