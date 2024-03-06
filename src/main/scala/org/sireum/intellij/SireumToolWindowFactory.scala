@@ -208,7 +208,7 @@ object SireumToolWindowFactory {
                   var i = 0
                   while (i < lines.length) {
                     val line = lines(i).toString
-                    if (line.startsWith("by [") || line.startsWith("∴") || line.startsWith("Begin") ) {
+                    if (line.startsWith("by [") || line.startsWith("∴") || line.startsWith("Begin") || line.startsWith("info [")) {
                       var j = i + 1
                       var l = lines(j).toString
                       var ls = Vector(line)
