@@ -143,7 +143,8 @@ object SireumClient {
   val gutterInfoIcon: Icon = IconLoader.getIcon("/icon/gutter-info.png")
   val gutterHintIcon: Icon = IconLoader.getIcon("/icon/gutter-hint.png")
   val gutterSummoningIcon: Icon = IconLoader.getIcon("/icon/gutter-summoning.png")
-  val gutterVerifiedIcon: Icon = IconLoader.getIcon("/icon/gutter-verified.png")
+  val gutterLogikaVerifiedIcon: Icon = IconLoader.getIcon("/icon/gutter-logika-verified.png")
+  val gutterLogikaErrorIcon: Icon = IconLoader.getIcon("/icon/gutter-logika-error.png")
   val verifiedInfoIcon: Icon = IconLoader.getIcon("/icon/logika-verified-info.png")
   val sireumGrayIcon: Icon = IconLoader.getIcon("/icon/sireum-gray.png")
   val editorMap: scala.collection.mutable.Map[org.sireum.ISZ[org.sireum.String], (Project, VirtualFile, Editor, String, Boolean)] = scala.collection.mutable.Map()
@@ -728,7 +729,8 @@ object SireumClient {
                                                     messageHeader: String,
                                                     offset: Int,
                                                     val message: String,
-                                                    terminated: Boolean) extends ReportItem {
+                                                    terminated: Boolean,
+                                                    isError: Boolean) extends ReportItem {
     override def toString: String = messageHeader
   }
 
@@ -783,7 +785,7 @@ object SireumClient {
           ) ++ r.labels
           labels.elements.reverse.mkString(" / ")
         }
-        return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text, r.terminated)))
+        return scala.Some((line, HintReportItem(scala.None, iproject, file, header, offset, text, r.terminated, false)))
       case r: Logika.Verify.Info =>
         val pos = r.pos
         val line = pos.beginLine.toInt
@@ -797,7 +799,8 @@ object SireumClient {
           }
           s"Info: $firstLine"
         }
-        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, header, offset, text, false)))
+        return scala.Some((line, HintReportItem(Some(r.kind), iproject, file, header, offset, text, false,
+          r.kind == org.sireum.server.protocol.Logika.Verify.Info.Kind.Error)))
 
       case _ =>
     }
@@ -1124,7 +1127,9 @@ object SireumClient {
       rhLine.setThinErrorStripeMark(false)
       val (title, icon) = ri.kindOpt match {
         case scala.Some(org.sireum.server.protocol.Logika.Verify.Info.Kind.Verified) =>
-          ("Click to show verification report", gutterVerifiedIcon)
+          ("Click to show verification report", gutterLogikaVerifiedIcon)
+        case scala.Some(org.sireum.server.protocol.Logika.Verify.Info.Kind.Error) =>
+          ("Click to show verification report", gutterLogikaErrorIcon)
         case _ => ("Click to show some hints", gutterHintIcon)
       }
       rhLine.setGutterIconRenderer(gutterIconRenderer(
