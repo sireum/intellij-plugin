@@ -496,7 +496,7 @@ object SireumClient {
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
             content = input,
             line = line,
-            renumberProofSteps = false
+            rewriteKindOpt = org.sireum.None()
           )
         } else {
           var files = ofiles
@@ -524,7 +524,8 @@ object SireumClient {
             files = files,
             vfiles = vfiles,
             line = line,
-            renumberProofStepsUriOpt = org.sireum.None()
+            rewriteUriOpt = org.sireum.None(),
+            rewriteKind = org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps
           )
         }
       )

@@ -127,9 +127,8 @@ final class SlangInsertConstructorValsAction extends SlangRewriteAction {
     org.sireum.server.protocol.Slang.Rewrite.Kind.InsertConstructorVals
 }
 
-final class SlangRenumberProofStepsAction extends SlangRewriteAction {
-  def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type =
-    org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps
+trait SlangTypedRewriteAction extends SlangRewriteAction {
+  def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type
 
   override def actionPerformed(e: AnActionEvent): Unit = {
     val project = e.getProject
@@ -150,14 +149,24 @@ final class SlangRenumberProofStepsAction extends SlangRewriteAction {
     SireumClient.addRequest(id => Vector(
       if (isWorksheet) org.sireum.server.protocol.Slang.Check.Script(
         isBackground = false, false, id, fileUriOpt, text, 0,
-        renumberProofSteps = true
+        rewriteKindOpt = org.sireum.Some(kind)
       ) else org.sireum.server.protocol.Slang.Check.Project(
         isBackground = false, id, org.sireum.Os.path(project.getBasePath).string,
         org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String] + fileUriOpt.get ~> text,
-        org.sireum.ISZ(), 0, fileUriOpt
+        org.sireum.ISZ(), 0, kind, fileUriOpt
       )
     ), project, file, editor, isBackground = false, text, isInterprocedural = false)
   }
+}
+
+final class SlangRenumberProofStepsAction extends SlangTypedRewriteAction {
+  def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type =
+    org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps
+}
+
+final class SlangExpandInduct extends SlangTypedRewriteAction {
+  def kind: org.sireum.server.protocol.Slang.Rewrite.Kind.Type =
+    org.sireum.server.protocol.Slang.Rewrite.Kind.ExpandInduct
 }
 
 class SlangReplaceEnumSymbolsAction extends SlangRewriteAction {

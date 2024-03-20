@@ -185,6 +185,13 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="F"/>
         </action>
 
+        <action id="SlangExpandInduct" class="org.sireum.intellij.SlangExpandInduct"
+                text="Expand @induct"
+                description="Expand @induct">
+            <add-to-group group-id="SlangGroup"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="2"/>
+        </action>
+
         <action id="SireumInsertImplication" class="org.sireum.intellij.SireumInsertImply"
                 text="Imply"
                 description="Insert implication symbol">
