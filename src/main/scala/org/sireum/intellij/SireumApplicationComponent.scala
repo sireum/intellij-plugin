@@ -166,19 +166,11 @@ object SireumApplicationComponent {
 
   def getSireumProcess(sireumHome: org.sireum.Os.Path,
                        command: Seq[String],
-                       queue: BlockingQueue[Vector[(Boolean, String)]],
                        processOutput: String => Unit): scala.sys.process.Process = {
     new Exec().process(command, { os =>
       try {
-        val w = new OutputStreamWriter(os)
-        val lineSep = scala.util.Properties.lineSeparator
         while (!terminated) {
-          for ((shouldLog, m) <- queue.take()) {
-            w.write(m)
-            w.write(lineSep)
-            w.flush()
-            if (shouldLog) SireumClient.writeLog(isRequest = true, m)
-          }
+          Thread.sleep(1000)
         }
       } catch {
         case _: Throwable =>

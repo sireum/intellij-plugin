@@ -51,6 +51,8 @@ import org.sireum.server.protocol.Analysis
 
 import java.awt.font.TextAttribute
 import java.awt.{Color, Font}
+import java.io.{BufferedReader, BufferedWriter, ByteArrayOutputStream, InputStream, InputStreamReader, OutputStreamWriter}
+import java.net.{InetAddress, Socket}
 import java.util.concurrent._
 import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
 
@@ -186,7 +188,49 @@ object SireumClient {
   var shutdown: Boolean = false
   var queue: LinkedBlockingQueue[Vector[(Boolean, String)]] = new LinkedBlockingQueue
   var lastStatusUpdate: Long = System.currentTimeMillis
+  var socket: Socket = null
+  var ir: BufferedReader = null
+  var ow: BufferedWriter = null
 
+  var responseThread: Thread = null
+  var requestThread: Thread = null
+
+  def processResponse(s: String): Unit = {
+    val trimmed = s.trim
+    var shouldLog = false
+    var hasError = false
+
+    def err(): Unit = {
+      shouldLog = true
+      hasError = true
+      val msg = s"Invalid server message: $trimmed"
+      notifyHelper(scala.None, scala.None,
+        org.sireum.server.protocol.Report(org.sireum.ISZ(),
+          org.sireum.message.Message(org.sireum.message.Level.InternalError, org.sireum.None(),
+            "client", msg))
+      )
+    }
+
+    if (trimmed.startsWith("""{  "type" : """)) {
+      try {
+        org.sireum.server.protocol.JSON.toResponse(trimmed) match {
+          case org.sireum.Either.Left(r) =>
+            r match {
+              case _: org.sireum.server.protocol.Status.Response =>
+              case _ => shouldLog = true
+            }
+            processResult(r)
+          case org.sireum.Either.Right(_) => err()
+        }
+      } catch {
+        case _: Throwable => err()
+      }
+    } else {
+      if (trimmed.nonEmpty) shouldLog = true
+    }
+    if (shouldLog) writeLog(isRequest = false, if (hasError) s"Error occurred when processing response: $s" else s)
+
+  }
   def createCoverageColor(intensity: Int): JBColor =
     new JBColor(new Color(129, 62, 200, intensity), new Color(129, 62, 200, intensity))
 
@@ -198,10 +242,21 @@ object SireumClient {
 
   def shutdownServer(): Unit = editorMap.synchronized {
     this.synchronized {
+      queue.clear()
       request = None
       editorMap.clear()
-      queue.add(terminateRequest)
-      queue = new LinkedBlockingQueue
+      if (ow != null) {
+        val content = terminateRequest.head._2
+        ow.write(content)
+        ow.flush()
+        writeLog(isRequest = true, content)
+      }
+      try socket.close() catch { case _: Throwable => }
+      try ir.close() catch { case _: Throwable => }
+      try ow.close() catch { case _: Throwable => }
+      ir = null
+      ow = null
+      socket = null
       processInit.foreach(p => runLater(5000)(() => if (p._1.isAlive()) p._1.destroy()))
       processInit = None
       shutdown = true
@@ -257,46 +312,10 @@ object SireumClient {
       val logFile = sireumHome / ".client.log"
       logFile.removeAll()
       val command = SireumApplicationComponent.getCommand(sireumHome, serverArgs)
-      queue = new LinkedBlockingQueue
+      queue.clear()
       processInit = Some((
         SireumApplicationComponent.getSireumProcess(sireumHome, command,
-          queue, { s =>
-            val trimmed = s.trim
-            var shouldLog = false
-            var hasError = false
-
-            def err(): Unit = {
-              shouldLog = true
-              hasError = true
-              val msg = s"Invalid server message: $trimmed"
-              notifyHelper(scala.Some(p), scala.None,
-                org.sireum.server.protocol.Report(org.sireum.ISZ(),
-                  org.sireum.message.Message(org.sireum.message.Level.InternalError, org.sireum.None(),
-                    "client", msg))
-              )
-            }
-
-            if (trimmed.startsWith("""{  "type" : """)) {
-              try {
-                org.sireum.server.protocol.JSON.toResponse(trimmed) match {
-                  case org.sireum.Either.Left(r) =>
-                    r match {
-                      case _: org.sireum.server.protocol.Status.Response =>
-                      case _ => shouldLog = true
-                    }
-                    processResult(r)
-                  case org.sireum.Either.Right(_) => err()
-                }
-              } catch {
-                case _: Throwable => err()
-              }
-            } else {
-              if (trimmed.nonEmpty) shouldLog = true
-            }
-            if (shouldLog) writeLog(isRequest = false, if (hasError) s"Error occurred when processing response: $s" else s)
-          }),
-        logFile
-      ))
+          s => processResponse(s)), logFile))
       writeLog(isRequest = false, s"Client v${PluginManager.getPlugin(PluginId.getId("org.sireum.intellij")).getVersion}: Started Sireum server ...")
       writeLog(isRequest = false, command.mkString(" ").replace(sireumHome.string.value, if (org.sireum.Os.isWin) "%SIREUM_HOME%" else "$SIREUM_HOME"))
       if (processInit.isEmpty) return
@@ -493,6 +512,7 @@ object SireumClient {
             isBackground = isBackground,
             logikaEnabled = !typeCheckOnly && Util.isLogikaSupportedPlatform,
             id = requestId,
+            rootDirOpt = org.sireum.Some(org.sireum.Os.path(project.getBasePath).string),
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
             content = input,
             line = line,
@@ -520,7 +540,7 @@ object SireumClient {
           Slang.Check.Project(
             isBackground = isBackground,
             id = requestId,
-            proyek = org.sireum.Os.path(project.getBasePath).string,
+            rootDir = org.sireum.Os.path(project.getBasePath).string,
             files = files,
             vfiles = vfiles,
             line = line,
@@ -772,11 +792,25 @@ object SireumClient {
         val offset = r.pos.offset.toInt
         val header = r.info.value.lines().limit(2).map(line => line.replace(';', ' ').
           replace("Result:", "").replace("Result (Cached):", "").trim).toArray.mkString(": ")
+        val message = if (r.query.value.head != '@') s"${r.info}\n${r.query}" else {
+          val p = org.sireum.Os.path(r.query.value.substring(1))
+          val m = try s"${r.info}\n${p.read.value}" catch {
+            case _: Throwable => s"${r.info}\n${r.query}"
+          }
+          p.removeAll()
+          m
+        }
         return Some((line, SummoningReportItem(iproject, file, header, r.info.value, offset,
-          if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, r.query.value)))
+          if (r.isSat) true else r.kind == Smt2Query.Result.Kind.Unsat, message)))
       case r: Logika.Verify.State =>
         import org.sireum._
-        val text = normalizeChars(r.claims.value)
+        val text = normalizeChars(
+          if (r.claims.value.head == '@') {
+            val p = org.sireum.Os.path(r.claims.value.substring(1))
+            val t = p.read.value
+            p.removeAll()
+            t
+          } else r.claims.value)
         val pos = r.posOpt.get
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
@@ -791,7 +825,12 @@ object SireumClient {
         val pos = r.pos
         val line = pos.beginLine.toInt
         val offset = pos.offset.toInt
-        val text = r.message.value
+        val text = if (r.message.value.head == '@') {
+          val p = org.sireum.Os.path(r.message.value.substring(1))
+          val t = p.read.value
+          p.removeAll()
+          t
+        } else r.message.value
         val header = {
           val i = text.indexOf('\n')
           var firstLine = if (i >= 0) text.substring(0, i) else text
@@ -912,12 +951,7 @@ object SireumClient {
           if (0 <= i && i < list.getModel.getSize)
             list.getModel.getElementAt(i) match {
               case sri: SummoningReportItem =>
-                val content: Predef.String = if (sri.message.startsWith(";")) s"${sri.info}\n${sri.message}" else {
-                  val p = org.sireum.Os.path(sri.message)
-                  try s"${sri.info}\n${p.read.value}" catch {
-                    case _: Throwable => sri.info
-                  }
-                }
+                val content: Predef.String = sri.message
                 ApplicationManager.getApplication.invokeLater { () =>
                   f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
                   f.logika.logikaTextArea.setText(normalizeChars(content))
@@ -940,7 +974,7 @@ object SireumClient {
                     FileEditorManager.getInstance(project).openTextEditor(
                       new OpenFileDescriptor(cri.project, cri.file, cri.offset), true)): Runnable)
               case hri: HintReportItem =>
-                var content = normalizeChars(hri.message)
+                var content = hri.message
                 if (LogikaConfigurable.hintMaxColumn > 0) {
                   org.sireum.Scalafmt.format(
                     s"${org.sireum.Scalafmt.minimalConfig}\nmaxColumn = ${LogikaConfigurable.hintMaxColumn}", true,
@@ -1224,6 +1258,50 @@ object SireumClient {
     }
 
     r match {
+      case r: org.sireum.server.protocol.SocketPort =>
+        socket = new Socket(InetAddress.getLoopbackAddress, r.port.toInt)
+        ir = new BufferedReader(new InputStreamReader(socket.getInputStream, "UTF-8"))
+        ow = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream, "UTF-8"))
+        if (responseThread == null) {
+          responseThread = new Thread {
+            override def run(): Unit = {
+              while (true) try {
+                if (ir != null) {
+                  val line = ir.readLine
+                  ApplicationManager.getApplication.invokeLater(() => processResponse(line))
+                } else {
+                  Thread.sleep(1000)
+                }
+              } catch {
+                case _: Throwable =>
+              }
+            }
+          }
+          responseThread.setDaemon(true)
+          responseThread.start()
+        }
+        if (requestThread == null) {
+          requestThread = new Thread {
+            override def run(): Unit = {
+              while (true) try {
+                val lineSep = org.sireum.Os.lineSep.value
+                for ((shouldLog, m) <- queue.take()) {
+                  while (ow == null) {
+                    Thread.sleep(1000)
+                  }
+                  ow.write(m)
+                  ow.write(lineSep)
+                  ow.flush()
+                  if (shouldLog) SireumClient.writeLog(isRequest = true, m)
+                }
+              } catch {
+                case _: Throwable =>
+              }
+            }
+          }
+          requestThread.setDaemon(true)
+          requestThread.start()
+        }
       case r: org.sireum.server.protocol.Status.Response =>
         lastStatusUpdate = System.currentTimeMillis
         usedMemory = r.totalMemory - r.freeMemory

@@ -148,7 +148,7 @@ trait SlangTypedRewriteAction extends SlangRewriteAction {
 
     SireumClient.addRequest(id => Vector(
       if (isWorksheet) org.sireum.server.protocol.Slang.Check.Script(
-        isBackground = false, false, id, fileUriOpt, text, 0,
+        isBackground = false, false, id, org.sireum.Some(org.sireum.Os.path(project.getBasePath).string), fileUriOpt, text, 0,
         rewriteKindOpt = org.sireum.Some(kind)
       ) else org.sireum.server.protocol.Slang.Check.Project(
         isBackground = false, id, org.sireum.Os.path(project.getBasePath).string,
