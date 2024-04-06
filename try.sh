@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 DIR=`pwd`
-cd $SIREUM_HOME/bin/mac/idea/IVE.app/Contents/plugins/
+cd $SIREUM_HOME/.settings/.SireumIVE/plugins/
 rm -fR sireum-intellij-plugin
 unzip $DIR/intellij-plugin.zip
 cd sireum-intellij-plugin/lib

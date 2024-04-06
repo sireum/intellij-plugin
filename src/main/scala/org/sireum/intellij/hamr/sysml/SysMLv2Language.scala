@@ -48,6 +48,7 @@ import org.antlr.intellij.adaptor.psi.ANTLRPsiNode
 import org.antlr.v4.runtime.Parser
 import org.antlr.v4.runtime.tree.ParseTree
 import org.sireum.hamr.sysml._
+import org.sireum.hamr.sysml.parser._
 
 import _root_.java.util
 import javax.swing._
