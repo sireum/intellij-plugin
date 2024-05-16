@@ -48,15 +48,13 @@
 
         <applicationConfigurable id="SireumLogikaConfigurable" instance="org.sireum.intellij.logika.LogikaConfigurable"
                                  displayName="Logika" parentId="SireumConfigurable"/>
+
         <fileTypeFactory implementation="org.sireum.intellij.hamr.sysml.SysMLv2FileTypeFactory" />
         <lang.syntaxHighlighterFactory language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2SyntaxHighlighterFactory"/>
-
         <lang.parserDefinition language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ParserDefinition"/>
         <lang.ast.factory language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ASTFactory"/>
-
         <lang.psiStructureViewFactory language="SysMLv2"
                                       implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2StructureViewFactory"/>
-
         <colorSettingsPage implementation="org.sireum.intellij.hamr.sysml.SysMLv2ColorSettingsPage"/>
         <lang.foldingBuilder
                 language="SysMLv2"
@@ -65,6 +63,18 @@
 
         <!--lang.findUsagesProvider language="SysMLv2"
                                  implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2FindUsagesProvider"/-->
+
+        <fileTypeFactory implementation="org.sireum.intellij.smtlib.SMTLIBV2FileTypeFactory" />
+        <lang.syntaxHighlighterFactory language="SMTLIBv2" implementationClass="org.sireum.intellij.smtlib.SMTLIBV2SyntaxHighlighterFactory"/>
+        <lang.parserDefinition language="SMTLIBv2" implementationClass="org.sireum.intellij.smtlib.SMTLIBv2ParserDefinition"/>
+        <lang.ast.factory language="SMTLIBv2" implementationClass="org.sireum.intellij.smtlib.SMTLIBV2ASTFactory"/>
+        <lang.psiStructureViewFactory language="SMTLIBv2"
+                                      implementationClass="org.sireum.intellij.smtlib.SMTLIBV2StructureViewFactory"/>
+
+        <colorSettingsPage implementation="org.sireum.intellij.smtlib.SMTLIBV2ColorSettingsPage"/>
+        <lang.foldingBuilder
+                language="SMTLIBv2"
+                implementationClass="org.sireum.intellij.smtlib.SMTLIBV2FoldingBuilder"/>
     </extensions>
 
     <actions>

@@ -97,7 +97,8 @@ class SysMLv2SyntaxHighlighter extends SyntaxHighlighterBase {
     ttype match {
       case SysMLv2Lexer.RULE_ID | SysMLv2Lexer.RULE_UNRESTRICTED_NAME => attrKey = SysMLv2SyntaxHighlighter.ID
       case SysMLv2Lexer.RULE_STRING_VALUE => attrKey = SysMLv2SyntaxHighlighter.STRING
-      case SysMLv2Lexer.RULE_SL_NOTE | SysMLv2Lexer.RULE_ML_NOTE => attrKey = SysMLv2SyntaxHighlighter.BLOCK_COMMENT
+      case SysMLv2Lexer.RULE_ML_NOTE => attrKey = SysMLv2SyntaxHighlighter.BLOCK_COMMENT
+      case SysMLv2Lexer.RULE_SL_NOTE => attrKey = SysMLv2SyntaxHighlighter.LINE_COMMENT
       case SysMLv2Lexer.RULE_REGULAR_COMMENT => attrKey = SysMLv2SyntaxHighlighter.DOC_COMMENT
       case SysMLv2Lexer.RULE_DECIMAL_VALUE | SysMLv2Lexer.RULE_EXP_VALUE => attrKey = SysMLv2SyntaxHighlighter.CONSTANT
       case _ if isKeyword(ttype) => attrKey = SysMLv2SyntaxHighlighter.KEYWORD
