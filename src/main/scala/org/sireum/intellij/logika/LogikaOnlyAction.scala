@@ -123,7 +123,7 @@ trait LogikaCheckAction extends LogikaOnlyAction {
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
     if (editor == null) return
     SireumClient.enableEditor(project, file, editor)
-    SireumClient.analyze(project, file, editor, getLine(editor), isBackground = false, isInterprocedural = isInterprocedural)
+    SireumClient.analyze(isSlang = true, project, file, editor, getLine(editor), isBackground = false, isInterprocedural = isInterprocedural)
     e.getPresentation.setEnabled(true)
   }
 

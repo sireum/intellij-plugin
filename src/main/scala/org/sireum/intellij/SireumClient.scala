@@ -487,12 +487,12 @@ object SireumClient {
     rwEvalTrace = LogikaConfigurable.rwEvalTrace
   )
 
-  def analyze(project: Project, file: VirtualFile, editor: Editor, line: Int,
+  def analyze(isSlang: Boolean, project: Project, file: VirtualFile, editor: Editor, line: Int,
               isBackground: Boolean, isInterprocedural: Boolean,
               typeCheckOnly: Boolean = false): Unit = {
     if (editor.isDisposed || !isEnabled(editor)) return
     val input = editor.getDocument.getText
-    var ofiles = SireumClient.getModifiedFiles(project, file)
+    var ofiles = SireumClient.getModifiedFiles(isSlang, project, file)
     if (typeCheckOnly && ofiles.isEmpty) {
       ofiles = ofiles + org.sireum.Os.path(file.getCanonicalPath).canon.string ~> input
     }
@@ -506,7 +506,32 @@ object SireumClient {
       val isScript = p.ext.value == "sc"
       Vector(
         Logika.Verify.Config(LogikaConfigurable.infoFlow, getLogikaConfig(project, isBackground, isScript, isInterprocedural)),
-        if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || isScript ||
+        if (!isSlang) {
+          var files = ofiles
+          var vfiles = org.sireum.ISZ[org.sireum.String]()
+          try {
+            if (!typeCheckOnly) {
+              val content = editor.getDocument.getText
+              files = files + p.string ~> content
+              if (Util.isLogikaSupportedPlatform) {
+                vfiles = vfiles :+ p.string
+              }
+            }
+          } catch {
+            case t: Throwable =>
+              logStackTrace(t)
+              return Vector()
+          }
+          SysMLv2.Check.Files(
+            isBackground = isBackground,
+            logikaEnabled = !typeCheckOnly && Util.isLogikaSupportedPlatform,
+            id = requestId,
+            rootDir = org.sireum.Os.path(project.getBasePath).string,
+            files = files,
+            vfiles = vfiles,
+            line = line,
+          )
+        } else if (!(org.sireum.Os.path(project.getBasePath) / "bin" / "project.cmd").exists || isScript ||
           p.ext.value == "cmd" || p.ext.value == "logika") {
           Slang.Check.Script(
             isBackground = isBackground,
@@ -560,12 +585,18 @@ object SireumClient {
       return org.sireum.logika.Config.BackgroundMode.Disabled
     }
     val path = pOpt.get
-    val defaultConfig = getLogikaConfig(project, isBackground = false, path.ext.value != "scala",
-      isInterprocedural = false)
-    val maxCores = Runtime.getRuntime.availableProcessors
-    val config = org.sireum.logika.options.OptionsUtil.mineConfig(defaultConfig, maxCores, "file", org.sireum.HashMap.empty,
-      editor.getDocument.getText, org.sireum.None(), org.sireum.message.Reporter.create)
-    config.background
+    if (path.ext.value == "sysml") {
+      val defaultConfig = getLogikaConfig(project, isBackground = false, isScript = false,
+        isInterprocedural = false)
+      defaultConfig.background
+    } else {
+      val defaultConfig = getLogikaConfig(project, isBackground = false, path.ext.value != "scala",
+        isInterprocedural = false)
+      val maxCores = Runtime.getRuntime.availableProcessors
+      val config = org.sireum.logika.options.OptionsUtil.mineConfig(defaultConfig, maxCores, "file", org.sireum.HashMap.empty,
+        editor.getDocument.getText, org.sireum.None(), org.sireum.message.Reporter.create)
+      config.background
+    }
   }
 
   def analyzeOpt(project: Project, file: VirtualFile, editor: Editor, line: Int, isBackground: Boolean): Unit = {
@@ -573,34 +604,38 @@ object SireumClient {
     if (pOpt.isEmpty) {
       return
     }
-    val (isSireum, isLogika) = Util.isSireumOrLogikaFile(pOpt.get)(org.sireum.String(editor.getDocument.getText))
-    if (isLogika) {
+    if (file.getExtension == ".sysml") {
       enableEditor(project, file, editor)
-      if (isBackground)
-        analyze(project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
-    } else if (isSireum) {
-      enableEditor(project, file, editor)
-      if (isBackground)
-        analyze(project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
+      analyze(isSlang = false, project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
+    } else {
+      val (isSireum, isLogika) = Util.isSireumOrLogikaFile(pOpt.get)(org.sireum.String(editor.getDocument.getText))
+      if (isLogika || isSireum) {
+        enableEditor(project, file, editor)
+        if (isBackground)
+          analyze(isSlang = true, project, file, editor, line, isBackground = isBackground, isInterprocedural = false)
+      }
     }
   }
 
-  def getModifiedFiles(project: Project, file: VirtualFile): org.sireum.HashSMap[org.sireum.String, org.sireum.String] = {
+  def getModifiedFiles(isSlang: Boolean, project: Project, file: VirtualFile): org.sireum.HashSMap[org.sireum.String, org.sireum.String] = {
     var r = org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String]
     val pOpt = Util.getPath(file)
     if (pOpt.isEmpty) return r
-    if (pOpt.get.ext === ".sc") return r
+    if (isSlang && pOpt.get.ext === ".sc") return r
     for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors if fileEditor.isModified) scala.util.Try {
       val pathOpt = Util.getPath(fileEditor.getFile)
       fileEditor match {
         case fileEditor: TextEditor if pathOpt.nonEmpty =>
           val path = pathOpt.get
           val e = fileEditor.getEditor
-          if (path.ext.value == "scala") {
+          if (isSlang && path.ext.value == "scala") {
             val content = e.getDocument.getText
             if (org.sireum.lang.parser.SlangParser.detectSlang(org.sireum.Some(path.toUri), content)._1) {
               r = r + path.string ~> content
             }
+          } else if (!isSlang && path.ext.value == "sysml") {
+            val content = e.getDocument.getText
+            r = r + path.string ~> content
           }
         case _ =>
       }

@@ -64,6 +64,12 @@ object Util {
       case _ => (false, false)
     }
 
+  def isSysMLv2File(project: Project): Boolean =
+    getFilePath(project) match {
+      case Some(p) => p.ext.value == "sysml"
+      case _ => false
+    }
+
   def isProyek(project: Project): Boolean = {
     val root = org.sireum.Os.path(project.getBasePath)
     return (root / "bin" / "project.cmd").isFile

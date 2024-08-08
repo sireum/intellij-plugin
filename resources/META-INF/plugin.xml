@@ -126,6 +126,18 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
 
+        <group id="SysMLGroup" text="SysMLv2" popup="true">
+            <add-to-group group-id="SireumGroup" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </group>
+
+        <action id="SysMLv2CheckActionFile" class="org.sireum.intellij.SysMLv2CheckActionFile"
+                text="Type Check"
+                description="Type check">
+            <add-to-group group-id="SysMLGroup" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl X"/>
+        </action>
+
         <group id="SlangInsertTemplate" text="Insert Template" popup="true">
             <add-to-group group-id="SlangGroup" anchor="last"/>
         </group>
