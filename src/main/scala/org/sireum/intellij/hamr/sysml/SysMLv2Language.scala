@@ -372,6 +372,7 @@ class SysMLv2FoldingBuilder extends FoldingBuilderEx with DumbAware {
             val t = et.getANTLRTokenType
             val j = t match {
               case LBRACE => searchRightIndex(RBRACE)
+              case OP_SLASH_STAR_LBRACE => searchRightIndex(OP_RBRACE_STAR_SLASH)
               case _ => -1
             }
             if (j >= 0) {
