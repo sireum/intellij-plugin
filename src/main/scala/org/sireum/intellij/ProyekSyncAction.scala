@@ -25,7 +25,7 @@
 
 package org.sireum.intellij
 
-import com.intellij.configurationStore.StoreReloadManager
+import com.intellij.configurationStore.{StoreReloadManager, StoreReloadManagerImpl}
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.{KillableColoredProcessHandler, ProcessEvent, ProcessListener}
 import com.intellij.notification.{Notification, NotificationType}
@@ -34,6 +34,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.{ProgressIndicator, ProgressManager, Task}
 import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.wm.impl.ToolWindowImpl
 
 import java.nio.charset.Charset
 
@@ -45,6 +46,7 @@ object ProyekSyncAction {
         ProgressManager.getInstance().run(new Task.Backgroundable(iproject, "Proyek") {
           override def run(indicator: ProgressIndicator): Unit = {
             val srm: StoreReloadManager = StoreReloadManager.Companion.getInstance(iproject)
+            srm.scheduleProcessingChangedFiles()
             try {
               srm.blockReloadingProjectOnExternalChanges()
               indicator.setIndeterminate(true)
@@ -72,7 +74,9 @@ object ProyekSyncAction {
                 forms.consoleView.clear()
                 forms.consoleView.attachToProcess(processHandler)
                 ApplicationManager.getApplication.invokeLater(() => {
-                  forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
+                  forms.toolWindow.activate(() => {
+                    forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
+                  })
                 })
               })
               processHandler.addProcessListener(new ProcessListener {
