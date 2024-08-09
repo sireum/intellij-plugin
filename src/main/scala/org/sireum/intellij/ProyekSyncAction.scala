@@ -43,8 +43,18 @@ object ProyekSyncAction {
     var iproject = ip
     val basePath = ip.getBasePath
     StoreReloadManager.Companion.getInstance(ip).reloadProject()
+    iproject = null
     ApplicationManager.getApplication.invokeLater(() => {
-      iproject = ProjectManagerEx.getInstanceEx.loadAndOpenProject(basePath)
+      while (iproject == null) {
+        for (p <- ProjectManager.getInstance().getOpenProjects if p.getBasePath == basePath) {
+          iproject = p
+        }
+        try {
+          Thread.sleep(200)
+        } catch {
+          case _: Throwable =>
+        }
+      }
       import org.sireum._
       SireumApplicationComponent.getSireumHome(ip) match {
         case scala.Some(home) =>
