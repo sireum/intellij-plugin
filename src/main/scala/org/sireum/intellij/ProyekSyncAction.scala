@@ -32,88 +32,97 @@ import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{AnAction, AnActionEvent}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.{ProgressIndicator, ProgressManager, Task}
-import com.intellij.openapi.project.{Project => IProject}
+import com.intellij.openapi.project.ex.ProjectManagerEx
+import com.intellij.openapi.project.{ProjectManager, Project => IProject}
 import com.intellij.openapi.util.Key
 
 import java.nio.charset.Charset
 
 object ProyekSyncAction {
-  def sync(iproject: IProject): Unit = {
-    import org.sireum._
-    SireumApplicationComponent.getSireumHome(iproject) match {
-      case scala.Some(home) =>
-        ProgressManager.getInstance().run(new Task.Backgroundable(iproject, "Proyek") {
-          override def run(indicator: ProgressIndicator): Unit = {
-            val srm: StoreReloadManager = StoreReloadManager.Companion.getInstance(iproject)
-            srm.scheduleProcessingChangedFiles()
-            try {
-              srm.blockReloadingProjectOnExternalChanges()
-              indicator.setIndeterminate(true)
-              indicator.setText("Importing project ...")
-              val cmds = new java.util.ArrayList[Predef.String]
-              if (Os.isWin) {
-                cmds.add("cmd")
-                cmds.add("/c")
-                cmds.add("sireum.bat")
-              } else {
-                cmds.add("./sireum")
-              }
-              cmds.add("proyek")
-              cmds.add("ive")
-              cmds.add("--force")
-              cmds.add(iproject.getBasePath)
-              val generalCommandLine = new GeneralCommandLine(cmds)
-              generalCommandLine.setWorkDirectory((home / "bin").string.value)
-              generalCommandLine.setCharset(Charset.forName("UTF-8"))
-              val env = new java.util.HashMap[java.lang.String, java.lang.String]()
-              env.put("SIREUM_HOME", home.string.value)
-              generalCommandLine.withEnvironment(env)
-              val processHandler = new KillableColoredProcessHandler(generalCommandLine)
-              SireumClient.sireumToolWindowFactory(iproject, forms => {
-                forms.consoleView.clear()
-                forms.consoleView.attachToProcess(processHandler)
-                ApplicationManager.getApplication.invokeLater(() => {
-                  forms.toolWindow.activate(() => {
-                    forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
+  def sync(ip: IProject): Unit = {
+    var iproject = ip
+    val basePath = ip.getBasePath
+    StoreReloadManager.Companion.getInstance(ip).reloadProject()
+    ApplicationManager.getApplication.invokeLater(() => {
+      iproject = ProjectManagerEx.getInstanceEx.loadAndOpenProject(basePath)
+      import org.sireum._
+      SireumApplicationComponent.getSireumHome(ip) match {
+        case scala.Some(home) =>
+          ProgressManager.getInstance().run(new Task.Backgroundable(iproject, "Proyek") {
+            override def run(indicator: ProgressIndicator): Unit = {
+              val srm: StoreReloadManager = StoreReloadManager.Companion.getInstance(iproject)
+              val baseDir = iproject.getBaseDir
+              try {
+                srm.blockReloadingProjectOnExternalChanges()
+                srm.scheduleProcessingChangedFiles()
+                indicator.setIndeterminate(true)
+                indicator.setText("Importing project ...")
+                val cmds = new java.util.ArrayList[Predef.String]
+                if (Os.isWin) {
+                  cmds.add("cmd")
+                  cmds.add("/c")
+                  cmds.add("sireum.bat")
+                } else {
+                  cmds.add("./sireum")
+                }
+                cmds.add("proyek")
+                cmds.add("ive")
+                cmds.add("--force")
+                cmds.add(iproject.getBasePath)
+                val generalCommandLine = new GeneralCommandLine(cmds)
+                generalCommandLine.setWorkDirectory((home / "bin").string.value)
+                generalCommandLine.setCharset(Charset.forName("UTF-8"))
+                val env = new java.util.HashMap[java.lang.String, java.lang.String]()
+                env.put("SIREUM_HOME", home.string.value)
+                generalCommandLine.withEnvironment(env)
+                val processHandler = new KillableColoredProcessHandler(generalCommandLine)
+                SireumClient.sireumToolWindowFactory(iproject, forms => {
+                  forms.consoleView.clear()
+                  forms.consoleView.attachToProcess(processHandler)
+                  ApplicationManager.getApplication.invokeLater(() => {
+                    forms.toolWindow.activate(() => {
+                      forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Console"))
+                    })
                   })
                 })
-              })
-              processHandler.addProcessListener(new ProcessListener {
-                override def processTerminated(event: ProcessEvent): Unit = {
-                  iproject.getBaseDir.refresh(false, true)
-                  srm.reloadProject()
-                  if (event.getExitCode == 0) {
-                    Util.notify(new Notification(
-                      SireumClient.groupId, "Proyek synchronized",
-                      """<p>Proyek synchronization was successful</p>""",
-                      NotificationType.INFORMATION), null, shouldExpire = true)
-                  } else {
-                    Util.notify(new Notification(
-                      SireumClient.groupId, "Proyek failed to synchronize",
-                      "<p>Could not synchronize Proyek</p>",
-                      NotificationType.ERROR), null, shouldExpire = true)
+                processHandler.addProcessListener(new ProcessListener {
+                  override def processTerminated(event: ProcessEvent): Unit = {
+                    baseDir.refresh(false, true)
+                    srm.reloadProject()
+                    if (event.getExitCode == 0) {
+                      Util.notify(new Notification(
+                        SireumClient.groupId, "Proyek synchronized",
+                        """<p>Proyek synchronization was successful</p>""",
+                        NotificationType.INFORMATION), null, shouldExpire = true)
+                    } else {
+                      Util.notify(new Notification(
+                        SireumClient.groupId, "Proyek failed to synchronize",
+                        "<p>Could not synchronize Proyek</p>",
+                        NotificationType.ERROR), null, shouldExpire = true)
+                    }
                   }
+
+                  override def startNotified(event: ProcessEvent): Unit = {}
+
+                  override def onTextAvailable(event: ProcessEvent, outputType: Key[_]): Unit = {}
+                })
+                processHandler.startNotify()
+                processHandler.waitFor()
+              } finally {
+                if (srm.isReloadBlocked) {
+                  srm.unblockReloadingProjectOnExternalChanges()
                 }
-
-                override def startNotified(event: ProcessEvent): Unit = {}
-
-                override def onTextAvailable(event: ProcessEvent, outputType: Key[_]): Unit = {}
-              })
-              processHandler.startNotify()
-              processHandler.waitFor()
-            } finally {
-              if (srm.isReloadBlocked) {
-                srm.unblockReloadingProjectOnExternalChanges()
               }
             }
-          }
-        })
-      case _ =>
-        Util.notify(new Notification(
-          SireumClient.groupId, "Sireum home not set",
-          "Please set Sireum home directory first",
-          NotificationType.INFORMATION), iproject, shouldExpire = true)
-    }
+          })
+        case _ =>
+          Util.notify(new Notification(
+            SireumClient.groupId, "Sireum home not set",
+            "Please set Sireum home directory first",
+            NotificationType.INFORMATION), iproject, shouldExpire = true)
+      }
+
+    })
   }
 }
 class ProyekSyncAction extends AnAction {
