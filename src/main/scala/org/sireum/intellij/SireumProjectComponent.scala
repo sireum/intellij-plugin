@@ -29,6 +29,7 @@ import com.intellij.notification.{Notification, NotificationListener, Notificati
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.ProjectComponent
 import com.intellij.openapi.fileEditor.{FileEditorManager, FileEditorManagerEvent, FileEditorManagerListener, TextEditor}
+import com.intellij.openapi.progress.impl.CoreProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.{ToolWindowAnchor, ToolWindowManager, WindowManager}
@@ -80,6 +81,10 @@ class SireumProjectComponent(iproject: Project) extends ProjectComponent {
 
       if (SireumApplicationComponent.startup) {
         SireumClient.init(iproject)
+      }
+
+      while (!CoreProgressManager.getCurrentIndicators.isEmpty) {
+        Thread.sleep(1000)
       }
 
       if (Util.recommendReload(iproject)) {
