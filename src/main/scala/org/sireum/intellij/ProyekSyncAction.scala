@@ -28,7 +28,7 @@ package org.sireum.intellij
 import com.intellij.configurationStore.StoreReloadManager
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.{KillableColoredProcessHandler, ProcessEvent, ProcessListener}
-import com.intellij.notification.{Notification, NotificationListener, NotificationType}
+import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{AnAction, AnActionEvent}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.{ProgressIndicator, ProgressManager, Task}
@@ -36,7 +36,6 @@ import com.intellij.openapi.project.{Project => IProject}
 import com.intellij.openapi.util.Key
 
 import java.nio.charset.Charset
-import javax.swing.event.HyperlinkEvent
 
 object ProyekSyncAction {
   def sync(iproject: IProject): Unit = {
@@ -83,10 +82,8 @@ object ProyekSyncAction {
                   if (event.getExitCode == 0) {
                     Util.notify(new Notification(
                       SireumClient.groupId, "Proyek synchronized",
-                      """<p>Proyek synchronization was successful. <a href="">Restart</a>?</p>""",
-                      NotificationType.INFORMATION, (_: Notification, _: HyperlinkEvent) => {
-                        ApplicationManager.getApplication.invokeLater(() => ApplicationManager.getApplication.restart())
-                      }), null, scala.Some(8000))
+                      """<p>Proyek synchronization was successful</p>""",
+                      NotificationType.INFORMATION), null, shouldExpire = true)
                   } else {
                     Util.notify(new Notification(
                       SireumClient.groupId, "Proyek failed to synchronize",
