@@ -37,6 +37,7 @@ import com.intellij.openapi.project.{ProjectManager, Project => IProject}
 import com.intellij.openapi.util.Key
 
 import java.nio.charset.Charset
+import javax.swing.event.HyperlinkEvent
 
 object ProyekSyncAction {
   def sync(ip: IProject): Unit = {
@@ -102,8 +103,10 @@ object ProyekSyncAction {
                     if (event.getExitCode == 0) {
                       Util.notify(new Notification(
                         SireumClient.groupId, "Proyek synchronized",
-                        """<p>Proyek synchronization was successful</p>""",
-                        NotificationType.INFORMATION), null, shouldExpire = true)
+                        """<p>Proyek synchronization was successful. <a href="">Restart</a>?</p>""",
+                        NotificationType.INFORMATION, (_: Notification, _: HyperlinkEvent) => {
+                          ApplicationManager.getApplication.invokeLater(() => ApplicationManager.getApplication.restart())
+                        }), null, scala.Some(8000))
                     } else {
                       Util.notify(new Notification(
                         SireumClient.groupId, "Proyek failed to synchronize",
