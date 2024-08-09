@@ -156,7 +156,7 @@ object LogikaConfigurable {
     smt2Seq = pc.getBoolean(smt2SeqOptsKey, smt2Seq)
     smt2Simplify = pc.getBoolean(smt2SimplifyKey, smt2Simplify)
     val defaultOpts = defaultSmt2ValidOpts + ";" + defaultSmt2SatOpts + ";" + Smt2.validTimeoutInMs + ";" + Smt2.rlimit
-    if (defaultOpts != pc.getValue(smt2DefaultConfigsKey)) {
+    if (defaultOpts != pc.getValue(smt2DefaultConfigsKey, defaultOpts)) {
       Util.notify(new Notification(SireumClient.groupId, "Update Logika SMT2 default configurations?",
         """<p>Logika SMT2 default configurations have changed. <a href="">Update</a>?</p>""",
         NotificationType.INFORMATION, new NotificationListener.Adapter {
