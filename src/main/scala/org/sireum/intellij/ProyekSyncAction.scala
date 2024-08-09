@@ -64,6 +64,9 @@ object ProyekSyncAction {
               val generalCommandLine = new GeneralCommandLine(cmds)
               generalCommandLine.setWorkDirectory((home / "bin").string.value)
               generalCommandLine.setCharset(Charset.forName("UTF-8"))
+              val env = new java.util.HashMap[java.lang.String, java.lang.String]()
+              env.put("SIREUM_HOME", home.string.value)
+              generalCommandLine.withEnvironment(env)
               val processHandler = new KillableColoredProcessHandler(generalCommandLine)
               SireumClient.sireumToolWindowFactory(iproject, forms => {
                 forms.consoleView.clear()
@@ -80,12 +83,12 @@ object ProyekSyncAction {
                     Util.notify(new Notification(
                       SireumClient.groupId, "Proyek synchronized",
                       """<p>Proyek synchronization was successful</p>""",
-                      NotificationType.INFORMATION), iproject, shouldExpire = true)
+                      NotificationType.INFORMATION), null, shouldExpire = true)
                   } else {
                     Util.notify(new Notification(
                       SireumClient.groupId, "Proyek failed to synchronize",
                       "<p>Could not synchronize Proyek</p>",
-                      NotificationType.ERROR), iproject, shouldExpire = true)
+                      NotificationType.ERROR), null, shouldExpire = true)
                   }
                 }
 
