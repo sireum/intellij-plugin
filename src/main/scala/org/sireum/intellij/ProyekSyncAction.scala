@@ -32,7 +32,6 @@ import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{AnAction, AnActionEvent}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.{ProgressIndicator, ProgressManager, Task}
-import com.intellij.openapi.project.ex.ProjectManagerEx
 import com.intellij.openapi.project.{ProjectManager, Project => IProject}
 import com.intellij.openapi.util.Key
 
@@ -85,6 +84,16 @@ object ProyekSyncAction {
                 generalCommandLine.setCharset(Charset.forName("UTF-8"))
                 val env = new java.util.HashMap[java.lang.String, java.lang.String]()
                 env.put("SIREUM_HOME", home.string.value)
+                org.sireum.Os.javaHomeOpt(org.sireum.Os.kind, org.sireum.Some(home)) match {
+                  case org.sireum.Some(p) =>
+                    env.put("JAVA_HOME", p.string.value)
+                  case _ =>
+                }
+                org.sireum.Os.scalaHomeOpt(org.sireum.Some(home)) match {
+                  case org.sireum.Some(p) =>
+                    env.put("SCALA_HOME", p.string.value)
+                  case _ =>
+                }
                 generalCommandLine.withEnvironment(env)
                 val processHandler = new KillableColoredProcessHandler(generalCommandLine)
                 SireumClient.sireumToolWindowFactory(iproject, forms => {
