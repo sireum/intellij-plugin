@@ -28,6 +28,7 @@ import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{AnAction, AnActionEvent, CommonDataKeys}
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileChooser.{FileChooser, FileChooserDescriptor, FileChooserDescriptorFactory}
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -37,7 +38,7 @@ import java.awt.Color
 import java.awt.event.{ActionEvent, ActionListener, KeyEvent, KeyListener}
 import javax.swing.event.{DocumentEvent, DocumentListener}
 import javax.swing.text.Document
-import javax.swing.{JComponent, JDialog, JFrame, JLabel, JTextField, KeyStroke}
+import javax.swing.{JButton, JComponent, JDialog, JFrame, JLabel, JTextField, KeyStroke}
 
 object SireumAction {
   val infoTitle: String = "Sireum Info"
@@ -99,7 +100,7 @@ final class ConfigureHAMRCodeGenAction extends SireumAction {
 
   override def actionPerformed(e: AnActionEvent): Unit = {
     e.getPresentation.setEnabled(false)
-    val title = "Configure HAMR CodeGen"
+    val title = "Configure HAMR Code Generation Options"
     val dialog = new JDialog(new JFrame(title), title, true)
     val f = new HAMRCodeGenForm()
     val labelColor = f.outputLabel.getForeground
@@ -143,7 +144,8 @@ final class ConfigureHAMRCodeGenAction extends SireumAction {
         case _ => false
       }
     }
-    def updateOutput(): Unit = updateLabel(() => org.sireum.Os.path(f.outputTextField.getText).isWritable, f.outputLabel)
+    val projectPath: org.sireum.Os.Path = org.sireum.Os.path(e.getProject.getBasePath)
+    def updateOutput(): Unit = updateLabel(() => f.outputTextField.getText.nonEmpty && (projectPath / f.outputTextField.getText).isWritable, f.outputLabel)
     def updatePackage(): Unit = updateLabel(() => {
       val text = f.packageTextField.getText
       text.nonEmpty &&
@@ -152,10 +154,10 @@ final class ConfigureHAMRCodeGenAction extends SireumAction {
     }, f.packageLabel)
     def updateSeqSize(): Unit = updateLabel(() => isPosLongOpt(f.seqSizeTextField.getText.toLongOption), f.seqSizeLabel)
     def updateStringSize(): Unit = updateLabel(() => isPosLongOpt(f.stringSizeTextField.getText.toLongOption), f.stringSizeLabel)
-    def updateCOutput(): Unit = updateLabel(() => org.sireum.Os.path(f.cOutputTextField.getText).isWritable, f.cOutputLabel)
-    def updateAux(): Unit = updateLabel(() => f.auxTextField.getText.isEmpty || org.sireum.Os.path(f.auxTextField.getText).exists, f.auxLabel)
-    def updateSeL4Output(): Unit = updateLabel(() => org.sireum.Os.path(f.seL4OutputTextField.getText).isWritable, f.seL4OutputLabel)
-    def updateAuxSeL4(): Unit = updateLabel(() => f.auxSeL4TextField.getText.isEmpty || org.sireum.Os.path(f.auxSeL4TextField.getText).exists, f.auxSeL4Label)
+    def updateCOutput(): Unit = updateLabel(() => f.cOutputTextField.getText.nonEmpty && (projectPath / f.cOutputTextField.getText).isWritable, f.cOutputLabel)
+    def updateAux(): Unit = updateLabel(() => f.auxTextField.getText.isEmpty || (projectPath / f.auxTextField.getText).exists, f.auxLabel)
+    def updateSeL4Output(): Unit = updateLabel(() => f.seL4OutputTextField.getText.nonEmpty && (projectPath / f.seL4OutputTextField.getText).isWritable, f.seL4OutputLabel)
+    def updateAuxSeL4(): Unit = updateLabel(() => f.auxSeL4TextField.getText.isEmpty || (projectPath / f.auxSeL4TextField.getText).exists, f.auxSeL4Label)
     updateOutput()
     updatePackage()
     updateSeqSize()
@@ -212,6 +214,23 @@ final class ConfigureHAMRCodeGenAction extends SireumAction {
           f.camkesPanel.setVisible(true)
       }
     })
+    def addFileChooser(button: JButton, tf: JTextField): Unit = {
+      button.addActionListener((_: ActionEvent) => {
+        FileChooser.chooseFile(
+          FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+          e.getProject, null, (f: VirtualFile) => {
+            Util.getPath(f) match {
+              case Some(p) => tf.setText(projectPath.relativize(p).string.value)
+              case _ =>
+            }
+          })
+      })
+    }
+    addFileChooser(f.browseOutputButton, f.outputTextField)
+    addFileChooser(f.cOutputBrowseButton, f.cOutputTextField)
+    addFileChooser(f.auxBrowseButton, f.auxTextField)
+    addFileChooser(f.seL4OutputBrowseButton, f.seL4OutputTextField)
+    addFileChooser(f.auxSeL4BrowseButton, f.auxSeL4TextField)
     dialog.add(f.contentPanel)
     dialog.pack()
     f.platformComboBox.setSelectedIndex(0)
