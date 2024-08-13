@@ -138,6 +138,12 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl X"/>
         </action>
 
+        <action id="ConfigureHAMRCodeGenAction" class="org.sireum.intellij.ConfigureHAMRCodeGenAction"
+                text="Configure HAMR codegen ..."
+                description="Configure HAMR Code Generation">
+            <add-to-group group-id="SysMLGroup" anchor="last"/>
+        </action>
+
         <group id="SlangInsertTemplate" text="Insert Template" popup="true">
             <add-to-group group-id="SlangGroup" anchor="last"/>
         </group>

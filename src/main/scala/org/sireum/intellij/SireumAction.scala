@@ -31,6 +31,13 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import org.sireum.intellij.hamr.HAMRCodeGenForm
+
+import java.awt.Color
+import java.awt.event.{ActionEvent, ActionListener, KeyEvent, KeyListener}
+import javax.swing.event.{DocumentEvent, DocumentListener}
+import javax.swing.text.Document
+import javax.swing.{JComponent, JDialog, JFrame, JLabel, JTextField, KeyStroke}
 
 object SireumAction {
   val infoTitle: String = "Sireum Info"
@@ -78,6 +85,149 @@ final class SysMLv2CheckActionFile extends SireumAction {
     if (editor == null) return
     SireumClient.enableEditor(project, file, editor)
     SireumClient.analyze(isSlang = false, project, file, editor, 0, isBackground = false, isInterprocedural = false, typeCheckOnly = true)
+    e.getPresentation.setEnabled(true)
+  }
+}
+
+final class ConfigureHAMRCodeGenAction extends SireumAction {
+  override def update(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
+    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null &&
+      Util.isSysMLv2File(project))
+  }
+
+  override def actionPerformed(e: AnActionEvent): Unit = {
+    e.getPresentation.setEnabled(false)
+    val title = "Configure HAMR CodeGen"
+    val dialog = new JDialog(new JFrame(title), title, true)
+    val f = new HAMRCodeGenForm()
+    val labelColor = f.outputLabel.getForeground
+    def isValid: Boolean = {
+      f.platformComboBox.getSelectedItem.toString match {
+        case "JVM" =>
+          f.outputLabel.getForeground != Color.RED &&
+            f.stringSizeLabel.getForeground != Color.RED &&
+            f.seqSizeLabel.getForeground != Color.RED
+        case "macOS" | "Linux" | "Cygwin" =>
+          f.outputLabel.getForeground != Color.RED &&
+            f.stringSizeLabel.getForeground != Color.RED &&
+            f.seqSizeLabel.getForeground != Color.RED &&
+            f.cOutputLabel.getForeground != Color.RED &&
+            f.auxLabel.getForeground != Color.RED &&
+            f.seL4OutputLabel.getForeground != Color.RED &&
+            f.auxSeL4Label.getForeground != Color.RED
+        case "seL4_Only" | "seL4_TB" =>
+            f.seL4OutputLabel.getForeground != Color.RED &&
+            f.auxSeL4Label.getForeground != Color.RED
+      }
+    }
+    def updateLabel(pred: () => Boolean, label: JLabel): Unit = {
+      if (pred()) {
+        label.setForeground(labelColor)
+      } else {
+        label.setForeground(Color.RED)
+      }
+      f.okButton.setEnabled(isValid)
+    }
+    def addChangeListener(d: Document, f: () => Unit): Unit = {
+      d.addDocumentListener(new DocumentListener {
+        override def insertUpdate(e: DocumentEvent): Unit = f()
+        override def removeUpdate(e: DocumentEvent): Unit = f()
+        override def changedUpdate(e: DocumentEvent): Unit = f()
+      })
+    }
+    def isPosLongOpt(lOpt: Option[Long]): Boolean = {
+      lOpt match {
+        case Some(l) => l > 0
+        case _ => false
+      }
+    }
+    def updateOutput(): Unit = updateLabel(() => org.sireum.Os.path(f.outputTextField.getText).isWritable, f.outputLabel)
+    def updatePackage(): Unit = updateLabel(() => {
+      val text = f.packageTextField.getText
+      text.nonEmpty &&
+        text.headOption.forall(Character.isJavaIdentifierStart) &&
+        text.tail.forall(Character.isJavaIdentifierPart)
+    }, f.packageLabel)
+    def updateSeqSize(): Unit = updateLabel(() => isPosLongOpt(f.seqSizeTextField.getText.toLongOption), f.seqSizeLabel)
+    def updateStringSize(): Unit = updateLabel(() => isPosLongOpt(f.stringSizeTextField.getText.toLongOption), f.stringSizeLabel)
+    def updateCOutput(): Unit = updateLabel(() => org.sireum.Os.path(f.cOutputTextField.getText).isWritable, f.cOutputLabel)
+    def updateAux(): Unit = updateLabel(() => f.auxTextField.getText.isEmpty || org.sireum.Os.path(f.auxTextField.getText).exists, f.auxLabel)
+    def updateSeL4Output(): Unit = updateLabel(() => org.sireum.Os.path(f.seL4OutputTextField.getText).isWritable, f.seL4OutputLabel)
+    def updateAuxSeL4(): Unit = updateLabel(() => f.auxSeL4TextField.getText.isEmpty || org.sireum.Os.path(f.auxSeL4TextField.getText).exists, f.auxSeL4Label)
+    updateOutput()
+    updatePackage()
+    updateSeqSize()
+    updateStringSize()
+    updateCOutput()
+    updateAux()
+    updateSeL4Output()
+    updateAuxSeL4()
+    addChangeListener(f.outputTextField.getDocument, updateOutput _)
+    addChangeListener(f.packageTextField.getDocument, updatePackage _)
+    addChangeListener(f.seqSizeTextField.getDocument, updateSeqSize _)
+    addChangeListener(f.stringSizeTextField.getDocument, updateStringSize _)
+    addChangeListener(f.cOutputTextField.getDocument, updateCOutput _)
+    addChangeListener(f.auxTextField.getDocument, updateAux _)
+    addChangeListener(f.seL4OutputTextField.getDocument, updateSeL4Output _)
+    addChangeListener(f.auxSeL4TextField.getDocument, updateAuxSeL4 _)
+    f.platformComboBox.addActionListener((_: ActionEvent) => {
+      f.platformComboBox.getSelectedItem.toString match {
+        case "JVM" =>
+          f.outputLabel.setVisible(true)
+          f.outputTextField.setVisible(true)
+          f.browseOutputButton.setVisible(true)
+          f.packageLabel.setVisible(true)
+          f.packageTextField.setVisible(true)
+          f.runtimeMonitoringCheckBox.setVisible(true)
+          f.transpilerPanel.setVisible(false)
+          f.camkesPanel.setVisible(false)
+        case "macOS" | "Linux" | "Cygwin" =>
+          f.outputLabel.setVisible(true)
+          f.outputTextField.setVisible(true)
+          f.browseOutputButton.setVisible(true)
+          f.packageLabel.setVisible(true)
+          f.packageTextField.setVisible(true)
+          f.runtimeMonitoringCheckBox.setVisible(true)
+          f.transpilerPanel.setVisible(true)
+          f.camkesPanel.setVisible(false)
+        case "seL4" =>
+          f.outputLabel.setVisible(true)
+          f.outputTextField.setVisible(true)
+          f.browseOutputButton.setVisible(true)
+          f.packageLabel.setVisible(true)
+          f.packageTextField.setVisible(true)
+          f.runtimeMonitoringCheckBox.setVisible(true)
+          f.transpilerPanel.setVisible(true)
+          f.camkesPanel.setVisible(true)
+        case "seL4_Only" | "seL4_TB" =>
+          f.outputLabel.setVisible(false)
+          f.outputTextField.setVisible(false)
+          f.browseOutputButton.setVisible(false)
+          f.packageLabel.setVisible(false)
+          f.packageTextField.setVisible(false)
+          f.runtimeMonitoringCheckBox.setVisible(true)
+          f.transpilerPanel.setVisible(false)
+          f.camkesPanel.setVisible(true)
+      }
+    })
+    dialog.add(f.contentPanel)
+    dialog.pack()
+    f.platformComboBox.setSelectedIndex(0)
+    f.bitWidthComboBox.setSelectedItem("32")
+    dialog.setLocationRelativeTo(null)
+    f.contentPanel.registerKeyboardAction((_: ActionEvent) => dialog.dispose(),
+      KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+      JComponent.WHEN_IN_FOCUSED_WINDOW)
+    f.okButton.addActionListener((_: ActionEvent) => {
+      // TODO for Jason: generate and insert cli options
+      dialog.dispose()
+    })
+    f.cancelButton.addActionListener((_: ActionEvent) => {
+      dialog.dispose()
+    })
+    dialog.setVisible(true)
     e.getPresentation.setEnabled(true)
   }
 }
