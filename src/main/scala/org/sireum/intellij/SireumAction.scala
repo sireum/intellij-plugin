@@ -38,7 +38,7 @@ import java.awt.Color
 import java.awt.event.{ActionEvent, ActionListener, KeyEvent, KeyListener}
 import javax.swing.event.{DocumentEvent, DocumentListener}
 import javax.swing.text.Document
-import javax.swing.{JButton, JComponent, JDialog, JFrame, JLabel, JTextField, KeyStroke}
+import javax.swing.{Icon, JButton, JComponent, JDialog, JFrame, JLabel, JTextField, KeyStroke}
 
 object SireumAction {
   val infoTitle: String = "Sireum Info"
@@ -87,6 +87,8 @@ final class SysMLv2CheckActionFile extends SireumAction {
     SireumClient.enableEditor(project, file, editor)
     SireumClient.analyze(isSlang = false, project, file, editor, 0, isBackground = false, isInterprocedural = false, typeCheckOnly = true)
     e.getPresentation.setEnabled(true)
+    Util.notify(new Notification(SireumClient.groupId, "SysMLv2 Front-end", "SysMLv2 type checking is coming soon",
+      NotificationType.INFORMATION), project, shouldExpire = true)
   }
 }
 
@@ -242,6 +244,8 @@ final class ConfigureHAMRCodeGenAction extends SireumAction {
     f.okButton.addActionListener((_: ActionEvent) => {
       // TODO for Jason: generate and insert cli options
       dialog.dispose()
+      Util.notify(new Notification(SireumClient.groupId, "HAMR", "HAMR configuration is coming soon",
+        NotificationType.INFORMATION), e.getProject, shouldExpire = true)
     })
     f.cancelButton.addActionListener((_: ActionEvent) => {
       dialog.dispose()
