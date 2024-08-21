@@ -165,34 +165,27 @@ object SireumApplicationComponent {
   }
 
   def getSireumProcess(sireumHome: org.sireum.Os.Path,
-                       command: Seq[String],
-                       processOutput: String => Unit): scala.sys.process.Process = {
-    new Exec().process(command, { os =>
-      try {
-        while (!terminated) {
-          Thread.sleep(1000)
-        }
-      } catch {
-        case _: Throwable =>
-      } finally try os.close() catch { case _: Throwable => }
-
-    }
-      , { is =>
+                       command: Seq[String]): (ProcessHandle, Int) = {
+    val server = sireumHome / ".server.txt"
+    if (!server.exists) {
+      val pb = new ProcessBuilder(command.toArray: _*)
+      pb.environment().put("SIREUM_HOME", sireumHome.string.value)
+      pb.start()
+      var i = 0
+      while (!server.exists && i < 100) {
         try {
-          val r = new BufferedReader(new InputStreamReader(is))
-          while (!terminated) {
-            val line = r.readLine()
-            if (line != null) {
-              processOutput(line)
-            } else {
-              Thread.sleep(200)
-            }
-          }
+          i += 1
+          Thread.sleep(100)
         } catch {
-          case _: IOException =>
-        } finally is.close()
-      }, ("SIREUM_HOME", sireumHome.string.value))
+          case _: Throwable =>
+        }
+      }
+    }
+    val Array(pid, port) = server.read.value.split(':')
+    server.removeAll()
+    (ProcessHandle.of(pid.toLong).orElse(null), port.toInt)
   }
+
   private def runSireum(d: org.sireum.Os.Path,
                         vmArgs: Seq[String],
                         envVars: scala.collection.mutable.LinkedHashMap[String, String],

@@ -167,7 +167,7 @@ object SireumClient {
   val smt2TabName = "Local"
 
   var request: Option[Request] = None
-  var processInit: Option[(scala.sys.process.Process, org.sireum.Os.Path)] = None
+  var processInit: Option[(ProcessHandle, org.sireum.Os.Path)] = None
   var dividerWeight: Double = .2
   var tooltipMessageOpt: Option[String] = None
   var tooltipBalloonOpt: Option[Balloon] = None
@@ -313,9 +313,16 @@ object SireumClient {
       logFile.removeAll()
       val command = SireumApplicationComponent.getCommand(sireumHome, serverArgs)
       queue.clear()
-      processInit = Some((
-        SireumApplicationComponent.getSireumProcess(sireumHome, command,
-          s => processResponse(s)), logFile))
+      val phPort = SireumApplicationComponent.getSireumProcess(sireumHome, command)
+      if (phPort._1 == null) {
+        Util.notify(new Notification(
+          groupId, errorTitle,
+          s"Could not start Sireum server using command: $command",
+          NotificationType.ERROR), p, shouldExpire = true)
+        return
+      }
+      processInit = Some((phPort._1, logFile))
+      processResult(org.sireum.server.protocol.SocketPort(org.sireum.ISZ(), phPort._2))
       writeLog(isRequest = false, s"Client v${PluginManager.getPlugin(PluginId.getId("org.sireum.intellij")).getVersion}: Started Sireum server ...")
       writeLog(isRequest = false, command.mkString(" ").replace(sireumHome.string.value, if (org.sireum.Os.isWin) "%SIREUM_HOME%" else "$SIREUM_HOME"))
       if (processInit.isEmpty) return
