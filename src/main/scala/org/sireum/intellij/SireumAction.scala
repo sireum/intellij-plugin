@@ -87,8 +87,6 @@ final class SysMLv2CheckActionFile extends SireumAction {
     SireumClient.enableEditor(project, file, editor)
     SireumClient.analyze(isSlang = false, project, file, editor, 0, isBackground = false, isInterprocedural = true, typeCheckOnly = true)
     e.getPresentation.setEnabled(true)
-    Util.notify(new Notification(SireumClient.groupId, "SysMLv2 Front-end", "SysMLv2 type checking is coming soon",
-      NotificationType.INFORMATION), project, shouldExpire = true)
   }
 }
 
