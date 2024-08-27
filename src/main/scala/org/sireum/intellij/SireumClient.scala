@@ -766,6 +766,13 @@ object SireumClient {
               NotificationType.ERROR), project, shouldExpire = false)
             editorOpt.foreach(_.putUserData(statusKey, false))
           case _ =>
+            val nt = r.message.level match {
+              case Level.Info => NotificationType.INFORMATION
+              case Level.Warning => NotificationType.WARNING
+              case _ => NotificationType.ERROR
+            }
+            Util.notify(new Notification(groupId, r.message.kind.value, r.message.text.value, nt),
+              project, shouldExpire = true)
         }
       case _ =>
     }
@@ -816,7 +823,7 @@ object SireumClient {
         val msg = r.message
         val (line, column, offset, length) = r.message.posOpt match {
           case org.sireum.Some(pos) => (pos.beginLine.toInt, pos.beginColumn.toInt, pos.offset.toInt, pos.length.toInt)
-          case _ => (1, 1, -1, -1)
+          case _ => return None
         }
         msg.level match {
           case Level.InternalError =>
@@ -1416,7 +1423,7 @@ object SireumClient {
                         f.logika.logikaTextArea.setText("")
                       })
                     }
-                  case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError =>
+                  case r: org.sireum.server.protocol.Report if r.message.level == Level.InternalError || r.message.posOpt.isEmpty =>
                     notifyHelper(Some(pe._1), if (pe._3.isDisposed) None else Some(pe._3), r)
                   case _ =>
                 }
