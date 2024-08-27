@@ -6,11 +6,11 @@ lazy val `sireum-intellij-plugin` = project.in(file("."))
       version := "5.0.0-SNAPSHOT",
       scalaVersion := "2.13.13",
       ThisBuild / intellijPluginName := "sireum-intellij-plugin",
-      ThisBuild / intellijBuild      := "242.20224.387",
+      ThisBuild / intellijBuild      := "242.20224.419",
       ThisBuild / intellijPlatform   := IntelliJPlatform.IdeaCommunity,
       Global    / intellijAttachSources := true,
-      Compile / javacOptions ++= Seq("--release", "8"),
-      Compile / scalacOptions ++= Seq("-target:jvm-1.8", "-deprecation", "-Ydelambdafy:method", "-feature", "-unchecked"),
+      Compile / javacOptions ++= Seq("--release", "17"),
+      Compile / scalacOptions ++= Seq("-release", "17", "-deprecation", "-Ydelambdafy:method", "-feature", "-unchecked"),
       intellijPlugins ++= Seq(
         "org.jetbrains.plugins.terminal".toPlugin,
         "org.intellij.scala".toPlugin
