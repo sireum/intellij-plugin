@@ -765,7 +765,7 @@ object SireumClient {
               r.message.text.value,
               NotificationType.ERROR), project, shouldExpire = false)
             editorOpt.foreach(_.putUserData(statusKey, false))
-          case _ =>
+          case _ if r.message.posOpt.isEmpty =>
             val nt = r.message.level match {
               case Level.Info => NotificationType.INFORMATION
               case Level.Warning => NotificationType.WARNING
@@ -773,6 +773,7 @@ object SireumClient {
             }
             Util.notify(new Notification(groupId, r.message.kind.value, r.message.text.value, nt),
               project, shouldExpire = true)
+          case _ =>
         }
       case _ =>
     }
