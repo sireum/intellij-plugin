@@ -29,7 +29,7 @@ import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{ActionManager, AnAction}
-import com.intellij.openapi.application.{ApplicationManager, TransactionGuard}
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.{FileEditorManager, OpenFileDescriptor}
 
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
@@ -39,7 +39,9 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.JBColor
 import com.intellij.ui.content.ContentFactory
+import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
 import org.sireum.intellij.logika.LogikaToolWindowForm
+import org.sireum.smtlib.parser.{SMTLIBv2Lexer, SMTLIBv2Parser}
 
 import java.awt.{Color, Component}
 import java.awt.event.{ActionEvent, ActionListener, ComponentAdapter, ComponentEvent}
@@ -237,14 +239,41 @@ object SireumToolWindowFactory {
                     offset = newText.indexOf(content, i)
                   }
                 case _ =>
-                  var i = 0
-                  var offset = text.indexOf(content, i)
+                  val cs = CharStreams.fromString(text)
+                  val lexer = new SMTLIBv2Lexer(cs)
+                  val cts = new CommonTokenStream(lexer)
+                  val parser = new SMTLIBv2Parser(cts)
+                  parser.removeErrorListeners()
+                  parser.addErrorListener(new BaseErrorListener() {
+                    override def syntaxError(recognizer: Recognizer[_, _], offendingSymbol: Any, line: Int, charPositionInLine: Int, msg: String, e: RecognitionException): Unit = {
+                      throw new RuntimeException()
+                    }
+                  })
+                  var newText = text
+                  try {
+                    val script = parser.start().script()
+                    var chunks = Vector[String]()
+                    for (i <- 0 until script.getChildCount) {
+                      val command = script.command(i)
+                      val commandText = newText.substring(command.start.getStartIndex, command.stop.getStopIndex + 1)
+                      if (commandText.contains(content)) {
+                        chunks = chunks :+ commandText
+                      }
+                    }
+                    newText = s"// Filtered by: $content\n\n${chunks.mkString("\n")}"
+                  } catch {
+                    case _: RuntimeException =>
+                      newText = s"// Could not filter by (only highlight): $content\n\n$newText}"
+                  }
+                  logikaForm.logikaTextArea.setText(newText)
                   val highlighter = logikaForm.logikaTextArea.getHighlighter
                   highlighter.removeAllHighlights()
+                  var i = 0
+                  var offset = newText.indexOf(content, i)
                   while (offset > 0) {
                     i = offset + content.length
                     highlighter.addHighlight(offset, i, hpainter)
-                    offset = text.indexOf(content, i)
+                    offset = newText.indexOf(content, i)
                   }
               }
             }

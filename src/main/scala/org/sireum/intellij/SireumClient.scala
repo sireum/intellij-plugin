@@ -989,13 +989,25 @@ object SireumClient {
       val list = f.logika.logikaList
       list.synchronized {
         if (SireumApplicationComponent.sireumFont) {
-          val font = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${list.getFont.getSize}")).getOrElse(list.getFont)
+          var font = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${list.getFont.getSize}")).getOrElse(list.getFont)
           list.setFont(font)
+          font = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${f.logika.logikaTextArea.getFont.getSize}")).getOrElse(f.logika.logikaTextArea.getFont)
+          f.logika.logikaTextArea.setFont(font)
         }
         for (lsl <- list.getListSelectionListeners) {
           list.removeListSelectionListener(lsl)
         }
         list.setModel(new DefaultListModel[Object]())
+        val font = if (SireumApplicationComponent.sireumFont) {
+          scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${f.logika.logikaTextArea.getFont.getSize}")).
+            getOrElse(f.logika.logikaTextArea.getFont)
+        } else {
+          editorOpt match {
+            case Some(editor) => editor.getColorsScheme.getFont(EditorFontType.PLAIN)
+            case _ => f.logika.logikaTextArea.getFont
+          }
+        }
+
         list.addListSelectionListener(_ => list.synchronized {
           val i = list.getSelectedIndex
           if (0 <= i && i < list.getModel.getSize)
@@ -1006,12 +1018,11 @@ object SireumClient {
                   f.logika.logikaToolSplitPane.setDividerLocation(dividerWeight)
                   f.logika.logikaTextArea.setText(normalizeChars(content))
                   f.logika.logikaTextArea.setCaretPosition(0)
-                  val font = f.logika.logikaTextArea.getFont
                   val attrs = font.getAttributes.asInstanceOf[java.util.Map[TextAttribute, Object]]
                   attrs.put(TextAttribute.LIGATURES, Integer.valueOf(0))
                   f.logika.logikaTextArea.setFont(font.deriveFont(attrs))
                   f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
-                  f.logika.logikaToolTextField.setPlaceholder("Search ...")
+                  f.logika.logikaToolTextField.setPlaceholder("Filter ...")
                   f.logika.logikaToolTextField.setText("")
                   for (editor <- editorOpt if !editor.isDisposed)
                     TransactionGuard.submitTransaction(project, (() =>
@@ -1037,9 +1048,9 @@ object SireumClient {
                 ApplicationManager.getApplication.invokeLater { () =>
                   f.logika.logikaToolSplitPane.setDividerLocation(if (list.getModel.getSize <= 1) 0 else dividerWeight)
                   f.logika.logikaTextArea.setText(content)
-                  val font = f.logika.logikaTextArea.getFont
                   val attrs = font.getAttributes.asInstanceOf[java.util.Map[TextAttribute, Object]]
                   attrs.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON)
+                  f.logika.logikaTextArea.setFont(font.deriveFont(attrs))
                   f.logika.logikaToolTextField.getDocument.putProperty("Logika", f.logika.logikaTextArea.getText)
                   val desc = if (content.startsWith("{")) "claims "
                   else if (content.lines.anyMatch(l => l.startsWith("Trace:"))) "trace "
