@@ -988,18 +988,11 @@ object SireumClient {
     sireumToolWindowFactory(project, f => {
       val list = f.logika.logikaList
       list.synchronized {
-        if (SireumApplicationComponent.sireumFont) {
-          var font = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${list.getFont.getSize}")).getOrElse(list.getFont)
-          list.setFont(font)
-          font = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${f.logika.logikaTextArea.getFont.getSize}")).getOrElse(f.logika.logikaTextArea.getFont)
-          f.logika.logikaTextArea.setFont(font)
-        }
-        for (lsl <- list.getListSelectionListeners) {
-          list.removeListSelectionListener(lsl)
-        }
-        list.setModel(new DefaultListModel[Object]())
         val font = if (SireumApplicationComponent.sireumFont) {
-          scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${f.logika.logikaTextArea.getFont.getSize}")).
+          val listFont = scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-${list.getFont.getSize}")).getOrElse(list.getFont)
+          list.setFont(listFont)
+          val fontSize = editorOpt.map(_.getColorsScheme.getFont(EditorFontType.PLAIN).getSize).getOrElse(f.logika.logikaTextArea.getFont.getSize)
+          scala.Option(Font.decode(s"Sireum Mono Plus-PLAIN-$fontSize")).
             getOrElse(f.logika.logikaTextArea.getFont)
         } else {
           editorOpt match {
@@ -1007,6 +1000,11 @@ object SireumClient {
             case _ => f.logika.logikaTextArea.getFont
           }
         }
+        f.logika.logikaTextArea.setFont(font)
+        for (lsl <- list.getListSelectionListeners) {
+          list.removeListSelectionListener(lsl)
+        }
+        list.setModel(new DefaultListModel[Object]())
 
         list.addListSelectionListener(_ => list.synchronized {
           val i = list.getSelectedIndex
