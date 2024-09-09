@@ -35,7 +35,7 @@
         This plugin integrates Sireum tools such as the Logika verification framework.
     ]]></description>
 
-    <idea-version since-build="242.20224.387"/>
+    <idea-version since-build="242.21829.142"/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
@@ -48,21 +48,6 @@
 
         <applicationConfigurable id="SireumLogikaConfigurable" instance="org.sireum.intellij.logika.LogikaConfigurable"
                                  displayName="Logika" parentId="SireumConfigurable"/>
-
-        <fileTypeFactory implementation="org.sireum.intellij.hamr.sysml.SysMLv2FileTypeFactory" />
-        <lang.syntaxHighlighterFactory language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2SyntaxHighlighterFactory"/>
-        <lang.parserDefinition language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ParserDefinition"/>
-        <lang.ast.factory language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ASTFactory"/>
-        <lang.psiStructureViewFactory language="SysMLv2"
-                                      implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2StructureViewFactory"/>
-        <colorSettingsPage implementation="org.sireum.intellij.hamr.sysml.SysMLv2ColorSettingsPage"/>
-        <lang.foldingBuilder
-                language="SysMLv2"
-                implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2FoldingBuilder"/>
-        <!--externalAnnotator language="SysMLv2" implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2ExternalAnnotator"/-->
-
-        <!--lang.findUsagesProvider language="SysMLv2"
-                                 implementationClass="org.sireum.intellij.hamr.sysml.SysMLv2FindUsagesProvider"/-->
 
         <fileTypeFactory implementation="org.sireum.intellij.smtlib.SMTLIBV2FileTypeFactory" />
         <lang.syntaxHighlighterFactory language="SMTLIBv2" implementationClass="org.sireum.intellij.smtlib.SMTLIBV2SyntaxHighlighterFactory"/>
@@ -125,24 +110,6 @@
             <add-to-group group-id="SireumGroup" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </group>
-
-        <group id="SysMLGroup" text="SysMLv2" popup="true">
-            <add-to-group group-id="SireumGroup" anchor="last"/>
-            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-        </group>
-
-        <action id="SysMLv2CheckActionFile" class="org.sireum.intellij.SysMLv2CheckActionFile"
-                text="Type Check"
-                description="Type check">
-            <add-to-group group-id="SysMLGroup" anchor="last"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl X"/>
-        </action>
-
-        <action id="ConfigureHAMRCodeGenAction" class="org.sireum.intellij.ConfigureHAMRCodeGenAction"
-                text="Configure HAMR codegen ..."
-                description="Configure HAMR Code Generation">
-            <add-to-group group-id="SysMLGroup" anchor="last"/>
-        </action>
 
         <group id="SlangInsertTemplate" text="Insert Template" popup="true">
             <add-to-group group-id="SlangGroup" anchor="last"/>

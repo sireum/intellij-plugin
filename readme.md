@@ -23,8 +23,22 @@ Click on `sireum-intellij-plugin`
 Rebuild project in IntelliJ, then:
 
 ```sbt
-clean; cleanFiles; packageArtifactZip
+clean
 ```
+
+Rerun setup:
+
+```bash
+./setup.cmd
+```
+
+Package artifacts:
+
+```sbt
+cleanFiles; packageArtifactZip
+```
+
+Post-processing:
 
 ```bash
 ./post.cmd
