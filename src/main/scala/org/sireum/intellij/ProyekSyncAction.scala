@@ -107,9 +107,9 @@ object ProyekSyncAction {
                 })
                 processHandler.addProcessListener(new ProcessListener {
                   override def processTerminated(event: ProcessEvent): Unit = {
-                    baseDir.refresh(false, true)
-                    srm.reloadProject()
                     if (event.getExitCode == 0) {
+                      baseDir.refresh(false, true)
+                      srm.reloadProject()
                       Util.notify(new Notification(
                         SireumClient.groupId, "Proyek synchronized",
                         """<p>Proyek synchronization was successful. <a href="">Restart</a>?</p>""",
