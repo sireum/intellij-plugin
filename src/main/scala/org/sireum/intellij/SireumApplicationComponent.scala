@@ -66,7 +66,7 @@ object SireumApplicationComponent {
   private[intellij] var sireumHomeOpt: Option[org.sireum.Os.Path] = None
   private[intellij] var vmArgs: Seq[String] = Vector("-Xss2m")
   private[intellij] var envVars = scala.collection.mutable.LinkedHashMap[String, String]()
-  private[intellij] var backgroundAnalysis = 2
+  private[intellij] var backgroundAnalysis = 1
   private[intellij] var idle: Int = 1500
   private[intellij] var bgCores: Int = 1
   private[intellij] var cacheInput: Boolean = true

@@ -166,6 +166,7 @@ object SireumClient {
   val smt2SolverAndArgsPrefix = "; Solvers and arguments:"
   val smt2TabName = "Local"
 
+  var docChange: Option[(Long, () => Unit)] = None
   var request: Option[Request] = None
   var processInit: Option[(ProcessHandle, org.sireum.Os.Path)] = None
   var dividerWeight: Double = .2
@@ -384,6 +385,14 @@ object SireumClient {
                     queue.add(for (m <- r.msgGen()) yield (true, m))
                   }
                 case None =>
+              }
+              docChange match {
+                case Some((t, f)) =>
+                  if (System.currentTimeMillis - t > SireumApplicationComponent.idle) {
+                    docChange = None
+                    f()
+                  }
+                case _ =>
               }
             }
             Thread.sleep(175)
@@ -672,12 +681,14 @@ object SireumClient {
       cs.setUseLigatures(true)
     }
     editor.getDocument.addDocumentListener(new DocumentListener {
-      override def documentChanged(event: DocumentEvent): Unit =
-        if (!project.isDisposed && !editor.isDisposed &&
-          getBackground(project, editor, file) == org.sireum.logika.Config.BackgroundMode.Type) {
-          analyzeOpt(project, file, editor, getCurrentLine(editor), isBackground = true)
-        }
-
+      override def documentChanged(event: DocumentEvent): Unit = {
+        docChange = Some((System.currentTimeMillis, () => {
+          if (!project.isDisposed && !editor.isDisposed &&
+            getBackground(project, editor, file) == org.sireum.logika.Config.BackgroundMode.Type) {
+            analyzeOpt(project, file, editor, getCurrentLine(editor), isBackground = true)
+          }
+        } ))
+      }
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
     })
   }
