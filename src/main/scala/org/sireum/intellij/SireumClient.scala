@@ -51,7 +51,7 @@ import org.sireum.server.protocol.Analysis
 
 import java.awt.font.TextAttribute
 import java.awt.{Color, Font}
-import java.io.{BufferedReader, BufferedWriter, ByteArrayOutputStream, InputStream, InputStreamReader, OutputStreamWriter}
+import java.io.{BufferedReader, BufferedWriter, ByteArrayOutputStream, IOException, InputStream, InputStreamReader, OutputStreamWriter, Reader, Writer}
 import java.net.{InetAddress, Socket}
 import java.util.concurrent._
 import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
@@ -82,7 +82,7 @@ object SireumClient {
     override def install(statusBar: StatusBar): Unit = {
       component = statusBar.getComponent
       val shutdownItem = new JMenuItem("Shutdown Sireum server")
-      shutdownItem.addActionListener { _ => shutdownServer()}
+      shutdownItem.addActionListener { _ => shutdownServer() }
       val cacheMenu = new JMenu("Clear a specific cache")
       val fileItem = new JMenuItem("Files")
       fileItem.addActionListener { _ => clearCache(Analysis.Cache.Kind.Files) }
@@ -190,11 +190,13 @@ object SireumClient {
   var queue: LinkedBlockingQueue[Vector[(Boolean, String)]] = new LinkedBlockingQueue
   var lastStatusUpdate: Long = System.currentTimeMillis
   var socket: Socket = null
-  var ir: BufferedReader = null
-  var ow: BufferedWriter = null
+  var ir: Reader = null
+  var ow: Writer = null
 
   var responseThread: Thread = null
   var requestThread: Thread = null
+
+  def isSocketAlive: Boolean = socket != null && !socket.isClosed && !socket.isInputShutdown && !socket.isOutputShutdown
 
   def processResponse(s: String): Unit = {
     val trimmed = s.trim
@@ -232,6 +234,7 @@ object SireumClient {
     if (shouldLog) writeLog(isRequest = false, if (hasError) s"Error occurred when processing response: $s" else s)
 
   }
+
   def createCoverageColor(intensity: Int): JBColor =
     new JBColor(new Color(129, 62, 200, intensity), new Color(129, 62, 200, intensity))
 
@@ -246,20 +249,46 @@ object SireumClient {
       queue.clear()
       request = None
       editorMap.clear()
-      if (ow != null) {
+      if (ow != null) try {
         val content = terminateRequest.head._2
         ow.write(content)
         ow.flush()
         writeLog(isRequest = true, content)
+      } catch {
+        case _: Throwable =>
       }
-      try socket.close() catch { case _: Throwable => }
-      try ir.close() catch { case _: Throwable => }
-      try ow.close() catch { case _: Throwable => }
+      try socket.close() catch {
+        case _: Throwable =>
+      }
+      try ir.close() catch {
+        case _: Throwable =>
+      }
+      try ow.close() catch {
+        case _: Throwable =>
+      }
       ir = null
       ow = null
       socket = null
       processInit.foreach(p => runLater(5000)(() => if (p._1.isAlive()) p._1.destroy()))
       processInit = None
+      if (responseThread != null) {
+        val rt = responseThread
+        responseThread = null
+        try {
+          rt.interrupt()
+        } catch {
+          case _: Throwable =>
+        }
+      }
+      if (requestThread != null) {
+        val rt = requestThread
+        requestThread = null
+        try {
+          rt.interrupt()
+        } catch {
+          case _: Throwable =>
+        }
+      }
       shutdown = true
       for (frame <- WindowManager.getInstance.getAllProjectFrames) {
         frame.getStatusBar.removeWidget(statusBarWidget.ID())
@@ -489,8 +518,7 @@ object SireumClient {
     detailedInfo = LogikaConfigurable.detailedInfo,
     satTimeout = LogikaConfigurable.satTimeout,
     isAuto = if (isScript) LogikaConfigurable.auto else true,
-    atRewrite = if (!isScript) LogikaConfigurable.hintAtRewrite else
-      if (LogikaConfigurable.auto) LogikaConfigurable.hintAtRewrite else true,
+    atRewrite = if (!isScript) LogikaConfigurable.hintAtRewrite else if (LogikaConfigurable.auto) LogikaConfigurable.hintAtRewrite else true,
     background = if (LogikaConfigurable.backgroundAnalysis) SireumApplicationComponent.backgroundAnalysis match {
       case 0 => org.sireum.logika.Config.BackgroundMode.Disabled
       case 1 => org.sireum.logika.Config.BackgroundMode.Save
@@ -687,8 +715,9 @@ object SireumClient {
             getBackground(project, editor, file) == org.sireum.logika.Config.BackgroundMode.Type) {
             analyzeOpt(project, file, editor, getCurrentLine(editor), isBackground = true)
           }
-        } ))
+        }))
       }
+
       override def beforeDocumentChange(event: DocumentEvent): Unit = {}
     })
   }
@@ -1172,7 +1201,7 @@ object SireumClient {
       }
       val attr = new TextAttributes(null, null, color, EffectType.WAVE_UNDERSCORE, Font.PLAIN)
       val end = scala.math.min(ci.offset + ci.length, editor.getDocument.getTextLength)
-      val rhLine = addLineHighlighter(mm,line - 1, layer)
+      val rhLine = addLineHighlighter(mm, line - 1, layer)
       rhLine.putUserData(reportItemKey, ci)
       rhLine.setThinErrorStripeMark(false)
       rhLine.setErrorStripeMarkColor(color)
@@ -1227,7 +1256,7 @@ object SireumClient {
           l
       }
       hintListModel.addElement(ri)
-      val rhLine = addLineHighlighter(mm,line - 1, layer)
+      val rhLine = addLineHighlighter(mm, line - 1, layer)
       rhLine.putUserData(reportItemKey, ri)
       rhLine.setThinErrorStripeMark(false)
       val (title, icon) = ri.kindOpt match {
@@ -1327,23 +1356,51 @@ object SireumClient {
       rhs.put(line, rhl :+ rhLine)
     }
 
+    def readLine(r: Reader): String = {
+      val buffer = new StringBuilder
+      try {
+        while (true) {
+          while (isSocketAlive && !r.ready) {
+            Thread.sleep(250)
+          }
+          if (r.ready) {
+            val c = r.read.asInstanceOf[Char]
+            c match {
+              case '\n' => return buffer.toString
+              case -1 => return null
+              case _ => buffer.append(c)
+            }
+          }
+        }
+        buffer.toString
+      } catch {
+        case _: IOException => null
+      }
+    }
+
     r match {
       case r: org.sireum.server.protocol.SocketPort =>
         socket = new Socket(InetAddress.getLoopbackAddress, r.port.toInt)
-        ir = new BufferedReader(new InputStreamReader(socket.getInputStream, "UTF-8"))
-        ow = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream, "UTF-8"))
+        ir = new InputStreamReader(socket.getInputStream, "UTF-8")
+        ow = new OutputStreamWriter(socket.getOutputStream, "UTF-8")
         if (responseThread == null) {
           responseThread = new Thread {
             override def run(): Unit = {
-              while (true) try {
+              while (isSocketAlive) try {
                 if (ir != null) {
-                  val line = ir.readLine
+                  val line = readLine(ir)
+                  if (line == null) {
+                    shutdownServer()
+                  }
                   ApplicationManager.getApplication.invokeLater(() => processResponse(line))
                 } else {
                   Thread.sleep(1000)
                 }
               } catch {
+                case _: InterruptedException =>
                 case _: Throwable =>
+                  if (socket.isClosed || socket.isInputShutdown || socket.isOutputShutdown)
+                    shutdownServer()
               }
             }
           }
@@ -1353,19 +1410,26 @@ object SireumClient {
         if (requestThread == null) {
           requestThread = new Thread {
             override def run(): Unit = {
-              while (true) try {
-                val lineSep = org.sireum.Os.lineSep.value
+              val lineSep = org.sireum.Os.lineSep.value
+              while (isSocketAlive) try {
                 for ((shouldLog, m) <- queue.take()) {
-                  while (ow == null) {
+                  while (isSocketAlive && ow == null) {
                     Thread.sleep(1000)
                   }
-                  ow.write(m)
-                  ow.write(lineSep)
-                  ow.flush()
-                  if (shouldLog) SireumClient.writeLog(isRequest = true, m)
+                  if (isSocketAlive && ow != null) {
+                    ow.write(m)
+                    ow.write(lineSep)
+                    ow.flush()
+                    if (shouldLog) SireumClient.writeLog(isRequest = true, m)
+                  } else {
+                    shutdownServer()
+                  }
                 }
               } catch {
+                case _: InterruptedException =>
                 case _: Throwable =>
+                  if (socket.isClosed || socket.isInputShutdown || socket.isOutputShutdown)
+                    shutdownServer()
               }
             }
           }
@@ -1378,7 +1442,7 @@ object SireumClient {
       case _: org.sireum.server.protocol.Version.Response =>
       case r: org.sireum.server.protocol.Analysis.Cache.Cleared =>
         Util.notify(new Notification(groupId, sireumServerTitle,
-          r.msg.value,NotificationType.INFORMATION), null, shouldExpire = true)
+          r.msg.value, NotificationType.INFORMATION), null, shouldExpire = true)
       case _ =>
         def processResultH(): Unit = {
           def clearEditorH(editor: Editor): Unit = {
@@ -1614,6 +1678,7 @@ object SireumClient {
       widget.requestFocus()
       widget.executeCommand(command.replaceAll(" -in ", " "))
     })
+
     if (editor != null) Util.getPath(editor.getVirtualFile) match {
       case Some(path) =>
         val text = editor.getDocument.getText
