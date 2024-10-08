@@ -57,6 +57,11 @@ object SireumApplicationComponent {
   private val idleKey = sireumKey + "idle"
   private val bgcoresKey = sireumKey + "bgcores"
   private val sireumFontKey = sireumKey + "font"
+  private val proxyHostKey: String = sireumKey + "proxyHost"
+  private val proxyPortKey: String = sireumKey + "proxyPort"
+  private val proxyUserEnvVarKey: String = sireumKey + "proxyUser"
+  private val proxyPasswdEnvVarKey: String = sireumKey + "proxyPasswd"
+  private val proxyNonHostsKey: String = sireumKey + "proxyNonHosts"
 
   private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
@@ -75,6 +80,11 @@ object SireumApplicationComponent {
   private[intellij] var logging: Boolean = false
   private[intellij] var verbose: Boolean = false
   private[intellij] var sireumFont: Boolean = true
+  private[intellij] var proxyHost: String = ""
+  private[intellij] var proxyPort: String = ""
+  private[intellij] var proxyUserEnvVar: String = ""
+  private[intellij] var proxyPasswdEnvVar: String = ""
+  private[intellij] var proxyNonHosts: String = ""
 
   private[intellij] val platform: String = org.sireum.Os.kind match {
     case org.sireum.Os.Kind.Mac => "mac"
@@ -260,6 +270,11 @@ object SireumApplicationComponent {
     idle = pc.getInt(idleKey, idle)
     bgCores = pc.getInt(bgcoresKey, bgCores)
     sireumFont = pc.getBoolean(sireumFontKey, sireumFont)
+    proxyHost = pc.getValue(proxyHostKey, proxyHost)
+    proxyPort = pc.getValue(proxyPortKey, proxyPort)
+    proxyUserEnvVar = pc.getValue(proxyUserEnvVarKey, proxyUserEnvVar)
+    proxyPasswdEnvVar = pc.getValue(proxyPasswdEnvVarKey, proxyPasswdEnvVar)
+    proxyNonHosts = pc.getValue(proxyNonHostsKey, proxyNonHosts)
   }
 
   def saveConfiguration(): Unit = {
@@ -276,6 +291,11 @@ object SireumApplicationComponent {
     pc.setValue(idleKey, idle.toString)
     pc.setValue(bgcoresKey, bgCores.toString)
     pc.setValue(sireumFontKey, sireumFont.toString)
+    pc.setValue(proxyHostKey, proxyHost)
+    pc.setValue(proxyPortKey, proxyPort)
+    pc.setValue(proxyUserEnvVarKey, proxyUserEnvVar)
+    pc.setValue(proxyPasswdEnvVarKey, proxyPasswdEnvVar)
+    pc.setValue(proxyNonHostsKey, proxyNonHosts)
   }
 }
 

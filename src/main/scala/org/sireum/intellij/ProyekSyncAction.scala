@@ -78,6 +78,26 @@ object ProyekSyncAction {
                 cmds.add("proyek")
                 cmds.add("ive")
                 cmds.add("--force")
+                if (SireumApplicationComponent.proxyHost.nonEmpty) {
+                  cmds.add("--proxy-host")
+                  cmds.add(SireumApplicationComponent.proxyHost)
+                }
+                if (SireumApplicationComponent.proxyPort.nonEmpty) {
+                  cmds.add("--proxy-port")
+                  cmds.add(SireumApplicationComponent.proxyPort)
+                }
+                if (SireumApplicationComponent.proxyUserEnvVar.nonEmpty) {
+                  cmds.add("--proxy-user-env")
+                  cmds.add(SireumApplicationComponent.proxyUserEnvVar)
+                }
+                if (SireumApplicationComponent.proxyPasswdEnvVar.nonEmpty) {
+                  cmds.add("--proxy-passwd-env")
+                  cmds.add(SireumApplicationComponent.proxyPasswdEnvVar)
+                }
+                if (SireumApplicationComponent.proxyNonHosts.nonEmpty) {
+                  cmds.add("--proxy-non-hosts")
+                  cmds.add(SireumApplicationComponent.proxyNonHosts)
+                }
                 cmds.add(iproject.getBasePath)
                 val generalCommandLine = new GeneralCommandLine(cmds)
                 generalCommandLine.setWorkDirectory((home / "bin").string.value)

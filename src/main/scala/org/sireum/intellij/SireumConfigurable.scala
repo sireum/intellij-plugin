@@ -47,6 +47,9 @@ final class SireumConfigurable extends SireumForm with Configurable {
   private var validVmArgs = false
   private var validEnvVars = false
   private var validIdle = false
+  private var validProxyPort = false
+  private var validProxyUserEnv = false
+  private var validProxyPasswdEnv = false
   private var fgColor: Color = _
 
   override def getDisplayName: String = "Sireum"
@@ -54,7 +57,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
   override def getHelpTopic: String = null
 
   override def isModified: Boolean = {
-    validSireumHome && validVmArgs && validEnvVars && validIdle &&
+    validSireumHome && validVmArgs && validEnvVars && validIdle && validProxyPort && validProxyUserEnv && validProxyPasswdEnv &&
       (sireumHomeString != sireumHomeTextField.getText ||
         startup != startupCheckBox.isSelected ||
         logging != loggingCheckBox.isSelected ||
@@ -66,13 +69,18 @@ final class SireumConfigurable extends SireumForm with Configurable {
         backgroundAnalysis != bgValue ||
         idle.toString != idleTextField.getText ||
         bgCores != parSpinner.getValue.asInstanceOf[Int] ||
-        sireumFont != sireumFontCheckBox.isSelected)
+        sireumFont != sireumFontCheckBox.isSelected ||
+        proxyHost != proxyHostTextField.getText ||
+        proxyPort != proxyPortTextField.getText ||
+        proxyUserEnvVar != proxyUserEnvTextField.getText ||
+        proxyPasswdEnvVar != proxyPasswdEnvTextField.getText ||
+        proxyNonHosts != proxyNonHostsTextField.getText)
   }
 
-  def parseGe200(text: String): Option[Int] =
+  def parseGe(text: String, low: Int): Option[Int] =
     try {
       val n = text.toInt
-      if (n < 200) None else Some(n)
+      if (n < low) None else Some(n)
     } catch {
       case _: Throwable => None
     }
@@ -99,9 +107,27 @@ final class SireumConfigurable extends SireumForm with Configurable {
     }
 
     def updateBg(text: String): Unit = {
-      validIdle = parseGe200(text).nonEmpty
+      validIdle = parseGe(text, 200).nonEmpty
       bgIdleRadioButton.setForeground(if (validIdle) fgColor else JBColor.red)
       idleTextField.setToolTipText(if (validIdle) "OK" else "Must be at least 200.")
+    }
+
+    def updateProxyPort(text: String): Unit = {
+      validProxyPort = text == "" || parseGe(text, 1).nonEmpty
+      proxyPortLabel.setForeground(if (validProxyPort) fgColor else JBColor.red)
+      proxyPortTextField.setToolTipText(if (validProxyPort) "OK" else "Must be at least 1.")
+    }
+
+    def updateProxyUser(text: String): Unit = {
+      validProxyUserEnv = text == "" || System.getenv(text) != null
+      proxyUserEnvLabel.setForeground(if (validProxyUserEnv) fgColor else JBColor.red)
+      proxyUserEnvTextField.setToolTipText(if (validProxyUserEnv) "OK" else "Env var does not exist")
+    }
+
+    def updateProxyPasswd(text: String): Unit = {
+      validProxyPasswdEnv = text == "" || System.getenv(text) != null
+      proxyPasswdEnvLabel.setForeground(if (validProxyPasswdEnv) fgColor else JBColor.red)
+      proxyPasswdEnvTextField.setToolTipText(if (validProxyPasswdEnv) "OK" else "Env var does not exist")
     }
 
     logoLabel.setIcon(logo)
@@ -150,6 +176,36 @@ final class SireumConfigurable extends SireumForm with Configurable {
       def update(): Unit = updateEnvVars(envVarsTextArea.getText.trim)
     })
 
+    proxyPortTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = update()
+
+      override def changedUpdate(e: DocumentEvent): Unit = update()
+
+      override def removeUpdate(e: DocumentEvent): Unit = update()
+
+      def update(): Unit = updateProxyPort(proxyPortTextField.getText.trim)
+    })
+
+    proxyUserEnvTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = update()
+
+      override def changedUpdate(e: DocumentEvent): Unit = update()
+
+      override def removeUpdate(e: DocumentEvent): Unit = update()
+
+      def update(): Unit = updateProxyUser(proxyUserEnvTextField.getText.trim)
+    })
+
+    proxyPasswdEnvTextField.getDocument.addDocumentListener(new DocumentListener {
+      override def insertUpdate(e: DocumentEvent): Unit = update()
+
+      override def changedUpdate(e: DocumentEvent): Unit = update()
+
+      override def removeUpdate(e: DocumentEvent): Unit = update()
+
+      def update(): Unit = updateProxyPasswd(proxyPasswdEnvTextField.getText.trim)
+    })
+
     def updateBackground(): Unit = {
       val enabled = bgValue != 0
       idleTextField.setEnabled(enabled)
@@ -184,6 +240,9 @@ final class SireumConfigurable extends SireumForm with Configurable {
     updateBg(idle.toString)
     updateBackground()
     updateVerbose()
+    updateProxyPort(proxyPort)
+    updateProxyUser(proxyUserEnvVar)
+    updateProxyPasswd(proxyPasswdEnvVar)
 
     sireumPanel
   }
@@ -206,9 +265,14 @@ final class SireumConfigurable extends SireumForm with Configurable {
         cacheInput = cacheInputCheckBox.isSelected
         cacheType = cacheTypeCheckBox.isSelected
         backgroundAnalysis = bgValue
-        idle = parseGe200(idleTextField.getText).getOrElse(idle)
+        idle = parseGe(idleTextField.getText, 200).getOrElse(idle)
         bgCores = parSpinner.getValue.asInstanceOf[Int]
         sireumFont = sireumFontCheckBox.isSelected
+        proxyHost = proxyHostTextField.getText
+        proxyPort = proxyPortTextField.getText
+        proxyUserEnvVar = proxyUserEnvTextField.getText
+        proxyPasswdEnvVar = proxyPasswdEnvTextField.getText
+        proxyNonHosts = proxyNonHostsTextField.getText
         saveConfiguration()
       }
     } else {
@@ -238,6 +302,11 @@ final class SireumConfigurable extends SireumForm with Configurable {
       idleTextField.setText(idle.toString)
       parSpinner.setValue(bgCores)
       sireumFontCheckBox.setSelected(sireumFont)
+      proxyHostTextField.setText(proxyHost)
+      proxyPortTextField.setText(proxyPort)
+      proxyUserEnvTextField.setText(proxyUserEnvVar)
+      proxyPasswdEnvTextField.setText(proxyPasswdEnvVar)
+      proxyNonHostsTextField.setText(proxyNonHosts)
     }
   }
 
