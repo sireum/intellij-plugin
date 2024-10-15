@@ -44,6 +44,8 @@ import com.intellij.openapi.wm.impl.ToolWindowImpl
 import com.intellij.openapi.wm.{StatusBar, StatusBarWidget, ToolWindowManager, WindowManager}
 import com.intellij.ui.JBColor
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
+import org.sireum.forms
+import org.sireum.forms.LogikaFormEx
 import org.sireum.intellij.logika.LogikaConfigurable
 import org.sireum.logika.{Smt2, Smt2Config, Smt2Invoke, Smt2Query}
 import org.sireum.message.Level
@@ -155,7 +157,7 @@ object SireumClient {
   val statusKey = new Key[Boolean]("Sireum Analysis Status")
   val reportItemKey = new Key[ReportItem]("Sireum Report Item")
   val coverageTextAttributes = new TextAttributes(null,
-    createCoverageColor(LogikaConfigurable.coverageIntensity), null, EffectType.BOXED, Font.PLAIN)
+    createCoverageColor(LogikaFormEx.coverageIntensity), null, EffectType.BOXED, Font.PLAIN)
 
   val statusIdle = "Sireum is idle"
   val statusWaiting = "Sireum is waiting to work"
@@ -483,52 +485,52 @@ object SireumClient {
   def getSmt2Configs(project: Project): org.sireum.ISZ[Smt2Config] = SireumApplicationComponent.getSireumHome(project) match {
     case Some(sireumHome) if Util.isLogikaSupportedPlatform =>
       val nameExePathMap = Smt2Invoke.nameExePathMap(sireumHome)
-      Smt2.parseConfigs(nameExePathMap, false, LogikaConfigurable.smt2ValidOpts).left ++
-        Smt2.parseConfigs(nameExePathMap, true, LogikaConfigurable.smt2SatOpts).left
+      Smt2.parseConfigs(nameExePathMap, false, forms.LogikaFormEx.smt2ValidOpts).left ++
+        Smt2.parseConfigs(nameExePathMap, true, forms.LogikaFormEx.smt2SatOpts).left
     case _ => org.sireum.ISZ()
   }
 
   def getLogikaConfig(project: Project, isBackground: Boolean, isScript: Boolean,
                       isInterprocedural: Boolean): org.sireum.logika.Config = org.sireum.server.service.AnalysisService.defaultConfig(
-    logPc = LogikaConfigurable.hint,
-    logVc = LogikaConfigurable.inscribeSummonings,
+    logPc = forms.LogikaFormEx.hint,
+    logVc = forms.LogikaFormEx.inscribeSummonings,
     parCores = if (isBackground) SireumApplicationComponent.bgCores else SireumApplicationComponent.maxCores,
-    sat = LogikaConfigurable.checkSat,
-    timeoutInMs = LogikaConfigurable.timeout,
-    rlimit = LogikaConfigurable.rlimit,
-    useReal = LogikaConfigurable.useReal,
-    fpRoundingMode = LogikaConfigurable.fpRoundingMode,
-    smt2Caching = LogikaConfigurable.smt2Cache,
-    simplifiedQuery = LogikaConfigurable.smt2Simplify,
+    sat = forms.LogikaFormEx.checkSat,
+    timeoutInMs = forms.LogikaFormEx.timeout,
+    rlimit = forms.LogikaFormEx.rlimit,
+    useReal = forms.LogikaFormEx.useReal,
+    fpRoundingMode = forms.LogikaFormEx.fpRoundingMode,
+    smt2Caching = forms.LogikaFormEx.smt2Cache,
+    simplifiedQuery = forms.LogikaFormEx.smt2Simplify,
     smt2Configs = getSmt2Configs(project),
-    branchPar = LogikaConfigurable.branchPar,
-    splitIf = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitConds,
-    splitMatch = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitMatchCases,
-    splitContract = !LogikaConfigurable.infoFlow && LogikaConfigurable.splitContractCases,
-    atLinesFresh = LogikaConfigurable.hintLinesFresh,
+    branchPar =  org.sireum.logika.Config.BranchPar.byName(forms.LogikaFormEx.branchPar).get,
+    splitIf = !forms.LogikaFormEx.infoFlow && forms.LogikaFormEx.splitConds,
+    splitMatch = !forms.LogikaFormEx.infoFlow && forms.LogikaFormEx.splitMatchCases,
+    splitContract = !forms.LogikaFormEx.infoFlow && forms.LogikaFormEx.splitContractCases,
+    atLinesFresh = forms.LogikaFormEx.hintLinesFresh,
     interp = isInterprocedural,
-    loopBound = LogikaConfigurable.loopBound,
-    callBound = LogikaConfigurable.callBound,
-    interpContracts = LogikaConfigurable.interpContracts,
-    rawInscription = LogikaConfigurable.rawInscription,
-    elideEncoding = LogikaConfigurable.elideEncoding,
-    strictPureMode = LogikaConfigurable.strictPureMode,
-    transitionCache = LogikaConfigurable.transitionCache,
-    pureFun = LogikaConfigurable.pureFun,
-    detailedInfo = LogikaConfigurable.detailedInfo,
-    satTimeout = LogikaConfigurable.satTimeout,
-    isAuto = if (isScript) LogikaConfigurable.auto else true,
-    atRewrite = if (!isScript) LogikaConfigurable.hintAtRewrite else if (LogikaConfigurable.auto) LogikaConfigurable.hintAtRewrite else true,
-    background = if (LogikaConfigurable.backgroundAnalysis) SireumApplicationComponent.backgroundAnalysis match {
+    loopBound = forms.LogikaFormEx.loopBound,
+    callBound = forms.LogikaFormEx.callBound,
+    interpContracts = forms.LogikaFormEx.interpContracts,
+    rawInscription = forms.LogikaFormEx.rawInscription,
+    elideEncoding = forms.LogikaFormEx.elideEncoding,
+    strictPureMode = org.sireum.logika.Config.StrictPureMode.byName(forms.LogikaFormEx.strictPureMode).get,
+    transitionCache = forms.LogikaFormEx.transitionCache,
+    pureFun = forms.LogikaFormEx.pureFun,
+    detailedInfo = forms.LogikaFormEx.detailedInfo,
+    satTimeout = forms.LogikaFormEx.satTimeout,
+    isAuto = if (isScript) forms.LogikaFormEx.auto else true,
+    atRewrite = if (!isScript) forms.LogikaFormEx.hintAtRewrite else if (forms.LogikaFormEx.auto) forms.LogikaFormEx.hintAtRewrite else true,
+    background = if (forms.LogikaFormEx.backgroundAnalysis) SireumApplicationComponent.backgroundAnalysis match {
       case 0 => org.sireum.logika.Config.BackgroundMode.Disabled
       case 1 => org.sireum.logika.Config.BackgroundMode.Save
       case 2 => org.sireum.logika.Config.BackgroundMode.Type
     } else org.sireum.logika.Config.BackgroundMode.Disabled,
-    searchPc = LogikaConfigurable.searchPc,
-    rwTrace = LogikaConfigurable.rwTrace,
-    rwMax = LogikaConfigurable.rwMax,
-    rwPar = LogikaConfigurable.rwPar,
-    rwEvalTrace = LogikaConfigurable.rwEvalTrace
+    searchPc = forms.LogikaFormEx.searchPc,
+    rwTrace = forms.LogikaFormEx.rwTrace,
+    rwMax = forms.LogikaFormEx.rwMax,
+    rwPar = forms.LogikaFormEx.rwPar,
+    rwEvalTrace = forms.LogikaFormEx.rwEvalTrace
   )
 
   def analyze(isSlang: Boolean, project: Project, file: VirtualFile, editor: Editor, line: Int,
@@ -549,7 +551,7 @@ object SireumClient {
       }
       val isScript = p.ext.value == "sc"
       Vector(
-        Logika.Verify.Config(LogikaConfigurable.infoFlow, getLogikaConfig(project, isBackground, isScript, isInterprocedural)),
+        Logika.Verify.Config(forms.LogikaFormEx.infoFlow, getLogikaConfig(project, isBackground, isScript, isInterprocedural)),
         if (!isSlang) {
           var files = ofiles
           var vfiles = org.sireum.ISZ[org.sireum.String]()
@@ -1074,9 +1076,9 @@ object SireumClient {
                       new OpenFileDescriptor(cri.project, cri.file, cri.offset), true)): Runnable)
               case hri: HintReportItem =>
                 var content = hri.message
-                if (LogikaConfigurable.hintMaxColumn > 0) {
+                if (forms.LogikaFormEx.hintMaxColumn > 0) {
                   org.sireum.Scalafmt.format(
-                    s"${org.sireum.Scalafmt.minimalConfig}\nmaxColumn = ${LogikaConfigurable.hintMaxColumn}", true,
+                    s"${org.sireum.Scalafmt.minimalConfig}\nmaxColumn = ${forms.LogikaFormEx.hintMaxColumn}", true,
                     content
                   ) match {
                     case org.sireum.Some(r) => content = r.value
@@ -1113,7 +1115,7 @@ object SireumClient {
   }
 
   def normalizeChars(text: String): String = {
-    if (!LogikaConfigurable.hintUnicode) toASCII(text)
+    if (!forms.LogikaFormEx.hintUnicode) toASCII(text)
     else text
   }
 
@@ -1557,7 +1559,7 @@ object SireumClient {
               val mm = editor.getMarkupModel
               for (i <- r.pos.beginLine to r.pos.endLine) {
                 val line = i.toInt
-                if (LogikaConfigurable.coverage && !coverageLines.contains(i.toInt)) {
+                if (forms.LogikaFormEx.coverage && !coverageLines.contains(i.toInt)) {
                   val rh = addLineHighlighter(mm, line - 1, -1, coverageTextAttributes)
                   rh.putUserData(reportItemKey, CoverageReportItem)
                   coverageLines.add(line)

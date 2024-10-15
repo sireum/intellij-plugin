@@ -304,7 +304,7 @@ class SireumApplicationComponent extends ApplicationComponent {
 
   override def initComponent(): Unit = {
     SireumApplicationComponent.loadConfiguration()
-    LogikaConfigurable.loadConfiguration()
+    LogikaConfigurable.loadConfiguration(LogikaConfigurable.Parameter)
 
     ApplicationManager.getApplication.invokeLater(() =>
       org.sireum.Scalafmt.format(org.sireum.Scalafmt.minimalConfig, true, "{}"))
