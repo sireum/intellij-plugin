@@ -187,6 +187,12 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift ctrl QUOTE" second-keystroke="2"/>
         </action>
 
+        <action id="SlangViewAst" class="org.sireum.intellij.SlangViewAst"
+                text="View Resolved AST"
+                description="View Resolved AST">
+            <add-to-group group-id="SlangGroup"/>
+        </action>
+
         <action id="SireumInsertImplication" class="org.sireum.intellij.SireumInsertImply"
                 text="Imply"
                 description="Insert implication symbol">
