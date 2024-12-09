@@ -39,6 +39,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.JBColor
 import com.intellij.ui.content.ContentFactory
+import com.intellij.util.ui.tree.AbstractTreeModel
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
 import org.sireum.intellij.logika.LogikaToolWindowForm
 import org.sireum.smtlib.parser.{SMTLIBv2Lexer, SMTLIBv2Parser}
@@ -46,13 +47,59 @@ import org.sireum.smtlib.parser.{SMTLIBv2Lexer, SMTLIBv2Parser}
 import java.awt.{Color, Component}
 import java.awt.event.{ActionEvent, ActionListener, ComponentAdapter, ComponentEvent}
 import java.io.PrintWriter
-import javax.swing.{DefaultListCellRenderer, JList, JTextArea}
-import javax.swing.event.{DocumentEvent, DocumentListener}
+import javax.swing.{DefaultListCellRenderer, JList, JTextArea, JTree}
+import javax.swing.event.{DocumentEvent, DocumentListener, TreeModelListener, TreeSelectionEvent, TreeSelectionListener}
 import javax.swing.text.DefaultHighlighter
+import javax.swing.tree.{TreeCellRenderer, TreeModel, TreePath}
 
 object SireumToolWindowFactory {
 
-  final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm, consoleView: ConsoleView)
+  final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm, consoleView: ConsoleView, astTree: JTree)
+
+  object SlangAstTreeModel {
+    final class Node(val text: String, val isLeaf: Boolean, val value: Object) {
+      override def toString: String = {
+        val className = value.getClass.getName.replace('$', '.')
+        if (isLeaf) s"$text = $value ($className)" else s"$text ($className)"
+      }
+    }
+  }
+  final class SlangAstTreeModel(val project: Project, root: Object) extends AbstractTreeModel {
+    import org.sireum._
+
+    override def getRoot: AnyRef = root
+
+    override def getChild(parent: Any, index: Int): AnyRef = parent match {
+      case Some(x) => new SlangAstTreeModel.Node("value", isLeaf(x), x.asInstanceOf[Object])
+      case parent: IS[_, _] =>
+        val value = parent.atZ(index).asInstanceOf[Object]
+        new SlangAstTreeModel.Node(index.toString, isLeaf(value), value)
+      case parent: List[_] =>
+        val value = parent(index).asInstanceOf[Object]
+        new SlangAstTreeModel.Node(index.toString, isLeaf(value), value)
+      case parent: DatatypeSig =>
+        val (name, value) = parent.$content(index + 1)
+        val isLeaf = this.isLeaf(value)
+        new SlangAstTreeModel.Node(name, isLeaf, value.asInstanceOf[Object])
+      case parent: SlangAstTreeModel.Node => getChild(parent.value, index)
+    }
+
+    override def getChildCount(parent: Any): Int = parent match {
+      case _: None[_] => 0
+      case _: Some[_] => 1
+      case parent: IS[_, _] => parent.size.toInt
+      case parent: List[_] =>
+        parent.length
+      case parent: DatatypeSig =>
+        parent.$content.length - 1
+      case parent: SlangAstTreeModel.Node => getChildCount(parent.value)
+      case _ => 0
+    }
+
+    override def isLeaf(node: Any): Boolean = getChildCount(node) == 0
+
+    override def getIndexOfChild(parent: Any, child: Any): Int = ???
+  }
 
   val windows = new ConcurrentHashMap[Project, Forms]()
   val hpainterColor = new Color(129, 62, 200, 64)
@@ -106,6 +153,39 @@ object SireumToolWindowFactory {
       }
     })
 
+    val slangAstForm = new SlangAstToolWindowForm()
+    slangAstForm.slangAstTree.setModel(new SlangAstTreeModel(project, null))
+    slangAstForm.slangAstTree.addTreeSelectionListener(_ => {
+      import org.sireum._
+      slangAstForm.slangAstTree.getLastSelectedPathComponent match {
+        case node: SlangAstTreeModel.Node =>
+          node.value match {
+            case o: DatatypeSig =>
+              def openPosOpt(posOpt: Option[message.Position]): Unit = {
+                posOpt match {
+                  case Some(pos) =>
+                    val project = slangAstForm.slangAstTree.getModel.asInstanceOf[SlangAstTreeModel].project
+                    val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(pos.uriOpt.get).string.value)
+                    FileEditorManager.getInstance(project).openTextEditor(
+                      new OpenFileDescriptor(project, file, pos.offset.toInt), true)
+                  case _ =>
+                }
+              }
+              for ((_, attr) <- o.$content) {
+                attr match {
+                  case attr: lang.ast.Attr => openPosOpt(attr.posOpt)
+                  case attr: lang.ast.TypedAttr => openPosOpt(attr.posOpt)
+                  case attr: lang.ast.ResolvedAttr => openPosOpt(attr.posOpt)
+                  case _ =>
+                }
+              }
+            case _ =>
+          }
+        case _ =>
+      }
+    })
+    toolWindow.getContentManager.addContent(
+      contentFactory.createContent(slangAstForm.slangAstPanel, "Slang AST", false))
 
     logikaForm.logikaToolTextExportButton.addActionListener((_: ActionEvent) => {
       var text = logikaForm.logikaTextArea.getText
@@ -282,7 +362,7 @@ object SireumToolWindowFactory {
       }
     })
 
-    windows.put(project, Forms(toolWindow, logikaForm, console))
+    windows.put(project, Forms(toolWindow, logikaForm, console, slangAstForm.slangAstTree))
   } catch {
     case t: Throwable =>
       val sw = new java.io.StringWriter

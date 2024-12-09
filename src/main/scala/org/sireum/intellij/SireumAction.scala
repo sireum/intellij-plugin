@@ -26,6 +26,7 @@ package org.sireum.intellij
 
 import com.intellij.notification.{Notification, NotificationType}
 import com.intellij.openapi.actionSystem.{AnAction, AnActionEvent, CommonDataKeys}
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -245,6 +246,42 @@ final class SlangReformatProofsAction extends SireumAction {
   }
 }
 
+final class SlangViewAst extends SireumAction {
+  override def update(e: AnActionEvent): Unit = {
+    val project = e.getProject
+    val editor = FileEditorManager.
+      getInstance(project).getSelectedTextEditor
+    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.getFileExt(project) == "sc" &&
+      Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText))._1)
+  }
+  override def actionPerformed(e: AnActionEvent): Unit = {
+    import org.sireum._
+    val project = e.getProject
+    val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
+    if (editor == null) {
+      return
+    }
+    val reporter = message.Reporter.create
+    lang.parser.Parser.parseTopUnit[lang.ast.TopUnit.Program](editor.getDocument.getText(), T, F, Util.getFilePath(project) match {
+      case scala.Some(x) => Some(x.toUri.value)
+      case _ => None()
+    }, reporter) match {
+      case Some(program) =>
+        SireumClient.sireumToolWindowFactory(project, forms => {
+          ApplicationManager.getApplication.invokeLater(() => {
+            val p = lang.FrontEnd.checkWorksheet(100, Some(lang.FrontEnd.checkedLibraryReporter._1.typeHierarchy), program, reporter)._2
+            forms.toolWindow.activate(() => {
+              forms.astTree.setModel(new SireumToolWindowFactory.SlangAstTreeModel(project,
+                new SireumToolWindowFactory.SlangAstTreeModel.Node("ROOT", false, p)))
+              forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Slang AST"))
+            })
+          })
+        })
+      case _ =>
+    }
+  }
+}
+
 trait SireumInsertSymbol extends SireumAction {
   def symbol: String
 
@@ -254,17 +291,18 @@ trait SireumInsertSymbol extends SireumAction {
       getInstance(project).getSelectedTextEditor
     if (editor == null) return
     val document = editor.getDocument
+    val symbol = s"${this.symbol} "
     WriteCommandAction.runWriteCommandAction(project,
       (() => {
         val caretModel = editor.getCaretModel
         val caret = caretModel.getPrimaryCaret
         if (caret.hasSelection) {
           document.replaceString(caret.getSelectionStart, caret.getSelectionEnd, symbol)
-          caret.moveToOffset(caret.getSelectionStart + 1)
+          caret.moveToOffset(caret.getSelectionStart + symbol.length)
         } else {
           val offset = caret.getOffset
           document.insertString(offset, symbol)
-          caret.moveToOffset(offset + 1)
+          caret.moveToOffset(offset + symbol.length)
         }
       }): Runnable)
   }
