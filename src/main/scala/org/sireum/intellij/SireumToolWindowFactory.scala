@@ -45,16 +45,23 @@ import org.sireum.intellij.logika.LogikaToolWindowForm
 import org.sireum.smtlib.parser.{SMTLIBv2Lexer, SMTLIBv2Parser}
 
 import java.awt.{Color, Component}
-import java.awt.event.{ActionEvent, ActionListener, ComponentAdapter, ComponentEvent}
+import java.awt.event.{ActionEvent, ComponentAdapter, ComponentEvent}
 import java.io.PrintWriter
-import javax.swing.{DefaultListCellRenderer, JList, JTextArea, JTree}
-import javax.swing.event.{DocumentEvent, DocumentListener, TreeModelListener, TreeSelectionEvent, TreeSelectionListener}
+import javax.swing.{DefaultListCellRenderer, DefaultListModel, JList, JTextArea, JTree}
+import javax.swing.event.{DocumentEvent, DocumentListener}
 import javax.swing.text.DefaultHighlighter
-import javax.swing.tree.{TreeCellRenderer, TreeModel, TreePath}
 
 object SireumToolWindowFactory {
 
-  final case class Forms(toolWindow: ToolWindow, logika: LogikaToolWindowForm, consoleView: ConsoleView, astTree: JTree)
+  final case class Problem(value: SireumClient.ConsoleReportItem) {
+    override def toString: String = s"[${value.file.getName}, ${value.line}, ${value.offset}] ${value.message}"
+  }
+
+  final case class Forms(toolWindow: ToolWindow,
+                         problemList: JList[Problem],
+                         logika: LogikaToolWindowForm,
+                         consoleView: ConsoleView,
+                         astTree: JTree)
 
   object SlangAstTreeModel {
     final class Node(val text: String, val isLeaf: Boolean, val value: Object) {
@@ -120,13 +127,20 @@ object SireumToolWindowFactory {
       case _ =>
     }
     val contentFactory = ContentFactory.getInstance
+
+    val problemForm = new ProblemToolWindowForm()
+    toolWindow.getContentManager.addContent(
+      contentFactory.createContent(problemForm.problemPanel, "Problems", false))
+    problemForm.problemList.setModel(new DefaultListModel[Problem]())
+    problemForm.problemList.addListSelectionListener(e => {
+      val problem = problemForm.problemList.getModel.getElementAt(e.getFirstIndex)
+      FileEditorManager.getInstance(project).openTextEditor(
+        new OpenFileDescriptor(problem.value.project, problem.value.file, problem.value.offset), true)
+    })
+
     val logikaForm = new LogikaToolWindowForm()
     toolWindow.getContentManager.addContent(
       contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Output", false))
-    val console = TextConsoleBuilderFactory.getInstance().createBuilder(project).getConsole
-    console.requestScrollingToEnd()
-    toolWindow.getContentManager.addContent(
-      contentFactory.createContent(console.getComponent, "Console", false))
     logikaForm.logikaTextArea.setEditable(false)
     logikaForm.logikaList.setCellRenderer(new DefaultListCellRenderer {
       val ta = new JTextArea
@@ -152,6 +166,11 @@ object SireumToolWindowFactory {
         logikaForm.logikaList.setFixedCellHeight(-1)
       }
     })
+
+    val console = TextConsoleBuilderFactory.getInstance().createBuilder(project).getConsole
+    console.requestScrollingToEnd()
+    toolWindow.getContentManager.addContent(
+      contentFactory.createContent(console.getComponent, "Console", false))
 
     val slangAstForm = new SlangAstToolWindowForm()
     slangAstForm.slangAstTree.setModel(new SlangAstTreeModel(project, null))
@@ -362,7 +381,7 @@ object SireumToolWindowFactory {
       }
     })
 
-    windows.put(project, Forms(toolWindow, logikaForm, console, slangAstForm.slangAstTree))
+    windows.put(project, Forms(toolWindow, problemForm.problemList, logikaForm, console, slangAstForm.slangAstTree))
   } catch {
     case t: Throwable =>
       val sw = new java.io.StringWriter

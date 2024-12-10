@@ -56,6 +56,7 @@ import java.awt.{Color, Font}
 import java.io.{BufferedReader, BufferedWriter, ByteArrayOutputStream, IOException, InputStream, InputStreamReader, OutputStreamWriter, Reader, Writer}
 import java.net.{InetAddress, Socket}
 import java.util.concurrent._
+import javax.swing.event.HyperlinkEvent
 import javax.swing.{DefaultListModel, Icon, JComponent, JMenu, JMenuItem, JPopupMenu, JSplitPane}
 
 object SireumClient {
@@ -760,6 +761,15 @@ object SireumClient {
     import org.sireum.message.Level
     import org.sireum.server.protocol._
     val project = projectOpt.orNull
+    def openProblems(): Unit = {
+      SireumClient.sireumToolWindowFactory(project, forms => {
+        ApplicationManager.getApplication.invokeLater(() => {
+          forms.toolWindow.activate(() => {
+            forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Problems"))
+          })
+        })
+      })
+    }
     val statusOpt = editorOpt.map(_.getUserData(statusKey))
     r match {
       case r: Analysis.End =>
@@ -769,14 +779,16 @@ object SireumClient {
               if (r.isIllFormed) {
                 Util.notify(new Notification(
                   groupId, errorTitle,
-                  s"Ill-formed file with ${r.numOfErrors} error(s)",
-                  NotificationType.ERROR), project, shouldExpire = true)
+                  s"""<p>Ill-formed file with ${r.numOfErrors} error(s). Open <a href="">Problems</a> list?</p>""",
+                  NotificationType.ERROR, (_: Notification, _: HyperlinkEvent) =>
+                    ApplicationManager.getApplication.invokeLater(openProblems _)), project, shouldExpire = true)
               }
               else {
                 Util.notify(new Notification(
                   groupId, logikaErrorTitle,
-                  s"Proof is rejected with ${r.numOfErrors} error(s)",
-                  NotificationType.ERROR), project, shouldExpire = true)
+                  s"""<p>Proof is rejected with ${r.numOfErrors} error(s). Open <a href="">Problems</a> list?</p>""",
+                  NotificationType.ERROR, (_: Notification, _: HyperlinkEvent) =>
+                    ApplicationManager.getApplication.invokeLater(openProblems _)), project, shouldExpire = true)
               }
             }
           }
@@ -1462,10 +1474,17 @@ object SireumClient {
             }
           }
 
+          def clearProblems(project: Project): Unit = {
+            SireumClient.sireumToolWindowFactory(project, forms => {
+              forms.problemList.getModel.asInstanceOf[DefaultListModel[SireumToolWindowFactory.Problem]].clear()
+            })
+          }
+
           def clearProgramMarkings(): Unit = {
             r match {
               case _: org.sireum.server.protocol.Analysis.Start =>
                 for (project <- ProjectManager.getInstance.getOpenProjects) {
+                  clearProblems(project)
                   for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
                     fileEditor match {
                       case fileEditor: TextEditor =>
@@ -1483,7 +1502,9 @@ object SireumClient {
 
           def clearScriptMarkings(editor: Editor): Unit = {
             r match {
-              case _: org.sireum.server.protocol.Analysis.Start => clearEditorH(editor)
+              case _: org.sireum.server.protocol.Analysis.Start =>
+                clearProblems(editor.getProject)
+                clearEditorH(editor)
               case _ =>
             }
           }
@@ -1648,7 +1669,12 @@ object SireumClient {
             case _ =>
               for ((line, ri) <- processReport(project, file, r)) try {
                 ri match {
-                  case ri: ConsoleReportItem => consoleReportItems(listModel, rhs, editor, ri, line)
+                  case ri: ConsoleReportItem =>
+                    SireumClient.sireumToolWindowFactory(project, forms => {
+                      forms.problemList.getModel.asInstanceOf[DefaultListModel[SireumToolWindowFactory.Problem]].
+                        addElement(SireumToolWindowFactory.Problem(ri))
+                    })
+                    consoleReportItems(listModel, rhs, editor, ri, line)
                   case ri: HintReportItem => hintReportItem(hintListModelMap, rhs, editor, ri, line)
                   case ri: SummoningReportItem => summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
                   case _ =>
