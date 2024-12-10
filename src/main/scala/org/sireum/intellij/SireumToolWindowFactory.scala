@@ -53,8 +53,53 @@ import javax.swing.text.DefaultHighlighter
 
 object SireumToolWindowFactory {
 
-  final case class Problem(value: SireumClient.ConsoleReportItem) {
-    override def toString: String = s"[${value.file.getName}, ${value.line}, ${value.offset}] ${value.message}"
+  final case class Problem(project: Project, value: org.sireum.server.protocol.Report) {
+    override def toString: String = {
+      import org.sireum._
+      val level = value.message.level match {
+        case message.Level.Error => "Error"
+        case message.Level.InternalError => "Internal Error"
+        case message.Level.Warning => "Warning"
+        case message.Level.Info => "Info"
+      }
+      value.posOpt match {
+        case Some(pos) =>
+          pos.uriOpt match {
+            case Some(uri) =>
+              s"[${Os.Path.fromUri(uri).name}, ${pos.beginLine}, ${pos.beginColumn}] $level: ${value.message.text}"
+            case _ =>
+              s"[${pos.beginLine}, ${pos.beginColumn}] $level: ${value.message.text}"
+          }
+        case _ =>
+          s"$level: ${value.message.text}"
+      }
+    }
+  }
+
+  final class ListCellRenderer extends DefaultListCellRenderer {
+    val ta = new JTextArea
+    val border = com.intellij.util.ui.JBUI.Borders.customLineBottom(new JBColor(Color.lightGray, Color.darkGray))
+    override def getListCellRendererComponent(list: JList[_ <: AnyRef], value: scala.Any, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
+      ta.setBorder(border)
+      if (isSelected) {
+        ta.setBackground(selectedListItemColor)
+      } else {
+        ta.setBackground(list.getBackground)
+      }
+      ta.setForeground(list.getForeground)
+      ta.setText(value.toString)
+      val width = list.getWidth
+      if (width > 0)
+        ta.setSize(width, Short.MaxValue)
+      ta
+    }
+  }
+
+  final class ListComponentAdapter(list: JList[_]) extends ComponentAdapter {
+    override def componentResized(e: ComponentEvent): Unit = {
+      list.setFixedCellHeight(10)
+      list.setFixedCellHeight(-1)
+    }
   }
 
   final case class Forms(toolWindow: ToolWindow,
@@ -131,41 +176,30 @@ object SireumToolWindowFactory {
     val problemForm = new ProblemToolWindowForm()
     toolWindow.getContentManager.addContent(
       contentFactory.createContent(problemForm.problemPanel, "Problems", false))
+    problemForm.problemList.setCellRenderer(new ListCellRenderer())
+    problemForm.problemList.addComponentListener(new ListComponentAdapter(problemForm.problemList))
     problemForm.problemList.setModel(new DefaultListModel[Problem]())
     problemForm.problemList.addListSelectionListener(e => {
       val problem = problemForm.problemList.getModel.getElementAt(e.getFirstIndex)
-      FileEditorManager.getInstance(project).openTextEditor(
-        new OpenFileDescriptor(problem.value.project, problem.value.file, problem.value.offset), true)
+      problem.value.posOpt match {
+        case org.sireum.Some(pos) =>
+          pos.uriOpt match {
+            case org.sireum.Some(uri) =>
+              val file = LocalFileSystem.getInstance().findFileByPath(org.sireum.Os.Path.fromUri(uri).string.value)
+              FileEditorManager.getInstance(project).openTextEditor(
+                new OpenFileDescriptor(problem.project, file, pos.offset.toInt), true)
+            case _ =>
+          }
+        case _ =>
+      }
     })
 
     val logikaForm = new LogikaToolWindowForm()
     toolWindow.getContentManager.addContent(
       contentFactory.createContent(logikaForm.logikaToolWindowPanel, "Output", false))
     logikaForm.logikaTextArea.setEditable(false)
-    logikaForm.logikaList.setCellRenderer(new DefaultListCellRenderer {
-      val ta = new JTextArea
-      val border = com.intellij.util.ui.JBUI.Borders.customLineBottom(new JBColor(Color.lightGray, Color.darkGray))
-      override def getListCellRendererComponent(list: JList[_], value: AnyRef, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
-        ta.setBorder(border)
-        if (isSelected) {
-          ta.setBackground(selectedListItemColor)
-        } else {
-          ta.setBackground(list.getBackground)
-        }
-        ta.setForeground(list.getForeground)
-        ta.setText(value.toString)
-        val width = list.getWidth
-        if (width > 0)
-          ta.setSize(width, Short.MaxValue)
-        ta
-      }
-    })
-    logikaForm.logikaList.addComponentListener(new ComponentAdapter {
-      override def componentResized(e: ComponentEvent): Unit = {
-        logikaForm.logikaList.setFixedCellHeight(10)
-        logikaForm.logikaList.setFixedCellHeight(-1)
-      }
-    })
+    logikaForm.logikaList.setCellRenderer(new ListCellRenderer())
+    logikaForm.logikaList.addComponentListener(new ListComponentAdapter(logikaForm.logikaList))
 
     val console = TextConsoleBuilderFactory.getInstance().createBuilder(project).getConsole
     console.requestScrollingToEnd()

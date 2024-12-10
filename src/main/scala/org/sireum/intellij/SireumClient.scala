@@ -1508,6 +1508,16 @@ object SireumClient {
               case _ =>
             }
           }
+          r match {
+            case r: org.sireum.server.protocol.Report =>
+              for (project <- ProjectManager.getInstance().getOpenProjects) {
+                SireumClient.sireumToolWindowFactory(project, forms => {
+                  forms.problemList.getModel.asInstanceOf[DefaultListModel[SireumToolWindowFactory.Problem]].
+                    addElement(SireumToolWindowFactory.Problem(project, r))
+                })
+              }
+            case _ =>
+          }
 
           val (project, file, editor, input) = editorMap.synchronized {
             editorMap.get(r.id) match {
@@ -1669,12 +1679,7 @@ object SireumClient {
             case _ =>
               for ((line, ri) <- processReport(project, file, r)) try {
                 ri match {
-                  case ri: ConsoleReportItem =>
-                    SireumClient.sireumToolWindowFactory(project, forms => {
-                      forms.problemList.getModel.asInstanceOf[DefaultListModel[SireumToolWindowFactory.Problem]].
-                        addElement(SireumToolWindowFactory.Problem(ri))
-                    })
-                    consoleReportItems(listModel, rhs, editor, ri, line)
+                  case ri: ConsoleReportItem => consoleReportItems(listModel, rhs, editor, ri, line)
                   case ri: HintReportItem => hintReportItem(hintListModelMap, rhs, editor, ri, line)
                   case ri: SummoningReportItem => summoningReportItem(summoningListModelMap, rhs, editor, ri, line)
                   case _ =>
