@@ -775,21 +775,19 @@ object SireumClient {
       case r: Analysis.End =>
         if (r.numOfErrors > 0 || r.numOfInternalErrors > 0) {
           if (!r.isBackground || statusOpt.getOrElse(true)) {
-            if (r.hasLogika) {
-              if (r.isIllFormed) {
-                Util.notify(new Notification(
-                  groupId, errorTitle,
-                  s"""<p>Ill-formed file with ${r.numOfErrors} error(s). Open <a href="">Problems</a> list?</p>""",
-                  NotificationType.ERROR, (_: Notification, _: HyperlinkEvent) =>
-                    ApplicationManager.getApplication.invokeLater(openProblems _)), project, shouldExpire = true)
-              }
-              else {
-                Util.notify(new Notification(
-                  groupId, logikaErrorTitle,
-                  s"""<p>Proof is rejected with ${r.numOfErrors} error(s). Open <a href="">Problems</a> list?</p>""",
-                  NotificationType.ERROR, (_: Notification, _: HyperlinkEvent) =>
-                    ApplicationManager.getApplication.invokeLater(openProblems _)), project, shouldExpire = true)
-              }
+            if (r.isIllFormed) {
+              Util.notify(new Notification(
+                groupId, errorTitle,
+                s"""<p>Ill-formed file with ${r.numOfErrors} error(s). Open <a href="">Problems</a> list?</p>""",
+                NotificationType.ERROR, (_: Notification, _: HyperlinkEvent) =>
+                  ApplicationManager.getApplication.invokeLater(openProblems _)), project, shouldExpire = true)
+            }
+            else {
+              Util.notify(new Notification(
+                groupId, logikaErrorTitle,
+                s"""<p>Proof is rejected with ${r.numOfErrors} error(s). Open <a href="">Problems</a> list?</p>""",
+                NotificationType.ERROR, (_: Notification, _: HyperlinkEvent) =>
+                  ApplicationManager.getApplication.invokeLater(openProblems _)), project, shouldExpire = true)
             }
           }
           editorOpt.foreach(_.putUserData(statusKey, false))
