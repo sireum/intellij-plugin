@@ -41,13 +41,14 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.content.ContentFactory
 import com.intellij.util.ui.tree.AbstractTreeModel
 import org.antlr.v4.runtime.{BaseErrorListener, CharStreams, CommonTokenStream, RecognitionException, Recognizer}
+import org.sireum.intellij.Util.{ListCellRenderer, ListComponentAdapter}
 import org.sireum.intellij.logika.LogikaToolWindowForm
 import org.sireum.smtlib.parser.{SMTLIBv2Lexer, SMTLIBv2Parser}
 
-import java.awt.{Color, Component}
-import java.awt.event.{ActionEvent, ComponentAdapter, ComponentEvent}
+import java.awt.Color
+import java.awt.event.ActionEvent
 import java.io.PrintWriter
-import javax.swing.{DefaultListCellRenderer, DefaultListModel, JList, JTextArea, JTree}
+import javax.swing.{DefaultListModel, JList, JTree}
 import javax.swing.event.{DocumentEvent, DocumentListener}
 import javax.swing.text.DefaultHighlighter
 
@@ -73,32 +74,6 @@ object SireumToolWindowFactory {
         case _ =>
           s"$level: ${value.message.text}"
       }
-    }
-  }
-
-  final class ListCellRenderer extends DefaultListCellRenderer {
-    val ta = new JTextArea
-    val border = com.intellij.util.ui.JBUI.Borders.customLineBottom(new JBColor(Color.lightGray, Color.darkGray))
-    override def getListCellRendererComponent(list: JList[_ <: AnyRef], value: scala.Any, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
-      ta.setBorder(border)
-      if (isSelected) {
-        ta.setBackground(selectedListItemColor)
-      } else {
-        ta.setBackground(list.getBackground)
-      }
-      ta.setForeground(list.getForeground)
-      ta.setText(value.toString)
-      val width = list.getWidth
-      if (width > 0)
-        ta.setSize(width, Short.MaxValue)
-      ta
-    }
-  }
-
-  final class ListComponentAdapter(list: JList[_]) extends ComponentAdapter {
-    override def componentResized(e: ComponentEvent): Unit = {
-      list.setFixedCellHeight(10)
-      list.setFixedCellHeight(-1)
     }
   }
 

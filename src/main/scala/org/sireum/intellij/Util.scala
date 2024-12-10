@@ -30,10 +30,41 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.JBColor
+import org.sireum.intellij.SireumToolWindowFactory.selectedListItemColor
 
+import java.awt.event.{ComponentAdapter, ComponentEvent}
+import java.awt.{Color, Component}
+import javax.swing.{DefaultListCellRenderer, JList, JTextArea}
 import javax.swing.event.HyperlinkEvent
 
 object Util {
+  final class ListCellRenderer extends DefaultListCellRenderer {
+    val ta = new JTextArea
+    val border = com.intellij.util.ui.JBUI.Borders.customLineBottom(new JBColor(Color.lightGray, Color.darkGray))
+    override def getListCellRendererComponent(list: JList[_ <: AnyRef], value: scala.Any, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component = {
+      ta.setBorder(border)
+      if (isSelected) {
+        ta.setBackground(selectedListItemColor)
+      } else {
+        ta.setBackground(list.getBackground)
+      }
+      ta.setForeground(list.getForeground)
+      ta.setText(value.toString)
+      val width = list.getWidth
+      if (width > 0)
+        ta.setSize(width, Short.MaxValue)
+      ta
+    }
+  }
+
+  final class ListComponentAdapter(list: JList[_]) extends ComponentAdapter {
+    override def componentResized(e: ComponentEvent): Unit = {
+      list.setFixedCellHeight(10)
+      list.setFixedCellHeight(-1)
+    }
+  }
+
   def getPath(file: VirtualFile): Option[org.sireum.Os.Path] =
     try Some(org.sireum.Os.path(file.toNioPath.toFile.getCanonicalPath))
     catch { case _: Throwable => return None }
