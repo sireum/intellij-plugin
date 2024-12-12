@@ -74,7 +74,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
         proxyPort != proxyPortTextField.getText ||
         proxyUserEnvVar != proxyUserEnvTextField.getText ||
         proxyPasswdEnvVar != proxyPasswdEnvTextField.getText ||
-        proxyNonHosts != proxyNonHostsTextField.getText)
+        proxyNonHosts != proxyNonHostsTextField.getText ||
+        useNative != nativeCheckBox.isSelected)
   }
 
   def parseGe(text: String, low: Int): Option[Int] =
@@ -217,6 +218,11 @@ final class SireumConfigurable extends SireumForm with Configurable {
       verboseCheckBox.setEnabled(loggingCheckBox.isSelected)
     }
 
+    def updateNative(): Unit = {
+      val enabled = !nativeCheckBox.isSelected
+      vmArgsTextField.setEnabled(enabled)
+    }
+
     loggingCheckBox.addActionListener(_ => updateVerbose())
     bgDisabledRadioButton.addActionListener(_ => updateBackground())
     bgSaveRadioButton.addActionListener(_ => updateBackground())
@@ -235,6 +241,8 @@ final class SireumConfigurable extends SireumForm with Configurable {
     parLabel.setText(s"CPU cores (max: $maxCores)")
     parSpinner.setModel(new SpinnerNumberModel(bgCores, 1, maxCores, 1))
 
+    nativeCheckBox.addChangeListener(_ => updateNative())
+
     updateEnvVars(envVarsString)
     updateVmArgs(vmArgsString)
     updateBg(idle.toString)
@@ -243,6 +251,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
     updateProxyPort(proxyPort)
     updateProxyUser(proxyUserEnvVar)
     updateProxyPasswd(proxyPasswdEnvVar)
+    updateNative()
 
     sireumPanel
   }
@@ -273,6 +282,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
         proxyUserEnvVar = proxyUserEnvTextField.getText
         proxyPasswdEnvVar = proxyPasswdEnvTextField.getText
         proxyNonHosts = proxyNonHostsTextField.getText
+        useNative = nativeCheckBox.isSelected
         saveConfiguration()
       }
     } else {
@@ -307,6 +317,7 @@ final class SireumConfigurable extends SireumForm with Configurable {
       proxyUserEnvTextField.setText(proxyUserEnvVar)
       proxyPasswdEnvTextField.setText(proxyPasswdEnvVar)
       proxyNonHostsTextField.setText(proxyNonHosts)
+      nativeCheckBox.setSelected(useNative)
     }
   }
 
@@ -317,11 +328,13 @@ final class SireumConfigurable extends SireumForm with Configurable {
     val oldCacheType = cacheType
     val oldLogging = logging
     val oldVerbose = verbose
+    val oldUseNative = useNative
 
     f()
 
     if (SireumClient.processInit.nonEmpty && (oldCacheInput != cacheInput || oldVmArgs != vmArgsString ||
-      oldCacheType != cacheType || oldLogging != logging || oldVerbose != verbose || oldEnvVars != envVarsString)) {
+      oldCacheType != cacheType || oldLogging != logging || oldVerbose != verbose || oldEnvVars != envVarsString) ||
+      oldUseNative != useNative) {
       ApplicationManager.getApplication.invokeLater { () =>
         SireumClient.shutdownServer()
         var found = false

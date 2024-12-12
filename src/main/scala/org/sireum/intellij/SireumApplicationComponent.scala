@@ -62,6 +62,7 @@ object SireumApplicationComponent {
   private val proxyUserEnvVarKey: String = sireumKey + "proxyUser"
   private val proxyPasswdEnvVarKey: String = sireumKey + "proxyPasswd"
   private val proxyNonHostsKey: String = sireumKey + "proxyNonHosts"
+  private val useNativeKey: String = sireumKey + "native"
 
   private val isDev: Boolean = "false" != System.getProperty("org.sireum.ive.dev")
   private val dev: String = if (isDev) "-dev" else ""
@@ -85,6 +86,7 @@ object SireumApplicationComponent {
   private[intellij] var proxyUserEnvVar: String = ""
   private[intellij] var proxyPasswdEnvVar: String = ""
   private[intellij] var proxyNonHosts: String = ""
+  private[intellij] var useNative: Boolean = false
 
   private[intellij] val platform: String = org.sireum.Os.kind match {
     case org.sireum.Os.Kind.Mac => "mac"
@@ -167,6 +169,12 @@ object SireumApplicationComponent {
 
   def getCommand(sireumHome: org.sireum.Os.Path, args: Seq[String]): Seq[String] = {
     import org.sireum._
+    if (useNative) {
+      val sireumExe = sireumHome / "bin" / platform / (if (Os.isWin) "sireum.exe" else "sireum")
+      if (sireumExe.isExecutable) {
+        return sireumExe.value.value +: args
+      }
+    }
     val javaHome = sireumHome / "bin" / platform / "java"
     val javaPath = javaHome / "bin" / (if (Os.isWin) "java.exe" else "java")
     val sireumJarPath = sireumHome / "bin" / "sireum.jar"
@@ -275,6 +283,7 @@ object SireumApplicationComponent {
     proxyUserEnvVar = pc.getValue(proxyUserEnvVarKey, proxyUserEnvVar)
     proxyPasswdEnvVar = pc.getValue(proxyPasswdEnvVarKey, proxyPasswdEnvVar)
     proxyNonHosts = pc.getValue(proxyNonHostsKey, proxyNonHosts)
+    useNative = pc.getBoolean(useNativeKey, useNative)
   }
 
   def saveConfiguration(): Unit = {
@@ -296,6 +305,7 @@ object SireumApplicationComponent {
     pc.setValue(proxyUserEnvVarKey, proxyUserEnvVar)
     pc.setValue(proxyPasswdEnvVarKey, proxyPasswdEnvVar)
     pc.setValue(proxyNonHostsKey, proxyNonHosts)
+    pc.setValue(useNativeKey, useNative.toString)
   }
 }
 
