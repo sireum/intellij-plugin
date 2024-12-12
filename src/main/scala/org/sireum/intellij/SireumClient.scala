@@ -588,7 +588,8 @@ object SireumClient {
             uriOpt = org.sireum.Some(org.sireum.String(file.toNioPath.toUri.toASCIIString)),
             content = input,
             line = line,
-            rewriteKindOpt = org.sireum.None()
+            rewriteKindOpt = org.sireum.None(),
+            returnAST = false
           )
         } else {
           var files = ofiles
@@ -617,7 +618,8 @@ object SireumClient {
             vfiles = vfiles,
             line = line,
             rewriteUriOpt = org.sireum.None(),
-            rewriteKind = org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps
+            rewriteKind = org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps,
+            returnAST = false
           )
         }
       )
@@ -1455,6 +1457,26 @@ object SireumClient {
       case r: org.sireum.server.protocol.Analysis.Cache.Cleared =>
         Util.notify(new Notification(groupId, sireumServerTitle,
           r.msg.value, NotificationType.INFORMATION), null, shouldExpire = true)
+      case r: org.sireum.server.protocol.Analysis.ResolvedAst =>
+        if (r.path.value.isEmpty) {
+          Util.notify(new Notification(groupId, "Slang AST Viewer",
+            s"Could not display Slang AST", NotificationType.ERROR), null, shouldExpire = true)
+        } else {
+          val path = org.sireum.Os.path(r.path)
+          val topUnit = org.sireum.lang.tipe.JSON.to_astTopUnit(path.read).left
+          val project = Util.activeProject
+          if (project != null) {
+            sireumToolWindowFactory(project, forms => {
+              ApplicationManager.getApplication.invokeLater(() => {
+                forms.toolWindow.activate(() => {
+                  forms.astTree.setModel(new SireumToolWindowFactory.SlangAstTreeModel(project,
+                    new SireumToolWindowFactory.SlangAstTreeModel.Node("ROOT", false, topUnit)))
+                  forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Slang AST"))
+                })
+              })
+            })
+          }
+        }
       case _ =>
         def processResultH(): Unit = {
           def clearEditorH(editor: Editor): Unit = {

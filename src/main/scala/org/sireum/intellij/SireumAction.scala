@@ -155,26 +155,27 @@ trait SlangTypedRewriteAction extends SlangRewriteAction {
     val project = e.getProject
     val editor = FileEditorManager.
       getInstance(project).getSelectedTextEditor
-    val fileUriOpt: org.sireum.Option[org.sireum.String] = Util.getFilePath(project) match {
-      case Some(p) => org.sireum.Some(p.canon.toUri)
+    val fileOpt: org.sireum.Option[org.sireum.Os.Path] = Util.getFilePath(project) match {
+      case Some(p) => org.sireum.Some(p)
       case _ => org.sireum.None()
     }
     val document = editor.getDocument
     val text = document.getText
-    val isWorksheet = fileUriOpt match {
-      case org.sireum.Some(fileUri) => !fileUri.value.endsWith(".scala") && !fileUri.value.endsWith(".slang")
+    val isWorksheet = fileOpt match {
+      case org.sireum.Some(f) => f.ext.value != "scala" && f.ext.value != "slang"
       case _ => true
     }
     val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
 
     SireumClient.addRequest(id => Vector(
       if (isWorksheet) org.sireum.server.protocol.Slang.Check.Script(
-        isBackground = false, false, id, org.sireum.Some(org.sireum.Os.path(project.getBasePath).string), fileUriOpt, text, 0,
-        rewriteKindOpt = org.sireum.Some(kind)
+        isBackground = false, false, id, org.sireum.Some(org.sireum.Os.path(project.getBasePath).string), fileOpt.map(_.toUri), text, 0,
+        rewriteKindOpt = org.sireum.Some(kind),
+        returnAST = false
       ) else org.sireum.server.protocol.Slang.Check.Project(
         isBackground = false, id, org.sireum.Os.path(project.getBasePath).string,
-        org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String] + fileUriOpt.get ~> text,
-        org.sireum.ISZ(), 0, kind, fileUriOpt
+        org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String] + fileOpt.get.value ~> text,
+        org.sireum.ISZ(), 0, kind, fileOpt.map(_.toUri), false
       )
     ), project, file, editor, isBackground = false, text, isInterprocedural = false)
   }
@@ -246,39 +247,34 @@ final class SlangReformatProofsAction extends SireumAction {
   }
 }
 
-final class SlangViewAst extends SireumAction {
-  override def update(e: AnActionEvent): Unit = {
+final class SlangViewAst extends SireumOnlyAction {
+  override def actionPerformed(e: AnActionEvent): Unit = {
     val project = e.getProject
     val editor = FileEditorManager.
       getInstance(project).getSelectedTextEditor
-    if (editor != null) e.getPresentation.setEnabledAndVisible(project != null && Util.getFileExt(project) == "sc" &&
-      Util.isSireumOrLogikaFile(project)(org.sireum.String(editor.getDocument.getText))._1)
-  }
-  override def actionPerformed(e: AnActionEvent): Unit = {
-    import org.sireum._
-    val project = e.getProject
-    val editor = FileEditorManager.getInstance(project).getSelectedTextEditor
-    if (editor == null) {
-      return
+    val fileOpt: org.sireum.Option[org.sireum.Os.Path] = Util.getFilePath(project) match {
+      case Some(p) => org.sireum.Some(p)
+      case _ => org.sireum.None()
     }
-    val reporter = message.Reporter.create
-    lang.parser.Parser.parseTopUnit[lang.ast.TopUnit.Program](editor.getDocument.getText(), T, F, Util.getFilePath(project) match {
-      case scala.Some(x) => Some(x.toUri.value)
-      case _ => None()
-    }, reporter) match {
-      case Some(program) =>
-        SireumClient.sireumToolWindowFactory(project, forms => {
-          ApplicationManager.getApplication.invokeLater(() => {
-            val p = lang.FrontEnd.checkWorksheet(100, Some(lang.FrontEnd.checkedLibraryReporter._1.typeHierarchy), program, reporter)._2
-            forms.toolWindow.activate(() => {
-              forms.astTree.setModel(new SireumToolWindowFactory.SlangAstTreeModel(project,
-                new SireumToolWindowFactory.SlangAstTreeModel.Node("ROOT", false, p)))
-              forms.toolWindow.getContentManager.setSelectedContent(forms.toolWindow.getContentManager.findContent("Slang AST"))
-            })
-          })
-        })
-      case _ =>
+    val document = editor.getDocument
+    val text = document.getText
+    val isWorksheet = fileOpt match {
+      case org.sireum.Some(f) => f.ext.value != "scala" && f.ext.value != "slang"
+      case _ => true
     }
+    val file = e.getData[VirtualFile](CommonDataKeys.VIRTUAL_FILE)
+
+    SireumClient.addRequest(id => Vector(
+      if (isWorksheet) org.sireum.server.protocol.Slang.Check.Script(
+        isBackground = false, false, id, org.sireum.Some(org.sireum.Os.path(project.getBasePath).string), fileOpt.map(_.toUri), text, 0,
+        rewriteKindOpt = org.sireum.None(),
+        returnAST = true
+      ) else org.sireum.server.protocol.Slang.Check.Project(
+        isBackground = false, id, org.sireum.Os.path(project.getBasePath).string,
+        org.sireum.HashSMap.empty[org.sireum.String, org.sireum.String] + fileOpt.get.value ~> text,
+        org.sireum.ISZ(), 0, org.sireum.server.protocol.Slang.Rewrite.Kind.RenumberProofSteps, org.sireum.None(), true
+      )
+    ), project, file, editor, isBackground = false, text, isInterprocedural = false)
   }
 }
 

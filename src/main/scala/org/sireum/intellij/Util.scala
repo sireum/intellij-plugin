@@ -28,8 +28,9 @@ package org.sireum.intellij
 import com.intellij.notification.{Notification, NotificationListener, NotificationType, Notifications}
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.{FileDocumentManager, FileEditorManager}
-import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.{Project, ProjectManager}
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.JBColor
 import org.sireum.intellij.SireumToolWindowFactory.selectedListItemColor
 
@@ -87,6 +88,16 @@ object Util {
       case Some(path) => path.ext.value
       case _ => ""
     }
+  }
+
+  def activeProject: Project = {
+    for (project <- ProjectManager.getInstance().getOpenProjects) {
+      val window = WindowManager.getInstance().suggestParentWindow(project)
+      if (window != null && window.isActive) {
+        return project
+      }
+    }
+    return null
   }
 
   def isSireumOrLogikaFile(project: Project)(content: => org.sireum.String): (Boolean, Boolean) =
