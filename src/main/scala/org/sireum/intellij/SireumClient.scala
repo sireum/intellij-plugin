@@ -531,7 +531,9 @@ object SireumClient {
     rwTrace = forms.LogikaFormEx.rwTrace,
     rwMax = forms.LogikaFormEx.rwMax,
     rwPar = forms.LogikaFormEx.rwPar,
-    rwEvalTrace = forms.LogikaFormEx.rwEvalTrace
+    rwEvalTrace = forms.LogikaFormEx.rwEvalTrace,
+    branchParPredNum = forms.LogikaFormEx.branchParNum,
+    branchParPredComp = forms.LogikaFormEx.branchParComp
   )
 
   def analyze(isSlang: Boolean, project: Project, file: VirtualFile, editor: Editor, line: Int,

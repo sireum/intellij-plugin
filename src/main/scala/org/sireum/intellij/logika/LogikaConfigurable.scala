@@ -104,6 +104,9 @@ object LogikaConfigurable {
   private val rwMaxKey = logikaKey + "rw.max"
   private val rwParKey = logikaKey + "rw.par"
   private val rwEvalTraceKey = logikaKey + "rw.evalTrace"
+  private val branchParPredNumKey = logikaKey + "branchPar.pred.num"
+  private val branchParPredCompKey = logikaKey + "branchPar.pred.comp"
+
 
   def loadConfiguration[T](parameter: LogikaFormEx.Parameter[T]): Unit = {
     val pc = PropertiesComponent.getInstance
@@ -169,6 +172,8 @@ object LogikaConfigurable {
     rwMax = pc.getInt(rwMaxKey, rwMax)
     rwPar = pc.getBoolean(rwParKey, rwPar)
     rwEvalTrace = pc.getBoolean(rwEvalTraceKey, rwEvalTrace)
+    branchParNum = pc.getInt(branchParPredNumKey, branchParNum)
+    branchParComp = pc.getInt(branchParPredCompKey, branchParComp)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 
@@ -218,6 +223,8 @@ object LogikaConfigurable {
     pc.setValue(rwMaxKey, rwMax.toString)
     pc.setValue(rwParKey, rwPar.toString)
     pc.setValue(rwEvalTraceKey, rwEvalTrace.toString)
+    pc.setValue(branchParPredNumKey, branchParNum.toString)
+    pc.setValue(branchParPredCompKey, branchParComp.toString)
     SireumClient.coverageTextAttributes.setBackgroundColor(SireumClient.createCoverageColor(coverageIntensity))
   }
 }
