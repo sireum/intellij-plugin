@@ -4,12 +4,12 @@ lazy val `sireum-intellij-plugin` = project.in(file("."))
     .enablePlugins(SbtIdeaPlugin)
     .settings(
       version := "5.0.0-SNAPSHOT",
-      scalaVersion := "2.13.15",
+      scalaVersion := "2.13.16",
       ThisBuild / intellijPluginName := "sireum-intellij-plugin",
       ThisBuild / intellijBuild      := "243.22562.218",
       ThisBuild / intellijPlatform   := IntelliJPlatform.IdeaCommunity,
       resolvers += "jitpack" at "https://jitpack.io",
-      libraryDependencies += "org.sireum" % "forms" % "4.20250114.a159491" excludeAll(
+      libraryDependencies += "org.sireum" % "forms" % "4.20250121.d3ae23a" excludeAll(
         ExclusionRule(organization = "asm"),
         ExclusionRule(organization = "com.intellij"),
         ExclusionRule(organization = "com.jgoodies"),
