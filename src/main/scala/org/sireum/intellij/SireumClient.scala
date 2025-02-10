@@ -1142,42 +1142,29 @@ object SireumClient {
   def processResult(r: org.sireum.server.protocol.Response): Unit = {
     def getProjectFileEditorInput(pe: (Project, VirtualFile, Editor, String, Boolean)): Option[(Project, VirtualFile, Editor, String)] = {
       r.posOpt match {
-        case org.sireum.Some(pos) if pos.uriOpt.nonEmpty && !pe._1.isDisposed =>
+        case org.sireum.Some(pos) if pos.uriOpt.nonEmpty =>
           val uri = pos.uriOpt.get
-          val pOpt = Util.getPath(pe._2)
-          pOpt match {
-            case Some(p) =>
-              if (uri == p.toUri) return Some((pe._1, pe._2, pe._3, pe._4))
-              val project = pe._1
-              for (fileEditor <- FileEditorManager.getInstance(project).getAllEditors) {
-                val pOpt2 = Util.getPath(fileEditor.getFile)
-                pOpt2 match {
-                  case Some(p2) =>
-                    fileEditor match {
-                      case fileEditor: TextEditor if p2.toUri == uri =>
-                        val editor = fileEditor.getEditor
-                        return Some((project, fileEditor.getFile, editor, editor.getDocument.getText))
-                      case _ =>
-                    }
-                  case _ =>
-                }
-              }
-              if (pe._5) {
-                val file = LocalFileSystem.getInstance.findFileByPath(org.sireum.Os.uriToPath(uri).string.value)
-                val offset = pos.offset.toInt
-                val editor = FileEditorManager.getInstance(project).openTextEditor(
-                  if (offset >= 1) new OpenFileDescriptor(project, file, offset)
-                  else new OpenFileDescriptor(project, file),
-                  true)
-                return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
-              } else {
-                return None
-              }
-            case _ =>
-              return None
+          val p = org.sireum.Os.Path.fromUri(uri).canon
+          val project = pe._1
+          if (project.isDisposed) {
+            return None
           }
-        case _ => return Some((pe._1, pe._2, pe._3, pe._4))
+          var editor = pe._3
+          var file = pe._2
+          if (file.getCanonicalPath != p.value.value || editor.isDisposed) {
+            file = LocalFileSystem.getInstance.findFileByPath(p.value.value)
+            if (file != null) {
+              val offset = pos.offset.toInt
+              editor = FileEditorManager.getInstance(project).openTextEditor(
+                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
+                else new OpenFileDescriptor(project, file),
+                false)
+            }
+          }
+          return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
+        case _ =>
       }
+      None
     }
 
     def consoleReportItems(listModel: DefaultListModel[Object],
