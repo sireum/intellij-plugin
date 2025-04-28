@@ -35,7 +35,7 @@
         This plugin integrates Sireum tools such as the Logika verification framework.
     ]]></description>
 
-    <idea-version since-build="243.22562.145"/>
+    <idea-version since-build="251.23774.435"/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
