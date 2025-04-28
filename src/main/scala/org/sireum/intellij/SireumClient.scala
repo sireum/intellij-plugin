@@ -1539,6 +1539,7 @@ object SireumClient {
                 }
                 r match {
                   case r: org.sireum.server.protocol.Analysis.End =>
+                    notifyHelper(Some(pe._1), Some(pe._3), r)
                     editorMap -= r.id
                   case r: org.sireum.server.protocol.Slang.Rewrite.Response => editorMap -= r.id
                   case _: org.sireum.server.protocol.Analysis.Start =>
@@ -1569,9 +1570,6 @@ object SireumClient {
           val (rhs, listModel, summoningListModelMap, hintListModelMap, coverageLines) =
             analysisDataKey.synchronized {
               r match {
-                case r: org.sireum.server.protocol.Analysis.End =>
-                  notifyHelper(Some(project), Some(editor), r)
-                  return
                 case r: org.sireum.server.protocol.Slang.Rewrite.Response =>
                   SireumOnlyAction.processSlangRewriteResponse(r, project, editor)
                   return
