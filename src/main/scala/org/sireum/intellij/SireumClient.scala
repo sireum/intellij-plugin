@@ -1151,16 +1151,19 @@ object SireumClient {
           }
           val editor = pe._3
           val file = pe._2
-          if (file.getCanonicalPath != p.value.value || editor.isDisposed) {
-            return None
-//            file = LocalFileSystem.getInstance.findFileByPath(p.value.value)
-//            if (file != null) {
-//              val offset = pos.offset.toInt
-//              editor = FileEditorManager.getInstance(project).openTextEditor(
-//                if (offset >= 1) new OpenFileDescriptor(project, file, offset)
-//                else new OpenFileDescriptor(project, file),
-//                false)
-//            }
+          if (file.getCanonicalPath != p.value.value) {
+            for (te <- FileEditorManager.getInstance(project).getAllEditors) {
+              te match {
+                case te: TextEditor =>
+                  val e = te.getEditor
+                  Util.getPath(te.getFile) match {
+                    case Some(path) if p.value.value == path.value.value =>
+                      return Some((project, te.getFile, e, e.getDocument.getText))
+                    case _ =>
+                  }
+                case _ =>
+              }
+            }
           }
           return if (editor != null) Some((project, file, editor, editor.getDocument.getText)) else None
         case _ =>
